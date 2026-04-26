@@ -793,12 +793,52 @@
 
   /* delete set button */
   .set-actions .icon-btn.delete-set { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
+
+  /* Streak banner */
+  .streak-banner {
+    display: flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.18), rgba(250, 204, 21, 0.12));
+    border: 1px solid rgba(251, 146, 60, 0.3);
+    border-radius: 14px; padding: 10px 14px; margin-bottom: 12px;
+  }
+  .streak-emoji { font-size: 22px; line-height: 1; }
+  .streak-text { font-size: 14px; color: var(--text); }
+  .streak-text b { color: var(--accent); font-size: 18px; }
+
+  /* PR celebration toast */
+  .toast.celebrate {
+    background: linear-gradient(135deg, var(--pr), #fbbf24);
+    color: #1c1c20; font-weight: 700;
+    border: none;
+    box-shadow: 0 8px 28px rgba(250, 204, 21, 0.4);
+    padding: 14px 22px; font-size: 14px;
+  }
+
+  /* Workout history detail row */
+  .history-ex {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;
+  }
+  .history-ex .name { font-size: 14px; font-weight: 600; }
+  .history-ex .sets { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+  /* Manage entries list */
+  .entry-list { list-style: none; padding: 0; margin: 12px 0 0; }
+  .entry-list li {
+    display: flex; gap: 10px; align-items: center;
+    padding: 10px 0; border-top: 1px solid var(--border);
+  }
+  .entry-list li:first-child { border-top: none; }
+  .entry-list .info { flex: 1; }
+  .entry-list .date { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+  .entry-list .val { font-size: 15px; font-weight: 600; margin-top: 2px; }
+  .entry-list .actions { display: flex; gap: 6px; }
 </style>
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <h1 id="topTitle">Home</h1>
+    <h1 id="topTitle">Dashboard</h1>
     <span class="pill" id="topPhase">Phase 1</span>
   </header>
   <main id="view"></main>
@@ -807,8 +847,8 @@
 <nav class="tabs">
   <div class="inner">
     <button data-tab="home" class="active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 9v11h5v-7h4v7h5V9"/></svg>
-      <span>Home</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="10" rx="1"/><rect x="13" y="3" width="8" height="6" rx="1"/><rect x="13" y="11" width="8" height="10" rx="1"/><rect x="3" y="15" width="8" height="6" rx="1"/></svg>
+      <span>Dashboard</span>
     </button>
     <button data-tab="today">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5l11 11M3 9l3 3-3 3M21 9l-3 3 3 3M9 3l3 3 3-3M9 21l3-3 3 3"/></svg>
@@ -1009,6 +1049,49 @@ try {
 }
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
+/* one-time seed for past 10 sessions (Apr 7 - Apr 25, 2026) */
+function seedPastSessions() {
+  if (state.settings.seededPastSessions) return;
+  const seed = [
+    // Week 1 (Apr 7-13): 3 sessions, low rep range
+    { date: '2026-04-07', dayKey: 2, repFloor: 'min' },
+    { date: '2026-04-11', dayKey: 6, repFloor: 'min' },
+    { date: '2026-04-13', dayKey: 1, repFloor: 'min' },
+    // Week 2 (Apr 14-20): 3 sessions
+    { date: '2026-04-14', dayKey: 2, repFloor: 'min' },
+    { date: '2026-04-16', dayKey: 4, repFloor: 'min' },
+    { date: '2026-04-18', dayKey: 6, repFloor: 'min' },
+    // Week 3 (Apr 20-26): 4 sessions, target reps
+    { date: '2026-04-20', dayKey: 1, repFloor: 'target' },
+    { date: '2026-04-21', dayKey: 2, repFloor: 'target' },
+    { date: '2026-04-23', dayKey: 4, repFloor: 'target' },
+    { date: '2026-04-25', dayKey: 6, repFloor: 'target' }
+  ];
+  for (const s of seed) {
+    if (state.workouts[s.date]) continue;
+    const day = DAYS[s.dayKey]; if (!day) continue;
+    const logs = {};
+    for (const ex of day.exercises) {
+      const reps = s.repFloor === 'target' ? ex.repsMin + Math.floor((ex.repsMax - ex.repsMin) / 2) : ex.repsMin;
+      const weight = ex.bw ? '' : String(ex.weight);
+      logs[ex.id] = [];
+      for (let i = 0; i < ex.sets; i++) {
+        logs[ex.id].push({ w: weight, r: String(reps), d: true });
+      }
+    }
+    const start = new Date(s.date + 'T15:00:00').getTime();
+    state.workouts[s.date] = {
+      dayKey: s.dayKey, logs, notes: {}, swaps: {},
+      started: start, finished: start + 60 * 60 * 1000,
+      timers: { warmup: 5 * 60 * 1000, workout: 55 * 60 * 1000, cooldown: 0 },
+      activePhase: null, phaseStart: null
+    };
+  }
+  state.settings.seededPastSessions = true;
+  save();
+}
+seedPastSessions();
+
 /* =========== HELPERS =========== */
 function $(id) { return document.getElementById(id); }
 function el(tag, attrs = {}, children = []) {
@@ -1139,6 +1222,35 @@ function workoutProgress(date, dayKey) {
     done += logs.filter(s => s.d).length;
   }
   return { done, total };
+}
+
+function sessionsInWeek(monday) {
+  let count = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    const k = d.toISOString().slice(0, 10);
+    if (state.workouts[k]?.finished) count++;
+  }
+  return count;
+}
+function getStreak() {
+  // count consecutive completed weeks (4+ sessions) going back from this week
+  // we don't include this week unless it's already complete
+  const TARGET = 4;
+  const t = new Date(); const dow = t.getDay() || 7;
+  let monday = new Date(t); monday.setDate(t.getDate() - (dow - 1));
+  // start from previous monday
+  let streak = 0;
+  // also count current week if already at target
+  if (sessionsInWeek(monday) >= TARGET) streak++;
+  monday.setDate(monday.getDate() - 7);
+  while (monday >= new Date(PROGRAM_START)) {
+    if (sessionsInWeek(monday) >= TARGET) {
+      streak++;
+      monday.setDate(monday.getDate() - 7);
+    } else break;
+  }
+  return streak;
 }
 
 function sessionsThisWeek() {
@@ -1307,9 +1419,13 @@ function startPhaseTick() {
 }
 
 /* =========== TOAST + MODAL =========== */
-function toast(msg) {
-  const t = $('toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 1700);
+function toast(msg, kind) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  t.classList.toggle('celebrate', kind === 'celebrate');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { t.classList.remove('show'); t.classList.remove('celebrate'); }, kind === 'celebrate' ? 2800 : 1700);
 }
 function openModal(node) {
   $('modalContent').innerHTML = '';
@@ -1333,7 +1449,7 @@ function render() {
     b.classList.toggle('active', b.dataset.tab === activeTab);
   });
   $('topPhase').textContent = `Phase ${currentPhase().num}`;
-  $('topTitle').textContent = ({ home: 'Home', today: 'Workout', plan: 'Plan', progress: 'Progress', more: 'More' })[activeTab];
+  $('topTitle').textContent = ({ home: 'Dashboard', today: 'Workout', plan: 'Plan', progress: 'Progress', more: 'More' })[activeTab];
 }
 
 /* =========== HOME =========== */
@@ -1392,6 +1508,18 @@ function renderHome() {
     el('div', { class: 'quote-text' }, q.text),
     el('div', { class: 'quote-author' }, '— ' + q.author)
   ]));
+
+  // Streak banner (above CTA, only when streak >= 1)
+  const streak = getStreak();
+  if (streak >= 1) {
+    v.appendChild(el('div', { class: 'streak-banner' }, [
+      el('span', { class: 'streak-emoji' }, '🔥'),
+      el('span', { class: 'streak-text' }, [
+        el('b', {}, `${streak} `),
+        document.createTextNode(streak === 1 ? 'week complete' : 'weeks in a row')
+      ])
+    ]));
+  }
 
   // Today CTA
   const cta = el('button', {
@@ -1475,8 +1603,8 @@ function renderHome() {
     const lDay = DAYS[lw.dayKey];
     const prog = workoutProgress(d, lw.dayKey);
     const totalMs = (lw.timers?.warmup || 0) + (lw.timers?.workout || 0);
-    const card = el('div', { class: 'card' });
-    card.appendChild(el('div', { class: 'card-title' }, 'Last session'));
+    const card = el('div', { class: 'card', style: 'cursor:pointer;', onclick: () => openWorkoutDetail(d) });
+    card.appendChild(el('div', { class: 'card-title' }, 'Last session · tap to view'));
     card.appendChild(el('div', { class: 'row between' }, [
       el('div', {}, [
         el('div', { class: 'bold' }, lDay ? lDay.name : 'Workout'),
@@ -1789,12 +1917,19 @@ function renderSetRow(ex, date, dayKey, logs, i, lastSession) {
       style: 'margin-top:4px;padding:11px;font-size:14px;',
       onclick: e => {
         e.stopPropagation();
+        const prevPR = getPR(ex.id, date);
         logs[i].d = true;
         editingSetKey = null;
         if (!w.started) w.started = Date.now();
         save(); render();
         startRest();
         if (navigator.vibrate) navigator.vibrate(20);
+        const e1 = epley(logs[i].w, logs[i].r);
+        if (e1 > 0 && (!prevPR || e1 > prevPR.e)) {
+          const lift = ex.bw ? `BW × ${logs[i].r}` : `${logs[i].w}kg × ${logs[i].r}`;
+          toast(`★ NEW PR · ${lift}`, 'celebrate');
+          if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 100]);
+        }
       }
     }, s.d ? 'Save' : 'Log set'));
   } else if (s.d) {
@@ -1814,11 +1949,20 @@ function renderSetRow(ex, date, dayKey, logs, i, lastSession) {
         e.stopPropagation();
         if (!logs[i].w && !ex.bw) logs[i].w = String(tapW);
         if (!logs[i].r) logs[i].r = String(tapR);
+        // capture PR state BEFORE marking done (PR check excludes current date)
+        const prevPR = getPR(ex.id, date);
         logs[i].d = true;
         if (!w.started) w.started = Date.now();
         save(); render();
         startRest();
         if (navigator.vibrate) navigator.vibrate(20);
+        // Celebrate if new PR
+        const e1 = epley(logs[i].w, logs[i].r);
+        if (e1 > 0 && (!prevPR || e1 > prevPR.e)) {
+          const lift = ex.bw ? `BW × ${logs[i].r}` : `${logs[i].w}kg × ${logs[i].r}`;
+          toast(`★ NEW PR · ${lift}`, 'celebrate');
+          if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 100]);
+        }
       }
     }, [
       el('span', { class: 'tap-label' }, 'Tap to log'),
@@ -1919,6 +2063,250 @@ function openSwapModal(ex, date) {
     if (isActive) opt.appendChild(el('span', { class: 'chip accent', style: 'position:absolute;top:14px;right:14px;' }, '✓'));
     m.appendChild(opt);
   });
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:14px;', onclick: closeModal }, 'Close'));
+  openModal(m);
+}
+
+function openWeightHistoryModal() {
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Body weight history'));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:6px;' }, 'Tap edit to fix a typo, trash to remove.'));
+  if (!state.bodyWeight.length) {
+    m.appendChild(el('div', { class: 'empty' }, 'No entries yet.'));
+  } else {
+    const list = el('ul', { class: 'entry-list' });
+    [...state.bodyWeight].reverse().forEach(entry => {
+      const li = el('li');
+      li.appendChild(el('div', { class: 'info' }, [
+        el('div', { class: 'date' }, entry.date),
+        el('div', { class: 'val' }, `${entry.weight} kg`)
+      ]));
+      const actions = el('div', { class: 'actions' });
+      actions.appendChild(el('button', {
+        class: 'icon-btn',
+        title: 'Edit',
+        onclick: () => openWeightEditModal(entry.date),
+        html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4v16h16v-7M18 2l4 4-10 10H8v-4L18 2z"/></svg>'
+      }));
+      actions.appendChild(el('button', {
+        class: 'icon-btn delete-set',
+        title: 'Delete',
+        onclick: () => {
+          if (!confirm(`Delete weight log for ${entry.date}?`)) return;
+          state.bodyWeight = state.bodyWeight.filter(x => x.date !== entry.date);
+          save(); render();
+          closeModal(); openWeightHistoryModal();
+        },
+        html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>'
+      }));
+      li.appendChild(actions);
+      list.appendChild(li);
+    });
+    m.appendChild(list);
+  }
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:14px;', onclick: closeModal }, 'Close'));
+  openModal(m);
+}
+function openWeightEditModal(originalDate) {
+  const entry = state.bodyWeight.find(x => x.date === originalDate);
+  if (!entry) return;
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Edit body weight'));
+  m.appendChild(el('label', {}, 'Weight (kg)'));
+  const inp = el('input', { type: 'number', step: '0.1' }); inp.value = entry.weight;
+  m.appendChild(inp);
+  m.appendChild(el('label', {}, 'Date'));
+  const d = el('input', { type: 'date' }); d.value = originalDate;
+  m.appendChild(d);
+  m.appendChild(el('button', {
+    class: 'btn',
+    onclick: () => {
+      const v = parseFloat(inp.value); if (!v) { toast('Enter weight'); return; }
+      state.bodyWeight = state.bodyWeight.filter(x => x.date !== originalDate && x.date !== d.value);
+      state.bodyWeight.push({ date: d.value, weight: v });
+      state.bodyWeight.sort((a, b) => a.date.localeCompare(b.date));
+      save(); closeModal(); render(); toast('Updated');
+    }
+  }, 'Save'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: () => { closeModal(); openWeightHistoryModal(); } }, 'Back'));
+  openModal(m);
+}
+
+function openSleepHistoryModal() {
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Sleep history'));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:6px;' }, 'Tap edit to fix, trash to remove.'));
+  if (!state.sleep.length) {
+    m.appendChild(el('div', { class: 'empty' }, 'No entries yet.'));
+  } else {
+    const list = el('ul', { class: 'entry-list' });
+    [...state.sleep].reverse().forEach(entry => {
+      const li = el('li');
+      li.appendChild(el('div', { class: 'info' }, [
+        el('div', { class: 'date' }, entry.date),
+        el('div', { class: 'val' }, `${entry.hours.toFixed(1)} h · ${entry.bedtime} → ${entry.waketime}`)
+      ]));
+      const actions = el('div', { class: 'actions' });
+      actions.appendChild(el('button', {
+        class: 'icon-btn',
+        title: 'Edit',
+        onclick: () => openSleepEditModal(entry.date),
+        html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4v16h16v-7M18 2l4 4-10 10H8v-4L18 2z"/></svg>'
+      }));
+      actions.appendChild(el('button', {
+        class: 'icon-btn delete-set',
+        title: 'Delete',
+        onclick: () => {
+          if (!confirm(`Delete sleep entry for ${entry.date}?`)) return;
+          state.sleep = state.sleep.filter(x => x.date !== entry.date);
+          save(); render();
+          closeModal(); openSleepHistoryModal();
+        },
+        html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>'
+      }));
+      li.appendChild(actions);
+      list.appendChild(li);
+    });
+    m.appendChild(list);
+  }
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:14px;', onclick: closeModal }, 'Close'));
+  openModal(m);
+}
+function openSleepEditModal(originalDate) {
+  const entry = state.sleep.find(x => x.date === originalDate);
+  if (!entry) return;
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Edit sleep'));
+  m.appendChild(el('label', {}, 'Bedtime'));
+  const bed = el('input', { type: 'time' }); bed.value = entry.bedtime; m.appendChild(bed);
+  m.appendChild(el('label', {}, 'Wake time'));
+  const wake = el('input', { type: 'time' }); wake.value = entry.waketime; m.appendChild(wake);
+  m.appendChild(el('label', {}, 'Date'));
+  const d = el('input', { type: 'date' }); d.value = originalDate; m.appendChild(d);
+  m.appendChild(el('button', {
+    class: 'btn',
+    onclick: () => {
+      const [bh, bm] = bed.value.split(':').map(Number);
+      const [wh, wm] = wake.value.split(':').map(Number);
+      let mins = (wh * 60 + wm) - (bh * 60 + bm);
+      if (mins < 0) mins += 24 * 60;
+      const hours = mins / 60;
+      state.sleep = state.sleep.filter(x => x.date !== originalDate && x.date !== d.value);
+      state.sleep.push({ date: d.value, bedtime: bed.value, waketime: wake.value, hours });
+      state.sleep.sort((a, b) => a.date.localeCompare(b.date));
+      save(); closeModal(); render(); toast('Updated');
+    }
+  }, 'Save'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: () => { closeModal(); openSleepHistoryModal(); } }, 'Back'));
+  openModal(m);
+}
+
+function openMeasurementsHistoryModal() {
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Measurement history'));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:6px;' }, 'Tap edit to fix, trash to remove.'));
+  if (!state.measurements.length) {
+    m.appendChild(el('div', { class: 'empty' }, 'No entries yet.'));
+  } else {
+    const list = el('ul', { class: 'entry-list' });
+    [...state.measurements].reverse().forEach(entry => {
+      const li = el('li');
+      const parts = [];
+      if (entry.waist != null) parts.push(`W ${entry.waist}`);
+      if (entry.chest != null) parts.push(`C ${entry.chest}`);
+      if (entry.arms != null) parts.push(`A ${entry.arms}`);
+      if (entry.thighs != null) parts.push(`T ${entry.thighs}`);
+      li.appendChild(el('div', { class: 'info' }, [
+        el('div', { class: 'date' }, entry.date),
+        el('div', { class: 'val' }, parts.join(' · ') + ' cm')
+      ]));
+      const actions = el('div', { class: 'actions' });
+      actions.appendChild(el('button', {
+        class: 'icon-btn',
+        title: 'Edit',
+        onclick: () => openMeasurementEditModal(entry.date),
+        html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4v16h16v-7M18 2l4 4-10 10H8v-4L18 2z"/></svg>'
+      }));
+      actions.appendChild(el('button', {
+        class: 'icon-btn delete-set',
+        title: 'Delete',
+        onclick: () => {
+          if (!confirm(`Delete measurements for ${entry.date}?`)) return;
+          state.measurements = state.measurements.filter(x => x.date !== entry.date);
+          save(); render();
+          closeModal(); openMeasurementsHistoryModal();
+        },
+        html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>'
+      }));
+      li.appendChild(actions);
+      list.appendChild(li);
+    });
+    m.appendChild(list);
+  }
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:14px;', onclick: closeModal }, 'Close'));
+  openModal(m);
+}
+function openMeasurementEditModal(originalDate) {
+  const entry = state.measurements.find(x => x.date === originalDate);
+  if (!entry) return;
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Edit measurements (cm)'));
+  const fields = [['waist','Waist'],['chest','Chest'],['arms','Arms'],['thighs','Thighs']];
+  const inputs = {};
+  fields.forEach(([k, label]) => {
+    m.appendChild(el('label', {}, label));
+    const i = el('input', { type: 'number', step: '0.1' });
+    if (entry[k] != null) i.value = entry[k];
+    inputs[k] = i; m.appendChild(i);
+  });
+  m.appendChild(el('label', {}, 'Date'));
+  const d = el('input', { type: 'date' }); d.value = originalDate; m.appendChild(d);
+  m.appendChild(el('button', {
+    class: 'btn',
+    onclick: () => {
+      const next = { date: d.value };
+      let any = false;
+      for (const k of Object.keys(inputs)) {
+        const v = parseFloat(inputs[k].value);
+        if (!isNaN(v)) { next[k] = v; any = true; }
+      }
+      if (!any) { toast('Enter at least one'); return; }
+      state.measurements = state.measurements.filter(x => x.date !== originalDate && x.date !== d.value);
+      state.measurements.push(next);
+      state.measurements.sort((a, b) => a.date.localeCompare(b.date));
+      save(); closeModal(); render(); toast('Updated');
+    }
+  }, 'Save'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: () => { closeModal(); openMeasurementsHistoryModal(); } }, 'Back'));
+  openModal(m);
+}
+
+function openWorkoutDetail(date) {
+  const w = state.workouts[date];
+  if (!w) { toast('No workout that day'); return; }
+  const day = DAYS[w.dayKey];
+  const m = el('div');
+  m.appendChild(el('h3', {}, day ? day.name + ' · ' + date : 'Workout · ' + date));
+  const totalMs = (w.timers?.warmup || 0) + (w.timers?.workout || 0);
+  const meta = el('div', { class: 'small muted', style: 'margin-bottom:14px;' },
+    `${day ? day.focus : ''}${totalMs ? ' · ' + fmtTime(totalMs) : ''}`);
+  m.appendChild(meta);
+  if (w.sessionNote) {
+    m.appendChild(el('div', { class: 'coach-note info', style: 'font-size:12px;padding:8px 10px;margin-bottom:10px;' }, [el('span', {}, '📝 ' + w.sessionNote)]));
+  }
+  if (day) {
+    day.exercises.forEach(ex => {
+      const logs = w.logs[ex.id] || [];
+      const card = el('div', { class: 'history-ex' });
+      card.appendChild(el('div', { class: 'name' }, getDisplayName(ex, date)));
+      const setsTxt = logs.length
+        ? logs.map((s, i) => s.d ? `${i + 1}: ${ex.bw ? 'BW' : s.w + 'kg'} × ${s.r}` : `${i + 1}: skipped`).join(' · ')
+        : 'No sets logged';
+      card.appendChild(el('div', { class: 'sets' }, setsTxt));
+      if (w.notes?.[ex.id]) card.appendChild(el('div', { class: 'small muted', style: 'margin-top:4px;font-style:italic;' }, '📝 ' + w.notes[ex.id]));
+      m.appendChild(card);
+    });
+  }
   m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:14px;', onclick: closeModal }, 'Close'));
   openModal(m);
 }
@@ -2039,9 +2427,12 @@ function renderProgress() {
 
   // Body weight chart
   const bwCard = el('div', { class: 'card' });
-  bwCard.appendChild(el('div', { class: 'row between', style: 'margin-bottom:6px;' }, [
+  bwCard.appendChild(el('div', { class: 'row between', style: 'margin-bottom:6px;gap:6px;' }, [
     el('div', { class: 'card-title', style: 'margin:0;' }, 'Body weight'),
-    el('button', { class: 'btn small', onclick: openWeightModal }, '+ Log')
+    el('div', { class: 'row', style: 'gap:6px;' }, [
+      el('button', { class: 'btn small secondary', onclick: openWeightHistoryModal }, 'Manage'),
+      el('button', { class: 'btn small', onclick: openWeightModal }, '+ Log')
+    ])
   ]));
   if (state.bodyWeight.length >= 1) {
     bwCard.appendChild(buildLineChart(state.bodyWeight.map(b => ({ date: b.date, value: b.weight })), 'kg'));
@@ -2065,12 +2456,12 @@ function renderProgress() {
       const day = DAYS[w.dayKey];
       const prog = workoutProgress(date, w.dayKey);
       const totalMs = (w.timers?.warmup || 0) + (w.timers?.workout || 0);
-      recentCard.appendChild(el('div', { class: 'list-item' }, [
+      recentCard.appendChild(el('div', { class: 'list-item', onclick: () => openWorkoutDetail(date) }, [
         el('div', {}, [
           el('div', { class: 'bold' }, day ? day.name : 'Workout'),
           el('div', { class: 'small muted' }, `${date}${totalMs ? ' · ' + fmtTime(totalMs) : ''}`)
         ]),
-        el('div', { class: 'right' }, [el('span', { class: 'chip success' }, `${prog.done}/${prog.total} sets`)])
+        el('div', { class: 'right' }, [el('span', { class: 'chip success' }, `${prog.done}/${prog.total} sets`), el('span', {}, '›')])
       ]));
     });
   }
@@ -2196,9 +2587,12 @@ function renderMore() {
 
   // Sleep
   const slc = el('div', { class: 'card' });
-  slc.appendChild(el('div', { class: 'row between', style: 'margin-bottom:6px;' }, [
+  slc.appendChild(el('div', { class: 'row between', style: 'margin-bottom:6px;gap:6px;' }, [
     el('div', { class: 'card-title', style: 'margin:0;' }, 'Sleep'),
-    el('button', { class: 'btn small', onclick: openSleepModal }, '+ Log night')
+    el('div', { class: 'row', style: 'gap:6px;' }, [
+      el('button', { class: 'btn small secondary', onclick: openSleepHistoryModal }, 'Manage'),
+      el('button', { class: 'btn small', onclick: openSleepModal }, '+ Log')
+    ])
   ]));
   const lastN = state.sleep.slice(-7);
   if (lastN.length) {
@@ -2224,9 +2618,12 @@ function renderMore() {
 
   // Body measurements
   const mzc = el('div', { class: 'card' });
-  mzc.appendChild(el('div', { class: 'row between', style: 'margin-bottom:6px;' }, [
+  mzc.appendChild(el('div', { class: 'row between', style: 'margin-bottom:6px;gap:6px;' }, [
     el('div', { class: 'card-title', style: 'margin:0;' }, 'Body measurements'),
-    el('button', { class: 'btn small', onclick: openMeasurementsModal }, '+ Log')
+    el('div', { class: 'row', style: 'gap:6px;' }, [
+      el('button', { class: 'btn small secondary', onclick: openMeasurementsHistoryModal }, 'Manage'),
+      el('button', { class: 'btn small', onclick: openMeasurementsModal }, '+ Log')
+    ])
   ]));
   const lm = lastMeasurement();
   const pm = prevMeasurement();
