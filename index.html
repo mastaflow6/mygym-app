@@ -804,31 +804,45 @@
   /* delete set button */
   .set-actions .icon-btn.delete-set { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
 
-  /* Phase progress card */
-  .phase-progress {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; padding: 12px 14px; margin-bottom: 12px;
-    display: flex; align-items: center; gap: 14px;
+  /* Rings row (3 small circular progress cards) */
+  .rings-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
   }
-  .phase-progress .ring {
-    width: 56px; height: 56px; flex-shrink: 0;
+  .ring-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .ring-card .ring {
+    width: 56px; height: 56px;
     position: relative;
   }
-  .phase-progress .ring svg { transform: rotate(-90deg); }
-  .phase-progress .ring .ring-bg { fill: none; stroke: var(--surface-3); stroke-width: 5; }
-  .phase-progress .ring .ring-fg {
-    fill: none; stroke: var(--accent); stroke-width: 5;
+  .ring-card .ring svg { transform: rotate(-90deg); }
+  .ring-card .ring-bg { fill: none; stroke: var(--surface-3); stroke-width: 5; }
+  .ring-card .ring-fg {
+    fill: none; stroke-width: 5;
     stroke-linecap: round;
     transition: stroke-dashoffset 0.5s ease;
   }
-  .phase-progress .ring-label {
+  .ring-card .ring-label {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; color: var(--accent);
+    font-size: 11px; font-weight: 700;
   }
-  .phase-progress .info { flex: 1; }
-  .phase-progress .info .num { font-size: 17px; font-weight: 700; }
-  .phase-progress .info .lbl { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .ring-card .ring-info { text-align: center; }
+  .ring-card .ring-info .num {
+    font-size: 13px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .ring-card .ring-info .lbl {
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    font-weight: 600; margin-top: 2px;
+  }
 
   /* Rest-day CTA — calm green instead of training orange */
   .today-cta.rest {
@@ -1603,29 +1617,85 @@ function getNudges() {
   return out.slice(0, 3);
 }
 
-function buildPhaseProgressCard() {
-  const total = totalSessions();
-  const ph = currentPhase();
-  // Phase 1 is sessions 1-16; later phases scale similarly. For now hardcode P1 target = 16.
-  const PHASE_TARGETS = { 1: 16, 2: 24, 3: 32, 4: 48 };
-  const target = PHASE_TARGETS[ph.num] || 16;
-  const pct = Math.min(1, total / target);
+function buildRing(opts) {
+  // opts: { value, total, percent, color, valueLabel, subLabel }
+  const pct = Math.min(1, opts.percent != null ? opts.percent : (opts.total > 0 ? opts.value / opts.total : 0));
   const r = 22, c = 2 * Math.PI * r;
   const offset = c * (1 - pct);
-  const card = el('div', { class: 'phase-progress' });
+  const color = opts.color || 'var(--accent)';
+  const card = el('div', { class: 'ring-card' });
   const ring = el('div', { class: 'ring' });
   ring.innerHTML = `
     <svg viewBox="0 0 56 56" width="56" height="56">
       <circle class="ring-bg" cx="28" cy="28" r="${r}"/>
-      <circle class="ring-fg" cx="28" cy="28" r="${r}" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"/>
+      <circle class="ring-fg" cx="28" cy="28" r="${r}" style="stroke:${color}" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"/>
     </svg>
-    <span class="ring-label">${Math.round(pct * 100)}%</span>`;
+    <span class="ring-label" style="color:${color}">${Math.round(pct * 100)}%</span>`;
   card.appendChild(ring);
-  card.appendChild(el('div', { class: 'info' }, [
-    el('div', { class: 'num' }, `${total} / ${target} sessions`),
-    el('div', { class: 'lbl' }, `Phase ${ph.num} — ${ph.name}`)
+  card.appendChild(el('div', { class: 'ring-info' }, [
+    el('div', { class: 'num' }, opts.valueLabel),
+    el('div', { class: 'lbl' }, opts.subLabel)
   ]));
   return card;
+}
+
+function buildRingsRow() {
+  const row = el('div', { class: 'rings-row' });
+
+  // Phase progress
+  const total = totalSessions();
+  const ph = currentPhase();
+  const PHASE_TARGETS = { 1: 16, 2: 24, 3: 32, 4: 48 };
+  const phaseTarget = PHASE_TARGETS[ph.num] || 16;
+  row.appendChild(buildRing({
+    value: total, total: phaseTarget,
+    color: 'var(--accent)',
+    valueLabel: `${total} / ${phaseTarget}`,
+    subLabel: `Phase ${ph.num}`
+  }));
+
+  // This week
+  const sw = sessionsThisWeek();
+  row.appendChild(buildRing({
+    value: sw, total: 4,
+    color: '#22c55e',
+    valueLabel: `${sw} / 4`,
+    subLabel: 'This week'
+  }));
+
+  // Sleep avg over last 7 nights / target
+  const sleepAvg = getSleepAvgLast7();
+  const sleepTarget = state.settings.sleepTarget || 8;
+  row.appendChild(buildRing({
+    percent: sleepAvg ? Math.min(1, sleepAvg / sleepTarget) : 0,
+    color: '#818cf8',
+    valueLabel: sleepAvg ? `${sleepAvg.toFixed(1)} h` : '—',
+    subLabel: 'Sleep avg'
+  }));
+
+  return row;
+}
+
+function getSleepAvgLast7() {
+  if (!state.sleep.length) return null;
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+  const cutKey = cutoff.toISOString().slice(0, 10);
+  const recent = state.sleep.filter(s => s.date >= cutKey);
+  if (!recent.length) return null;
+  return recent.reduce((a, s) => a + s.hours, 0) / recent.length;
+}
+
+function totalTimeThisWeek() {
+  const t = new Date(); const dow = t.getDay() || 7;
+  const monday = new Date(t); monday.setDate(t.getDate() - (dow - 1));
+  let total = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    const k = d.toISOString().slice(0, 10);
+    const w = state.workouts[k];
+    if (w?.finished) total += (w.timers?.warmup || 0) + (w.timers?.workout || 0);
+  }
+  return total;
 }
 
 function makeQuickBtn(label, icon, onclick) {
@@ -1655,8 +1725,8 @@ function renderHome() {
     el('div', { class: 'quote-author' }, '— ' + q.author)
   ]));
 
-  // Phase 1 progress ring
-  v.appendChild(buildPhaseProgressCard());
+  // Phase / week / sleep rings
+  v.appendChild(buildRingsRow());
 
   // Today CTA
   const cta = el('button', {
@@ -2519,10 +2589,14 @@ function renderProgress() {
   const startBw = state.bodyWeight[0];
 
   const grid = el('div', { class: 'stat-grid' });
+  // Trained this week — total time
+  const weekMs = totalTimeThisWeek();
+  const wH = Math.floor(weekMs / 3600000);
+  const wM = Math.floor((weekMs % 3600000) / 60000);
   grid.appendChild(el('div', { class: 'stat' }, [
-    el('div', { class: 'label' }, 'This week'),
-    el('div', { class: 'value' }, `${sessionsThis} / 4`),
-    el('div', { class: 'sub' }, sessionsThis === 4 ? 'Complete ✓' : `${4 - sessionsThis} to go`)
+    el('div', { class: 'label' }, 'Trained this week'),
+    el('div', { class: 'value' }, weekMs ? (wH ? `${wH}h ${wM}m` : `${wM}m`) : '—'),
+    el('div', { class: 'sub' }, `${sessionsThis} session${sessionsThis === 1 ? '' : 's'}`)
   ]));
   grid.appendChild(el('div', { class: 'stat' }, [
     el('div', { class: 'label' }, 'Total sessions'),
@@ -2907,7 +2981,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v0.8 · Started ${PROGRAM_START}`));
+  }, `MyGym · v0.9 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
