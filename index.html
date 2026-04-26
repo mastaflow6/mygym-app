@@ -567,6 +567,15 @@
     border: none; color: inherit;
   }
   .ex-header-clickable:active { background: var(--surface-2); }
+  .ex-image {
+    width: 64px; height: 48px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: var(--surface-2);
+    display: block;
+    margin-bottom: 6px;
+    border: 1px solid var(--border);
+  }
   .ex-status { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .sets-count {
     font-size: 12px; font-weight: 700;
@@ -1030,6 +1039,43 @@ const QUOTES = [
   { text: "We don't rise to the level of our goals — we fall to the level of our systems.", author: "James Clear" },
   { text: "Show up every day. That's the secret.", author: "Anne Lamott" }
 ];
+
+/* Curated mappings from our exercise IDs → free-exercise-db catalog IDs.
+   Images: https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/<id>/0.jpg
+   Open source (AGPL-3.0). No API call needed; URL is deterministic. */
+const EX_IMG_IDS = {
+  'mon-1': 'Incline_Dumbbell_Press',
+  'mon-2': 'Dumbbell_Bench_Press',
+  'mon-3': 'Seated_Dumbbell_Press',
+  'mon-4': 'Side_Lateral_Raise',
+  'mon-5': 'Triceps_Pushdown_-_Rope_Attachment',
+  'mon-6': 'Cable_Rope_Overhead_Triceps_Extension',
+  'tue-1': 'Wide-Grip_Lat_Pulldown',
+  'tue-2': 'Lying_T-Bar_Row',
+  'tue-3': 'Seated_Cable_Rows',
+  'tue-4': 'Face_Pull',
+  'tue-5': 'Cable_Rear_Delt_Fly',
+  'tue-6': 'Standing_Biceps_Cable_Curl',
+  'tue-7': 'Alternate_Incline_Dumbbell_Curl',
+  'tue-8': 'Plank',
+  'thu-1': 'Leg_Press',
+  'thu-2': 'Romanian_Deadlift',
+  'thu-3': 'Split_Squat_with_Dumbbells',
+  'thu-4': 'Lying_Leg_Curls',
+  'thu-5': 'Standing_Calf_Raises',
+  'thu-6': 'Plank',
+  'sat-1': 'Dumbbell_Bench_Press',
+  'sat-2': 'Wide-Grip_Lat_Pulldown',
+  'sat-3': 'Lying_T-Bar_Row',
+  'sat-4': 'Side_Lateral_Raise',
+  'sat-5': 'Standing_Biceps_Cable_Curl',
+  'sat-6': 'Triceps_Pushdown_-_Rope_Attachment'
+};
+function getExerciseImageUrl(ex) {
+  const id = EX_IMG_IDS[ex.id];
+  if (!id) return null;
+  return `https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/${encodeURIComponent(id)}/0.jpg`;
+}
 
 const MUSCLES = ['chest','back','shoulders','biceps','triceps','legs','glutes','core'];
 const PLATES = [25, 20, 15, 10, 5, 2.5, 1.25];
@@ -1869,6 +1915,16 @@ function renderExercise(ex, date, dayKey) {
     }
   });
   const headerLeft = el('div', { class: 'grow', style: 'min-width:0;' });
+  const imgUrl = getExerciseImageUrl(ex);
+  if (imgUrl) {
+    headerLeft.appendChild(el('img', {
+      class: 'ex-image',
+      src: imgUrl,
+      alt: '',
+      loading: 'lazy',
+      onerror: e => { e.target.style.display = 'none'; }
+    }));
+  }
   const nameEl = el('div', { class: 'ex-name' });
   nameEl.appendChild(document.createTextNode(displayName));
   if (swapIdx > 0) nameEl.appendChild(el('span', { class: 'chip', style: 'margin-left:6px;font-size:10px;' }, 'swapped'));
@@ -2802,7 +2858,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v0.6 · Started ${PROGRAM_START}`));
+  }, `MyGym · v0.7 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
