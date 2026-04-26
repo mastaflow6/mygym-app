@@ -794,16 +794,37 @@
   /* delete set button */
   .set-actions .icon-btn.delete-set { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
 
-  /* Streak banner */
-  .streak-banner {
-    display: flex; align-items: center; gap: 10px;
-    background: linear-gradient(135deg, rgba(251, 146, 60, 0.18), rgba(250, 204, 21, 0.12));
-    border: 1px solid rgba(251, 146, 60, 0.3);
-    border-radius: 14px; padding: 10px 14px; margin-bottom: 12px;
+  /* Phase progress card */
+  .phase-progress {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 12px 14px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 14px;
   }
-  .streak-emoji { font-size: 22px; line-height: 1; }
-  .streak-text { font-size: 14px; color: var(--text); }
-  .streak-text b { color: var(--accent); font-size: 18px; }
+  .phase-progress .ring {
+    width: 56px; height: 56px; flex-shrink: 0;
+    position: relative;
+  }
+  .phase-progress .ring svg { transform: rotate(-90deg); }
+  .phase-progress .ring .ring-bg { fill: none; stroke: var(--surface-3); stroke-width: 5; }
+  .phase-progress .ring .ring-fg {
+    fill: none; stroke: var(--accent); stroke-width: 5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease;
+  }
+  .phase-progress .ring-label {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--accent);
+  }
+  .phase-progress .info { flex: 1; }
+  .phase-progress .info .num { font-size: 17px; font-weight: 700; }
+  .phase-progress .info .lbl { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Rest-day CTA — calm green instead of training orange */
+  .today-cta.rest {
+    background: linear-gradient(155deg, #16a34a 0%, #15803d 100%);
+    box-shadow: 0 8px 24px rgba(22, 163, 74, 0.25);
+  }
 
   /* PR celebration toast */
   .toast.celebrate {
@@ -902,7 +923,7 @@ const DAYS = {
       { id: 'mon-3', name: 'Seated shoulder press', sets: 3, repsMin: 8, repsMax: 10, weight: 10, target: 'Front + side delt', alt: 'Dumbbell shoulder press / Arnold press', alternatives: ['Dumbbell shoulder press', 'Arnold press'], muscles: ['shoulders','triceps'] },
       { id: 'mon-4', name: 'Lateral raise', sets: 3, repsMin: 12, repsMax: 15, weight: 5, target: 'Side delt', alt: 'Cable lateral raise / Machine lateral raise', alternatives: ['Cable lateral raise', 'Machine lateral raise'], muscles: ['shoulders'] },
       { id: 'mon-5', name: 'Triceps pushdown', sets: 3, repsMin: 10, repsMax: 12, weight: 23, target: 'Triceps', alt: 'Rope triceps pushdown / Single-arm cable pushdown', alternatives: ['Rope triceps pushdown', 'Single-arm cable pushdown'], muscles: ['triceps'] },
-      { id: 'mon-6', name: 'Overhead rope extension', sets: 2, repsMin: 10, repsMax: 12, weight: 9, target: 'Triceps long head', alt: 'Dumbbell overhead triceps extension / EZ bar skull crusher', alternatives: ['Dumbbell overhead triceps extension', 'EZ bar skull crusher'], muscles: ['triceps'] }
+      { id: 'mon-6', name: 'Overhead rope extension', sets: 3, repsMin: 10, repsMax: 12, weight: 9, target: 'Triceps long head', alt: 'Dumbbell overhead triceps extension / EZ bar skull crusher', alternatives: ['Dumbbell overhead triceps extension', 'EZ bar skull crusher'], muscles: ['triceps'] }
     ]
   },
   2: {
@@ -916,8 +937,8 @@ const DAYS = {
       { id: 'tue-4', name: 'Face pull', sets: 3, repsMin: 12, repsMax: 15, weight: 18, target: 'Rear delt, rotators', alt: 'Reverse pec deck / Cable rear delt fly', alternatives: ['Reverse pec deck', 'Cable rear delt fly'], muscles: ['shoulders'] },
       { id: 'tue-5', name: 'Rear delt fly', sets: 3, repsMin: 12, repsMax: 15, weight: 10, target: 'Rear delt, mid-trap', alt: 'Reverse pec deck / Bent-over dumbbell rear delt fly', alternatives: ['Reverse pec deck', 'Bent-over dumbbell rear delt fly'], muscles: ['shoulders'] },
       { id: 'tue-6', name: 'Cable biceps curl', sets: 3, repsMin: 10, repsMax: 12, weight: 14, target: 'Biceps', alt: 'Dumbbell biceps curl / EZ bar curl', alternatives: ['Dumbbell biceps curl', 'EZ bar curl'], muscles: ['biceps'] },
-      { id: 'tue-7', name: 'Incline dumbbell curl', sets: 2, repsMin: 10, repsMax: 12, weight: 5, target: 'Biceps long head', alt: 'Seated dumbbell curl / Hammer curl', alternatives: ['Seated dumbbell curl', 'Hammer curl'], muscles: ['biceps'] },
-      { id: 'tue-8', name: 'Plank', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Core', alt: 'Dead bug / Hollow body hold', alternatives: ['Dead bug', 'Hollow body hold'], timed: true, muscles: ['core'] }
+      { id: 'tue-7', name: 'Incline dumbbell curl', sets: 3, repsMin: 10, repsMax: 12, weight: 5, target: 'Biceps long head', alt: 'Seated dumbbell curl / Hammer curl', alternatives: ['Seated dumbbell curl', 'Hammer curl'], muscles: ['biceps'] },
+      { id: 'tue-8', name: 'Plank', sets: 3, repsMin: 30, repsMax: 45, weight: 0, target: 'Core', alt: 'Dead bug / Hollow body hold', alternatives: ['Dead bug', 'Hollow body hold'], timed: true, muscles: ['core'] }
     ]
   },
   4: {
@@ -928,10 +949,10 @@ const DAYS = {
     exercises: [
       { id: 'thu-1', name: 'Leg press', sets: 3, repsMin: 8, repsMax: 10, weight: 60, target: 'Quads, glutes', alt: 'Hack squat machine / Goblet squat', alternatives: ['Hack squat machine', 'Goblet squat'], muscles: ['legs','glutes'] },
       { id: 'thu-2', name: 'Romanian deadlift', sets: 3, repsMin: 8, repsMax: 10, weight: 10, target: 'Hamstrings, glutes', alt: 'Dumbbell Romanian deadlift / Smith machine RDL', alternatives: ['Dumbbell Romanian deadlift', 'Smith machine RDL'], muscles: ['legs','glutes'], barbell: true },
-      { id: 'thu-3', name: 'Stationary split squat', sets: 2, repsMin: 10, repsMax: 10, weight: 0, target: 'Quads, glutes (each leg)', alt: 'Walking lunges / Bulgarian split squat', alternatives: ['Walking lunges', 'Bulgarian split squat'], bw: true, muscles: ['legs','glutes'] },
+      { id: 'thu-3', name: 'Stationary split squat', sets: 3, repsMin: 10, repsMax: 10, weight: 0, target: 'Quads, glutes (each leg)', alt: 'Walking lunges / Bulgarian split squat', alternatives: ['Walking lunges', 'Bulgarian split squat'], bw: true, muscles: ['legs','glutes'] },
       { id: 'thu-4', name: 'Leg curl', sets: 3, repsMin: 10, repsMax: 12, weight: 15, target: 'Hamstrings', alt: 'Seated leg curl machine / Single-leg lying curl', alternatives: ['Seated leg curl machine', 'Single-leg lying curl'], warn: 'Watch hamstring', muscles: ['legs'] },
       { id: 'thu-5', name: 'Standing calf raise', sets: 3, repsMin: 12, repsMax: 15, weight: 10, target: 'Gastrocnemius', alt: 'Seated calf raise / Leg press calf raise', alternatives: ['Seated calf raise', 'Leg press calf raise'], muscles: ['legs'] },
-      { id: 'thu-6', name: 'Plank', sets: 2, repsMin: 30, repsMax: 45, weight: 40, target: 'Core', alt: 'Dead bug / Hollow body hold', alternatives: ['Dead bug', 'Hollow body hold'], timed: true, muscles: ['core'] }
+      { id: 'thu-6', name: 'Plank', sets: 3, repsMin: 30, repsMax: 45, weight: 40, target: 'Core', alt: 'Dead bug / Hollow body hold', alternatives: ['Dead bug', 'Hollow body hold'], timed: true, muscles: ['core'] }
     ]
   },
   6: {
@@ -1091,6 +1112,26 @@ function seedPastSessions() {
   save();
 }
 seedPastSessions();
+
+// One-time migration: pad seeded 2-set logs to 3 sets after we made all exercises 3-set
+function migrateThreeSets() {
+  if (state.settings.migratedThreeSets) return;
+  for (const [date, w] of Object.entries(state.workouts)) {
+    const day = DAYS[w.dayKey]; if (!day) continue;
+    for (const ex of day.exercises) {
+      if (!w.logs[ex.id]) continue;
+      while (w.logs[ex.id].length < ex.sets) {
+        const last = w.logs[ex.id][w.logs[ex.id].length - 1];
+        if (last && last.d) {
+          w.logs[ex.id].push({ w: last.w, r: last.r, d: true });
+        } else break;
+      }
+    }
+  }
+  state.settings.migratedThreeSets = true;
+  save();
+}
+migrateThreeSets();
 
 /* =========== HELPERS =========== */
 function $(id) { return document.getElementById(id); }
@@ -1481,6 +1522,31 @@ function getNudges() {
   return out.slice(0, 3);
 }
 
+function buildPhaseProgressCard() {
+  const total = totalSessions();
+  const ph = currentPhase();
+  // Phase 1 is sessions 1-16; later phases scale similarly. For now hardcode P1 target = 16.
+  const PHASE_TARGETS = { 1: 16, 2: 24, 3: 32, 4: 48 };
+  const target = PHASE_TARGETS[ph.num] || 16;
+  const pct = Math.min(1, total / target);
+  const r = 22, c = 2 * Math.PI * r;
+  const offset = c * (1 - pct);
+  const card = el('div', { class: 'phase-progress' });
+  const ring = el('div', { class: 'ring' });
+  ring.innerHTML = `
+    <svg viewBox="0 0 56 56" width="56" height="56">
+      <circle class="ring-bg" cx="28" cy="28" r="${r}"/>
+      <circle class="ring-fg" cx="28" cy="28" r="${r}" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"/>
+    </svg>
+    <span class="ring-label">${Math.round(pct * 100)}%</span>`;
+  card.appendChild(ring);
+  card.appendChild(el('div', { class: 'info' }, [
+    el('div', { class: 'num' }, `${total} / ${target} sessions`),
+    el('div', { class: 'lbl' }, `Phase ${ph.num} — ${ph.name}`)
+  ]));
+  return card;
+}
+
 function makeQuickBtn(label, icon, onclick) {
   return el('button', { class: 'quick-btn', onclick }, [
     el('div', { class: 'quick-icon' }, icon),
@@ -1498,8 +1564,7 @@ function renderHome() {
   const hour = new Date().getHours();
   const tod = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
   v.appendChild(el('div', { class: 'greeting' }, [
-    el('div', { class: 'small' }, `Good ${tod}`),
-    el('h2', { class: 'name' }, 'Hey Mustapha 👋')
+    el('h2', { class: 'name' }, `Good ${tod}`)
   ]));
 
   // Quote
@@ -1509,21 +1574,12 @@ function renderHome() {
     el('div', { class: 'quote-author' }, '— ' + q.author)
   ]));
 
-  // Streak banner (above CTA, only when streak >= 1)
-  const streak = getStreak();
-  if (streak >= 1) {
-    v.appendChild(el('div', { class: 'streak-banner' }, [
-      el('span', { class: 'streak-emoji' }, '🔥'),
-      el('span', { class: 'streak-text' }, [
-        el('b', {}, `${streak} `),
-        document.createTextNode(streak === 1 ? 'week complete' : 'weeks in a row')
-      ])
-    ]));
-  }
+  // Phase 1 progress ring
+  v.appendChild(buildPhaseProgressCard());
 
   // Today CTA
   const cta = el('button', {
-    class: 'today-cta',
+    class: 'today-cta' + (day ? '' : ' rest'),
     onclick: () => { activeTab = 'today'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   });
   if (day) {
@@ -1850,11 +1906,6 @@ function renderExercise(ex, date, dayKey) {
   icons.appendChild(makeActionBtn('History',
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>',
     () => openStrengthChart(ex)));
-  if (!ex.bw && !ex.timed) {
-    icons.appendChild(makeActionBtn('Plates',
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M5 12h2M17 12h2M12 5v2M12 17v2"/></svg>',
-      () => openPlateModal(ex.weight)));
-  }
   body.appendChild(icons);
 
   // Spec line
@@ -2684,10 +2735,6 @@ function renderMore() {
   // Tools
   const tools = el('div', { class: 'card' });
   tools.appendChild(el('div', { class: 'card-title' }, 'Tools'));
-  tools.appendChild(el('div', { class: 'list-item', onclick: () => openPlateModal() }, [
-    el('div', {}, 'Plate calculator'),
-    el('div', { class: 'right' }, [el('span', {}, '›')])
-  ]));
   tools.appendChild(el('div', { class: 'list-item', onclick: exportData }, [
     el('div', {}, 'Export data (JSON)'),
     el('div', { class: 'right' }, [el('span', {}, '↓')])
@@ -2755,7 +2802,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v0.5 · Started ${PROGRAM_START}`));
+  }, `MyGym · v0.6 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
