@@ -1206,7 +1206,10 @@ function seedPastSessions() {
     added++;
   }
   state.settings.seededPastSessions = true;
-  if (added > 0) save();
+  if (added > 0) {
+    save();
+    setTimeout(() => toast(`Restored ${added} past sessions`), 200);
+  }
 }
 seedPastSessions();
 
@@ -2930,6 +2933,19 @@ function renderMore() {
   // Tools
   const tools = el('div', { class: 'card' });
   tools.appendChild(el('div', { class: 'card-title' }, 'Tools'));
+  tools.appendChild(el('div', {
+    class: 'list-item',
+    onclick: () => {
+      const before = Object.keys(state.workouts).length;
+      seedPastSessions();
+      const added = Object.keys(state.workouts).length - before;
+      toast(added > 0 ? `Restored ${added} past sessions` : 'All past sessions present');
+      render();
+    }
+  }, [
+    el('div', {}, 'Sync past sessions'),
+    el('div', { class: 'right' }, [el('span', {}, '↻')])
+  ]));
   tools.appendChild(el('div', { class: 'list-item', onclick: exportData }, [
     el('div', {}, 'Export data (JSON)'),
     el('div', { class: 'right' }, [el('span', {}, '↓')])
@@ -2986,7 +3002,9 @@ function renderMore() {
     class: 'list-item',
     onclick: () => {
       if (!confirm('Clear all logged data? This cannot be undone.')) return;
-      state = structuredClone(defaultState); save(); render();
+      state = structuredClone(defaultState);
+      seedPastSessions();
+      save(); render();
       toast('Reset complete');
     }
   }, [
@@ -2997,7 +3015,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v1.0 · Started ${PROGRAM_START}`));
+  }, `MyGym · v1.1 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
@@ -3263,6 +3281,7 @@ function importData() {
         if (!confirm('Replace current data with imported file?')) return;
         state = { ...structuredClone(defaultState), ...data };
         for (const k of Object.keys(defaultState)) if (state[k] === undefined) state[k] = defaultState[k];
+        seedPastSessions();
         save(); render(); toast('Imported');
       } catch (err) { alert('Invalid file'); }
     };
