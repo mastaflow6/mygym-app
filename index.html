@@ -700,11 +700,11 @@
   }
 
   /* === Home page === */
-  .greeting { padding: 4px 0 14px; }
-  .greeting .small { color: var(--text-muted); font-size: 13px; font-weight: 500; }
+  .greeting { padding: 2px 0 12px; }
   .greeting .name {
-    font-size: 28px; font-weight: 700; margin: 4px 0 0;
-    letter-spacing: -0.02em;
+    font-size: 16px; font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: -0.01em;
   }
   .quote-card {
     background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
@@ -1165,9 +1165,9 @@ try {
 }
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
-/* one-time seed for past 10 sessions (Apr 7 - Apr 25, 2026) */
+/* Idempotent seed for past 10 sessions (Apr 7 - Apr 25, 2026).
+   Skips dates that already exist; runs every load to repair missing data. */
 function seedPastSessions() {
-  if (state.settings.seededPastSessions) return;
   const seed = [
     // Week 1 (Apr 7-13): 3 sessions, low rep range
     { date: '2026-04-07', dayKey: 2, repFloor: 'min' },
@@ -1183,6 +1183,7 @@ function seedPastSessions() {
     { date: '2026-04-23', dayKey: 4, repFloor: 'target' },
     { date: '2026-04-25', dayKey: 6, repFloor: 'target' }
   ];
+  let added = 0;
   for (const s of seed) {
     if (state.workouts[s.date]) continue;
     const day = DAYS[s.dayKey]; if (!day) continue;
@@ -1202,9 +1203,10 @@ function seedPastSessions() {
       timers: { warmup: 5 * 60 * 1000, workout: 55 * 60 * 1000, cooldown: 0 },
       activePhase: null, phaseStart: null
     };
+    added++;
   }
   state.settings.seededPastSessions = true;
-  save();
+  if (added > 0) save();
 }
 seedPastSessions();
 
@@ -1715,7 +1717,7 @@ function renderHome() {
   const hour = new Date().getHours();
   const tod = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
   v.appendChild(el('div', { class: 'greeting' }, [
-    el('h2', { class: 'name' }, `Good ${tod}`)
+    el('div', { class: 'name' }, `Good ${tod}, Mustapha`)
   ]));
 
   // Quote
@@ -2621,19 +2623,28 @@ function renderProgress() {
   monthCard.appendChild(buildMonthlyChart());
   v.appendChild(monthCard);
 
-  // Weekly volume per muscle
+  // Weekly volume per muscle (sorted descending, helpful overview)
   const volCard = el('div', { class: 'card' });
-  volCard.appendChild(el('div', { class: 'card-title' }, 'This week — sets per muscle'));
   const vol = getWeeklyVolume();
-  const max = Math.max(1, ...Object.values(vol));
-  MUSCLES.forEach(m => {
-    const v = vol[m] || 0;
-    const row = el('div', { class: 'bar-row' });
-    row.appendChild(el('div', { class: 'lbl' }, m));
-    row.appendChild(el('div', { class: 'bar' }, [el('span', { style: `width:${(v / max * 100)}%` })]));
-    row.appendChild(el('div', { class: 'v' }, String(v)));
-    volCard.appendChild(row);
-  });
+  const totalSets = Object.values(vol).reduce((a, x) => a + x, 0);
+  volCard.appendChild(el('div', { class: 'row between', style: 'margin-bottom:10px;' }, [
+    el('div', { class: 'card-title', style: 'margin:0;' }, 'This week — sets per muscle'),
+    el('span', { class: 'chip accent' }, `${totalSets} sets`)
+  ]));
+  if (totalSets === 0) {
+    volCard.appendChild(el('div', { class: 'empty' }, 'No sets logged this week yet.'));
+  } else {
+    const entries = MUSCLES.map(m => [m, vol[m] || 0]).sort((a, b) => b[1] - a[1]);
+    const max = Math.max(1, ...entries.map(e => e[1]));
+    entries.forEach(([m, val]) => {
+      if (val === 0) return; // hide muscles with no sets this week
+      const row = el('div', { class: 'bar-row' });
+      row.appendChild(el('div', { class: 'lbl' }, m));
+      row.appendChild(el('div', { class: 'bar' }, [el('span', { style: `width:${(val / max * 100)}%` })]));
+      row.appendChild(el('div', { class: 'v' }, String(val)));
+      volCard.appendChild(row);
+    });
+  }
   v.appendChild(volCard);
 
   // Phase track
@@ -2706,6 +2717,11 @@ function buildMonthlyChart() {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const k = d.toISOString().slice(0, 7);
     cols.push({ key: k, label: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()], data: months[k] });
+  }
+  const totalAcross = cols.reduce((a, c) => a + (c.data?.sessions || 0), 0);
+  if (totalAcross === 0) {
+    const empty = el('div', { class: 'empty' }, 'Finish a workout to see monthly stats.');
+    return empty;
   }
   const max = Math.max(1, ...cols.map(c => c.data?.sessions || 0));
   const grid = el('div', { class: 'month-grid' });
@@ -2981,7 +2997,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v0.9 · Started ${PROGRAM_START}`));
+  }, `MyGym · v1.0 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
