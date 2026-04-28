@@ -1132,6 +1132,27 @@ const SUPPLEMENTS = [
   { id: 'mag', name: 'Magnesium Bisglycinate', dose: '3 tabs (~300mg)', when: '30 min before bed' }
 ];
 
+const BAG_ITEMS = [
+  { section: 'Workout', items: [
+    { id: 'water-bottle', label: 'Water bottle' },
+    { id: 'towel-micro', label: 'Microfiber towel' },
+    { id: 'straps', label: 'Lifting straps' },
+    { id: 'lock', label: 'Combination lock' },
+    { id: 'airpods', label: 'AirPods' }
+  ]},
+  { section: 'After gym', items: [
+    { id: 'towel-large', label: 'Large towel' },
+    { id: 'flipflops', label: 'Flip flops' },
+    { id: 'shorts', label: 'Shorts' },
+    { id: 'tshirt', label: 'T-shirt' },
+    { id: 'sweatpants', label: 'Sweatpants' },
+    { id: 'jacket', label: 'Zip jacket' },
+    { id: 'bodywash', label: 'Body wash' },
+    { id: 'cap', label: 'Cap' }
+  ]}
+];
+const BAG_ITEMS_FLAT = BAG_ITEMS.flatMap(s => s.items);
+
 const ROUTINE = [
   { time: '07:00', what: 'Wake up · water · open window · 5 min light movement' },
   { time: '07:15', what: 'Breakfast + D3 + Omega 3' },
@@ -1260,9 +1281,10 @@ const defaultState = {
   sleep: [],
   water: {},
   supplements: {},
+  bag: {},
   photos: [],
   notes: {},
-  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 8, notifications: false, warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0 }
+  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0 }
 };
 
 let state;
@@ -1660,6 +1682,17 @@ function migrateThreeSets() {
 }
 migrateThreeSets();
 
+// One-time migration: cup size changed from ~250ml to ~500ml. Halve the daily target so
+// the total volume stays the same (8 cups × 250ml = 2L → 4 bottles × 500ml = 2L).
+function migrateWaterTo500ml() {
+  if (state.settings.migratedWaterTo500ml) return;
+  const cur = state.settings.waterTarget || 8;
+  state.settings.waterTarget = Math.max(2, Math.round(cur / 2));
+  state.settings.migratedWaterTo500ml = true;
+  save({ skipCloud: true });
+}
+migrateWaterTo500ml();
+
 /* =========== HELPERS =========== */
 function $(id) { return document.getElementById(id); }
 function el(tag, attrs = {}, children = []) {
@@ -1905,6 +1938,14 @@ function prevMeasurement() { return state.measurements.length > 1 ? state.measur
 function lastSleep() { return state.sleep[state.sleep.length - 1] || null; }
 function todaysSleep() { return state.sleep.find(s => s.date === today()); }
 function todaysWater() { return state.water[today()] || 0; }
+function todaysBag() { return state.bag[today()] || []; }
+function bagToggle(id) {
+  const k = today();
+  const cur = new Set(state.bag[k] || []);
+  if (cur.has(id)) cur.delete(id); else cur.add(id);
+  state.bag[k] = [...cur];
+  save();
+}
 
 /* =========== TIMERS =========== */
 let activeTab = 'home';
@@ -2147,7 +2188,7 @@ function getNudges() {
   }
   const wc = todaysWater();
   if (wc < state.settings.waterTarget && new Date().getHours() >= 14) {
-    out.push({ icon: '💧', text: `Water: ${wc}/${state.settings.waterTarget} cups today`, action: () => { activeTab = 'more'; render(); } });
+    out.push({ icon: '💧', text: `Water: ${wc}/${state.settings.waterTarget} bottles today`, action: () => { activeTab = 'more'; render(); } });
   }
   const ls = lastSleep();
   if (!ls || diffDays(ls.date, today()) >= 2) {
@@ -2513,6 +2554,22 @@ function renderHome() {
   ql.appendChild(makeQuickBtn('Sleep', '😴', openSleepModal));
   ql.appendChild(makeQuickBtn('Measure', '📏', openMeasurementsModal));
   v.appendChild(ql);
+
+  // Gym bag (workout days only)
+  if (day) {
+    const bagDone = todaysBag().length;
+    const bagTotal = BAG_ITEMS_FLAT.length;
+    const bagFull = bagDone === bagTotal;
+    const bagCard = el('div', { class: 'card', style: 'cursor:pointer;', onclick: openBagModal });
+    bagCard.appendChild(el('div', { class: 'row between', style: 'margin-bottom:8px;' }, [
+      el('div', { class: 'card-title', style: 'margin:0;' }, '🎒 Gym bag'),
+      el('span', { class: 'chip' + (bagFull ? ' success' : '') }, bagFull ? '✓ Packed' : `${bagDone} / ${bagTotal}`)
+    ]));
+    bagCard.appendChild(el('div', { class: 'progress-bar' }, [
+      el('span', { style: `width:${Math.min(100, bagDone / bagTotal * 100)}%; background: linear-gradient(90deg, #f59e0b, #d97706);` })
+    ]));
+    v.appendChild(bagCard);
+  }
 
   // Water
   const wcup = todaysWater();
@@ -3535,7 +3592,7 @@ function renderMore() {
     }));
   }
   wc.appendChild(water);
-  wc.appendChild(el('div', { class: 'small muted' }, '~250ml each. Tap to mark filled.'));
+  wc.appendChild(el('div', { class: 'small muted' }, '~500ml each (1 bottle). Tap to mark filled.'));
   v.appendChild(wc);
 
   // Supplements
@@ -3701,13 +3758,16 @@ function renderMore() {
   set.appendChild(el('div', {
     class: 'list-item',
     onclick: () => {
+      const opts = [3, 4, 5, 6, 8];
       const cur = state.settings.waterTarget;
-      const next = cur === 6 ? 8 : cur === 8 ? 10 : cur === 10 ? 12 : 6;
+      const idx = opts.indexOf(cur);
+      const next = opts[(idx + 1) % opts.length];
       state.settings.waterTarget = next; save(); render();
+      toast('Water target: ' + next + ' bottles (' + (next * 0.5).toFixed(1) + 'L)');
     }
   }, [
     el('div', {}, 'Water target'),
-    el('div', { class: 'right' }, [el('span', {}, state.settings.waterTarget + ' cups'), el('span', {}, '›')])
+    el('div', { class: 'right' }, [el('span', {}, state.settings.waterTarget + ' bottles · ' + (state.settings.waterTarget * 0.5).toFixed(1) + 'L'), el('span', {}, '›')])
   ]));
   set.appendChild(el('div', {
     class: 'list-item',
@@ -3760,6 +3820,59 @@ function renderMore() {
 }
 
 /* =========== MODALS =========== */
+function openBagModal() {
+  const m = el('div');
+  m.appendChild(el('h3', {}, '🎒 Gym bag checklist'));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:8px;' }, 'Tap to mark packed. Resets each day.'));
+
+  const checked = new Set(todaysBag());
+
+  BAG_ITEMS.forEach(group => {
+    m.appendChild(el('div', {
+      style: 'margin:18px 0 4px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;'
+    }, group.section));
+
+    group.items.forEach(it => {
+      const isChecked = checked.has(it.id);
+      const row = el('div', {
+        class: 'list-item',
+        style: 'gap:12px;',
+        onclick: () => { bagToggle(it.id); openBagModal(); render(); }
+      }, [
+        el('span', {
+          style: `display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;border:2px solid ${isChecked ? '#22c55e' : 'var(--border)'};background:${isChecked ? '#22c55e' : 'transparent'};color:white;font-size:14px;font-weight:700;flex-shrink:0;`
+        }, isChecked ? '✓' : ''),
+        el('div', {
+          style: `flex:1;${isChecked ? 'text-decoration:line-through;color:var(--text-muted);' : ''}`
+        }, it.label)
+      ]);
+      m.appendChild(row);
+    });
+  });
+
+  const total = BAG_ITEMS_FLAT.length;
+  const done = checked.size;
+  m.appendChild(el('div', {
+    class: 'small muted',
+    style: 'margin-top:14px;text-align:center;'
+  }, `${done} / ${total} packed`));
+
+  if (done > 0) {
+    m.appendChild(el('button', {
+      class: 'btn secondary',
+      style: 'margin-top:12px;',
+      onclick: () => { state.bag[today()] = []; save(); openBagModal(); render(); }
+    }, 'Clear all'));
+  }
+  m.appendChild(el('button', {
+    class: 'btn',
+    style: 'margin-top:8px;',
+    onclick: closeModal
+  }, 'Done'));
+
+  openModal(m);
+}
+
 function openWeightModal() {
   const m = el('div');
   m.appendChild(el('h3', {}, 'Log body weight'));
