@@ -391,6 +391,40 @@
   .checklist .text b { display: block; font-size: 14px; margin-bottom: 2px; }
   .checklist .text .meta { font-size: 12px; color: var(--text-muted); }
 
+  /* Bag-row variant: bigger tap target, single-line */
+  .checklist li.bag-row { padding: 14px 0; align-items: center; }
+  .checklist li.bag-row .box { width: 26px; height: 26px; margin-top: 0; }
+  .checklist li.bag-row .box svg { width: 16px; height: 16px; }
+  .checklist li.bag-row .text { font-size: 15px; align-self: center; }
+  .checklist li.bag-row.done .text { color: var(--text-muted); text-decoration: line-through; }
+
+  /* Skip workout button */
+  .skip-cta {
+    width: 100%; padding: 12px; margin-top: 8px;
+    background: var(--surface-2); color: var(--text-muted);
+    border: 1px solid var(--border); border-radius: 12px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all 0.15s;
+  }
+  .skip-cta:hover { background: var(--surface-3); color: var(--text); }
+
+  /* Inline change link next to Today CTA */
+  .today-change {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; color: var(--text-muted); cursor: pointer;
+    padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px;
+    background: var(--surface-2); transition: all 0.15s;
+  }
+  .today-change:hover { color: var(--text); border-color: var(--accent); }
+
+  /* Plan-day card with override marker */
+  .plan-shifted-tag {
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 2px 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent);
+    margin-left: 6px;
+  }
+
   /* Modal */
   .modal-bg {
     position: fixed; inset: 0; background: rgba(0,0,0,0.6);
@@ -1133,25 +1167,20 @@ const SUPPLEMENTS = [
 ];
 
 const BAG_ITEMS = [
-  { section: 'Workout', items: [
-    { id: 'water-bottle', label: 'Water bottle' },
-    { id: 'towel-micro', label: 'Microfiber towel' },
-    { id: 'straps', label: 'Lifting straps' },
-    { id: 'lock', label: 'Combination lock' },
-    { id: 'airpods', label: 'AirPods' }
-  ]},
-  { section: 'After gym', items: [
-    { id: 'towel-large', label: 'Large towel' },
-    { id: 'flipflops', label: 'Flip flops' },
-    { id: 'shorts', label: 'Shorts' },
-    { id: 'tshirt', label: 'T-shirt' },
-    { id: 'sweatpants', label: 'Sweatpants' },
-    { id: 'jacket', label: 'Zip jacket' },
-    { id: 'bodywash', label: 'Body wash' },
-    { id: 'cap', label: 'Cap' }
-  ]}
+  { id: 'water-bottle', label: 'Water bottle' },
+  { id: 'airpods', label: 'AirPods' },
+  { id: 'towel-micro', label: 'Microfiber towel' },
+  { id: 'straps', label: 'Lifting straps' },
+  { id: 'lock', label: 'Combination lock' },
+  { id: 'bodywash', label: 'Body wash' },
+  { id: 'towel-large', label: 'Large towel' },
+  { id: 'flipflops', label: 'Flip flops' },
+  { id: 'cap', label: 'Cap' },
+  { id: 'tshirt', label: 'T-shirt' },
+  { id: 'shorts', label: 'Shorts' },
+  { id: 'sweatpants', label: 'Sweatpants' },
+  { id: 'jacket', label: 'Zip jacket' }
 ];
-const BAG_ITEMS_FLAT = BAG_ITEMS.flatMap(s => s.items);
 
 const ROUTINE = [
   { time: '07:00', what: 'Wake up · water · open window · 5 min light movement' },
@@ -1282,9 +1311,10 @@ const defaultState = {
   water: {},
   supplements: {},
   bag: {},
+  plan: { skippedDates: [], overrides: {} },
   photos: [],
   notes: {},
-  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0 }
+  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false }
 };
 
 let state;
@@ -1947,6 +1977,124 @@ function bagToggle(id) {
   save();
 }
 
+/* =========== FLEXIBLE PLAN: skip / swap =========== */
+// Natural workout-day order (chronological, by dow): Mon→Push, Tue→Pull, Thu→Legs, Sat→Upper.
+// We don't hardcode this cycle — we read it dynamically by walking the calendar from PROGRAM_START,
+// so the math stays correct regardless of which weekday the program starts on.
+
+// Count natural workout slots from PROGRAM_START up to and including dateStr.
+// A natural slot = any date whose dow has a DAYS entry. Returns 0 for the very first slot.
+function naturalWorkoutSlotIndex(dateStr) {
+  const start = new Date(PROGRAM_START + 'T00:00:00');
+  const end = new Date(dateStr + 'T00:00:00');
+  if (end < start) return -1;
+  const days = Math.floor((end - start) / 86400000);
+  let count = 0;
+  for (let i = 0; i <= days; i++) {
+    const d = new Date(start.getTime() + i * 86400000);
+    if (DAYS[d.getDay()]) count++;
+  }
+  return count - 1; // 0-indexed
+}
+
+// Inverse of naturalWorkoutSlotIndex: which dayKey lives at the K-th natural slot
+// (counting from PROGRAM_START)? Returns null for negative K.
+function naturalSessionAtSlot(slot) {
+  if (slot < 0) return null;
+  const start = new Date(PROGRAM_START + 'T00:00:00');
+  let count = 0;
+  // 365 days is plenty for our forward-looking views.
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(start.getTime() + i * 86400000);
+    if (DAYS[d.getDay()]) {
+      if (count === slot) return d.getDay();
+      count++;
+    }
+  }
+  return null;
+}
+
+function countSkipsBefore(dateStr) {
+  if (!state.plan?.skippedDates?.length) return 0;
+  return state.plan.skippedDates.filter(d => d < dateStr).length;
+}
+
+// The session a date should run, accounting for skips and per-day overrides.
+// Returns dayKey (1, 2, 4, 6) or null for rest.
+function effectiveDayKey(dateStr) {
+  if (!state.plan) return DAYS[new Date(dateStr + 'T00:00:00').getDay()] ? new Date(dateStr + 'T00:00:00').getDay() : null;
+  if (state.plan.skippedDates?.includes(dateStr)) return null;
+  if (state.plan.overrides && state.plan.overrides[dateStr] != null) return state.plan.overrides[dateStr];
+  const dow = new Date(dateStr + 'T00:00:00').getDay();
+  if (!DAYS[dow]) return null; // Wed/Fri/Sun stay rest
+  const slot = naturalWorkoutSlotIndex(dateStr);
+  if (slot < 0) return dow;
+  const shift = countSkipsBefore(dateStr);
+  return naturalSessionAtSlot(slot - shift) ?? dow;
+}
+
+function nextDateStr(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0,10);
+}
+
+// Return the next N dates' planned sessions, starting from `fromDate` inclusive.
+function upcomingSessions(fromDate, n) {
+  const out = [];
+  let d = fromDate;
+  for (let i = 0; i < n; i++) {
+    out.push({ date: d, dayKey: effectiveDayKey(d) });
+    d = nextDateStr(d);
+  }
+  return out;
+}
+
+// Skip today: mark today as rest, persist, save. Today's session naturally
+// shifts to the next natural workout slot via effectiveDayKey.
+function skipTodayCommit() {
+  const t = today();
+  if (!state.plan) state.plan = { skippedDates: [], overrides: {} };
+  if (!state.plan.skippedDates.includes(t)) state.plan.skippedDates.push(t);
+  // Drop any override for today since we're now resting.
+  if (state.plan.overrides) delete state.plan.overrides[t];
+  // Discard any in-progress workout state for today.
+  delete state.workouts[t];
+  save();
+}
+
+function setTodayOverride(dayKey) {
+  const t = today();
+  if (!state.plan) state.plan = { skippedDates: [], overrides: {} };
+  // Un-skip if previously skipped.
+  state.plan.skippedDates = state.plan.skippedDates.filter(d => d !== t);
+  state.plan.overrides[t] = dayKey;
+  // If a workout was already initialized with a different dayKey, update it via ensureWorkout.
+  ensureWorkout(t, dayKey);
+  save();
+}
+
+function resetPlanOverrides() {
+  if (!state.plan) state.plan = { skippedDates: [], overrides: {} };
+  state.plan.skippedDates = [];
+  state.plan.overrides = {};
+  save();
+}
+
+// Return the dayKey actually performed yesterday (logged session if any, else effective plan).
+function yesterdayDayKey() {
+  const d = new Date(today() + 'T00:00:00');
+  d.setDate(d.getDate() - 1);
+  const yStr = d.toISOString().slice(0,10);
+  const w = state.workouts[yStr];
+  if (w && (w.finished || (w.logs && Object.values(w.logs).some(arr => arr.length)))) return w.dayKey;
+  return effectiveDayKey(yStr);
+}
+
+function tomorrowDayKey() {
+  return effectiveDayKey(nextDateStr(today()));
+}
+
 /* =========== TIMERS =========== */
 let activeTab = 'home';
 let activeDayKey = null;
@@ -2040,7 +2188,7 @@ $('restSkip').onclick = stopRest;
 $('restAdd').onclick = () => { restEndAt += 15000; updateRest(); };
 
 function setPhase(date, phase) {
-  const w = ensureWorkout(date, activeDayKey ?? todayDow());
+  const w = ensureWorkout(date, activeDayKey ?? effectiveDayKey(date) ?? todayDow());
   const now = Date.now();
   if (w.activePhase && w.phaseStart) {
     w.timers[w.activePhase] = (w.timers[w.activePhase] || 0) + (now - w.phaseStart);
@@ -2061,7 +2209,7 @@ function setPhase(date, phase) {
 }
 
 function endWarmupAndStartWorkout(date) {
-  const w = ensureWorkout(date, activeDayKey ?? todayDow());
+  const w = ensureWorkout(date, activeDayKey ?? effectiveDayKey(date) ?? todayDow());
   const now = Date.now();
   if (w.activePhase === 'warmup' && w.phaseStart) {
     w.timers.warmup = (w.timers.warmup || 0) + (now - w.phaseStart);
@@ -2450,7 +2598,10 @@ function renderHome() {
   const v = $('view');
   const date = today();
   const dow = todayDow();
-  const day = DAYS[dow];
+  const todayKey = effectiveDayKey(date);
+  const day = todayKey != null ? DAYS[todayKey] : null;
+  const isSkipped = state.plan?.skippedDates?.includes(date) || false;
+  const isOverride = state.plan?.overrides && state.plan.overrides[date] != null;
 
   // Focus takeover: while a phase is active (or session paused mid-flight), hide the rest of Home
   const wToday = state.workouts[date];
@@ -2458,7 +2609,7 @@ function renderHome() {
   const inFocus = day && wToday && !wToday.finished && !homeFocusExited && (
     wToday.activePhase === 'warmup' || wToday.activePhase === 'workout' || sessionStarted
   );
-  if (inFocus) { renderHomeFocus(date, dow, wToday); return; }
+  if (inFocus) { renderHomeFocus(date, todayKey, wToday); return; }
 
   // Greeting
   const hour = new Date().getHours();
@@ -2483,10 +2634,12 @@ function renderHome() {
     onclick: () => { activeTab = 'today'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   });
   if (day) {
-    const prog = workoutProgress(date, dow);
+    const prog = workoutProgress(date, todayKey);
     const pct = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
     const wkout = state.workouts[date];
-    cta.appendChild(el('div', { class: 'today-label' }, `${DAY_LABELS[dow]} · ${day.name} day`));
+    const tag = isOverride ? ' <span class="plan-shifted-tag">picked</span>'
+      : (todayKey !== dow && DAYS[dow]) ? ' <span class="plan-shifted-tag">shifted</span>' : '';
+    cta.appendChild(el('div', { class: 'today-label', html: `${DAY_LABELS[dow]} · ${day.name} day${tag}` }));
     cta.appendChild(el('div', { class: 'today-stats' }, `${prog.done} / ${prog.total} sets`));
     cta.appendChild(el('div', { class: 'today-progress' }, [
       el('div', { class: 'progress-bar' }, [el('span', { style: `width:${pct}%` })])
@@ -2495,11 +2648,20 @@ function renderHome() {
       wkout?.finished ? '✓ Done — view session →' :
       prog.done > 0 ? 'Continue workout →' : 'Start workout →'));
   } else {
-    cta.appendChild(el('div', { class: 'today-label' }, `${DAY_LABELS[dow]} · Rest day`));
+    const restLabel = isSkipped ? 'Skipped — rest today' : 'Rest day';
+    cta.appendChild(el('div', { class: 'today-label' }, `${DAY_LABELS[dow]} · ${restLabel}`));
     cta.appendChild(el('div', { class: 'today-stats' }, 'Recover · sleep early'));
     cta.appendChild(el('div', { class: 'today-cta-text' }, 'Pick a different day →'));
   }
   v.appendChild(cta);
+
+  // Change today's session — small pill below the CTA, on any day (workout or rest)
+  v.appendChild(el('div', { style: 'display:flex;justify-content:center;margin-top:-4px;margin-bottom:4px;' }, [
+    el('button', {
+      class: 'today-change',
+      onclick: () => openChangeSessionModal()
+    }, day ? 'Change today\'s session ›' : 'Pick a session for today ›')
+  ]));
 
   // Start warmup (focus mode) — only on workout days, not finished, no active phase
   if (day && !state.workouts[date]?.finished && !state.workouts[date]?.activePhase) {
@@ -2515,6 +2677,15 @@ function renderHome() {
         el('span', { class: 'bold' }, '▶ Start warmup'),
         el('span', { class: 'small dim' }, `${Math.round((state.settings.warmupTargetSec || 300)/60)} min · then auto-start workout`)
       ])
+    ]));
+
+    // Skip workout — moves today's session forward
+    v.appendChild(el('button', {
+      class: 'skip-cta',
+      onclick: () => openSkipConfirmModal()
+    }, [
+      el('span', { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:-2px;"><polygon points="5 4 15 12 5 20"/><line x1="19" y1="5" x2="19" y2="19"/></svg>' }),
+      el('span', {}, 'Skip workout — move to tomorrow')
     ]));
   }
 
@@ -2555,19 +2726,61 @@ function renderHome() {
   ql.appendChild(makeQuickBtn('Measure', '📏', openMeasurementsModal));
   v.appendChild(ql);
 
-  // Gym bag (workout days only)
+  // Gym bag (workout days only) — inline checklist
   if (day) {
-    const bagDone = todaysBag().length;
-    const bagTotal = BAG_ITEMS_FLAT.length;
+    const checked = new Set(todaysBag());
+    const bagDone = checked.size;
+    const bagTotal = BAG_ITEMS.length;
     const bagFull = bagDone === bagTotal;
-    const bagCard = el('div', { class: 'card', style: 'cursor:pointer;', onclick: openBagModal });
-    bagCard.appendChild(el('div', { class: 'row between', style: 'margin-bottom:8px;' }, [
+    // Auto-collapse when fully packed; user can also toggle manually.
+    const collapsed = state.settings.bagCollapsed || bagFull;
+
+    const bagCard = el('div', { class: 'card' });
+    const header = el('div', {
+      class: 'row between',
+      style: 'cursor:pointer;align-items:center;gap:8px;' + (collapsed ? '' : 'margin-bottom:8px;'),
+      onclick: () => {
+        state.settings.bagCollapsed = !state.settings.bagCollapsed;
+        save(); render();
+      }
+    });
+    header.appendChild(el('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
       el('div', { class: 'card-title', style: 'margin:0;' }, '🎒 Gym bag'),
       el('span', { class: 'chip' + (bagFull ? ' success' : '') }, bagFull ? '✓ Packed' : `${bagDone} / ${bagTotal}`)
     ]));
-    bagCard.appendChild(el('div', { class: 'progress-bar' }, [
-      el('span', { style: `width:${Math.min(100, bagDone / bagTotal * 100)}%; background: linear-gradient(90deg, #f59e0b, #d97706);` })
-    ]));
+    const rightControls = el('div', { class: 'row', style: 'gap:8px;align-items:center;' });
+    if (bagDone > 0 && !collapsed) {
+      rightControls.appendChild(el('button', {
+        class: 'btn small secondary',
+        style: 'padding:4px 10px;font-size:11px;',
+        onclick: (e) => {
+          e.stopPropagation();
+          state.bag[today()] = [];
+          save(); render();
+        }
+      }, 'Clear'));
+    }
+    rightControls.appendChild(el('span', {
+      style: 'color:var(--text-muted);font-size:14px;transition:transform 0.2s;' + (collapsed ? '' : 'transform:rotate(90deg);')
+    }, '›'));
+    header.appendChild(rightControls);
+    bagCard.appendChild(header);
+
+    if (!collapsed) {
+      const ul = el('ul', { class: 'checklist' });
+      BAG_ITEMS.forEach(it => {
+        const isChecked = checked.has(it.id);
+        const li = el('li', {
+          class: 'bag-row' + (isChecked ? ' done' : ''),
+          onclick: () => { bagToggle(it.id); render(); }
+        });
+        li.innerHTML = `
+          <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 12 10 18 20 6"/></svg></span>
+          <span class="text">${escapeHtml(it.label)}</span>`;
+        ul.appendChild(li);
+      });
+      bagCard.appendChild(ul);
+    }
     v.appendChild(bagCard);
   }
 
@@ -2628,7 +2841,7 @@ function renderToday() {
   const v = $('view');
   const dow = todayDow();
   const date = today();
-  const dayKey = activeDayKey ?? (DAYS[dow] ? dow : null);
+  const dayKey = activeDayKey ?? effectiveDayKey(date);
   const day = dayKey ? DAYS[dayKey] : null;
 
   if (!day) {
@@ -3041,7 +3254,7 @@ function openSwapModal(ex, date) {
     const opt = el('button', {
       class: 'swap-option' + (isActive ? ' active' : ''),
       onclick: () => {
-        const w = ensureWorkout(date, activeDayKey ?? todayDow());
+        const w = ensureWorkout(date, activeDayKey ?? effectiveDayKey(date) ?? todayDow());
         if (!w.swaps) w.swaps = {};
         if (i === 0) delete w.swaps[ex.id];
         else w.swaps[ex.id] = i;
@@ -3331,22 +3544,39 @@ function openVideoSearch(ex) {
 /* =========== PLAN =========== */
 function renderPlan() {
   const v = $('view');
-  const dow = todayDow();
-  const order = [1, 2, 3, 4, 5, 6, 0];
+  const t = today();
+  const skips = state.plan?.skippedDates?.length || 0;
+  const overrides = state.plan?.overrides ? Object.keys(state.plan.overrides).length : 0;
+  const isShifted = skips > 0 || overrides > 0;
 
   v.appendChild(el('div', { class: 'card', style: 'padding:14px 16px;' }, [
-    el('div', { class: 'card-title', style: 'margin-bottom:6px;' }, 'Weekly split'),
-    el('div', { class: 'small muted' }, '4 training days · 3 rest days · ~60 min sessions')
+    el('div', { class: 'card-title', style: 'margin-bottom:6px;' }, 'Next 7 days'),
+    el('div', { class: 'small muted' },
+      isShifted
+        ? `Plan shifted ${skips ? skips + ' skip' + (skips > 1 ? 's' : '') : ''}${skips && overrides ? ' · ' : ''}${overrides ? overrides + ' override' + (overrides > 1 ? 's' : '') : ''}`
+        : '4 training days · 3 rest days · ~60 min sessions')
   ]));
 
-  order.forEach(d => {
-    const day = DAYS[d];
-    const isToday = d === dow;
+  const sessions = upcomingSessions(t, 7);
+  sessions.forEach(({ date, dayKey }, i) => {
+    const dow = new Date(date + 'T00:00:00').getDay();
+    const day = dayKey ? DAYS[dayKey] : null;
+    const isToday = i === 0;
+    const isSkipped = state.plan?.skippedDates?.includes(date);
+    const isOverride = state.plan?.overrides && state.plan.overrides[date] != null;
+    const naturalKey = DAYS[dow] ? dow : null;
+    const isShiftedDay = day && dayKey !== naturalKey && !isOverride;
+
     const card = el('div', { class: 'day-card' + (day ? '' : ' rest') });
+    const headerRight = isToday ? el('span', { class: 'chip accent' }, 'Today')
+      : isOverride ? el('span', { class: 'chip accent' }, 'Picked')
+      : isShiftedDay ? el('span', { class: 'chip accent' }, 'Shifted')
+      : isSkipped ? el('span', { class: 'chip warn' }, 'Skipped')
+      : day ? el('span', { class: 'chip' }, `${day.exercises.length} ex`)
+      : null;
     const head = el('div', { class: 'header' }, [
-      el('div', { html: `<b>${DAY_LABELS[d]}</b> · ${day ? day.name : 'Rest'}` }),
-      isToday ? el('span', { class: 'chip accent' }, 'Today') :
-        day ? el('span', { class: 'chip' }, `${day.exercises.length} ex`) : null
+      el('div', { html: `<b>${DAY_LABELS[dow]}</b> · ${day ? day.name : (isSkipped ? 'Rest (skipped)' : 'Rest')}` }),
+      headerRight
     ]);
     card.appendChild(head);
     if (day) {
@@ -3364,6 +3594,19 @@ function renderPlan() {
     }
     v.appendChild(card);
   });
+
+  if (isShifted) {
+    v.appendChild(el('button', {
+      class: 'btn secondary',
+      style: 'margin-top:14px;',
+      onclick: () => {
+        if (!confirm('Reset plan? All skips and session overrides will be cleared and the calendar returns to the natural Push-Pull-Legs-Upper cycle.')) return;
+        resetPlanOverrides();
+        render();
+        toast('Plan reset to default');
+      }
+    }, 'Reset plan to default'));
+  }
 }
 
 /* =========== PROGRESS =========== */
@@ -3816,59 +4059,157 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v1.4 · Started ${PROGRAM_START}`));
+  }, `MyGym · v1.5 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
-function openBagModal() {
+function openSkipConfirmModal() {
   const m = el('div');
-  m.appendChild(el('h3', {}, '🎒 Gym bag checklist'));
-  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:8px;' }, 'Tap to mark packed. Resets each day.'));
+  m.appendChild(el('h3', {}, 'Skip workout — move to tomorrow?'));
 
-  const checked = new Set(todaysBag());
-
-  BAG_ITEMS.forEach(group => {
+  const t = today();
+  const w = state.workouts[t];
+  const hasLogs = w && w.logs && Object.values(w.logs).some(arr => arr.length);
+  if (hasLogs) {
     m.appendChild(el('div', {
-      style: 'margin:18px 0 4px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;'
-    }, group.section));
-
-    group.items.forEach(it => {
-      const isChecked = checked.has(it.id);
-      const row = el('div', {
-        class: 'list-item',
-        style: 'gap:12px;',
-        onclick: () => { bagToggle(it.id); openBagModal(); render(); }
-      }, [
-        el('span', {
-          style: `display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;border:2px solid ${isChecked ? '#22c55e' : 'var(--border)'};background:${isChecked ? '#22c55e' : 'transparent'};color:white;font-size:14px;font-weight:700;flex-shrink:0;`
-        }, isChecked ? '✓' : ''),
-        el('div', {
-          style: `flex:1;${isChecked ? 'text-decoration:line-through;color:var(--text-muted);' : ''}`
-        }, it.label)
-      ]);
-      m.appendChild(row);
-    });
-  });
-
-  const total = BAG_ITEMS_FLAT.length;
-  const done = checked.size;
-  m.appendChild(el('div', {
-    class: 'small muted',
-    style: 'margin-top:14px;text-align:center;'
-  }, `${done} / ${total} packed`));
-
-  if (done > 0) {
-    m.appendChild(el('button', {
-      class: 'btn secondary',
-      style: 'margin-top:12px;',
-      onclick: () => { state.bag[today()] = []; save(); openBagModal(); render(); }
-    }, 'Clear all'));
+      class: 'small',
+      style: 'margin-bottom:12px;padding:10px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:#fca5a5;'
+    }, '⚠ You\'ve already logged sets today. Skipping will discard them.'));
+  } else {
+    m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;' },
+      'Today becomes a rest day. Your sequence (Push → Pull → Legs → Upper) shifts forward one slot.'));
   }
+
+  // Before/after preview
+  const before = upcomingSessions(t, 7);
+  // Simulate: temporarily add today to skippedDates and re-compute
+  const origSkips = (state.plan?.skippedDates || []).slice();
+  if (!state.plan) state.plan = { skippedDates: [], overrides: {} };
+  state.plan.skippedDates = [...origSkips, t];
+  const after = upcomingSessions(t, 7);
+  state.plan.skippedDates = origSkips; // restore
+
+  const preview = el('div', {
+    class: 'small',
+    style: 'margin-bottom:14px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;font-family:ui-monospace,monospace;font-size:11px;line-height:1.6;'
+  });
+  let html = '<div style="color:var(--text-muted);margin-bottom:6px;font-weight:700;">NEXT 7 DAYS</div>';
+  for (let i = 0; i < before.length; i++) {
+    const b = before[i], a = after[i];
+    const dow = new Date(b.date + 'T00:00:00').getDay();
+    const lbl = DAY_LABELS[dow];
+    const bName = b.dayKey ? DAYS[b.dayKey].name : '—';
+    const aName = a.dayKey ? DAYS[a.dayKey].name : '—';
+    const same = bName === aName;
+    html += `<div style="display:flex;justify-content:space-between;${same ? 'opacity:0.55;' : ''}">`
+         + `<span style="min-width:34px;color:var(--text-muted);">${lbl}</span>`
+         + `<span style="flex:1;">${bName}</span>`
+         + `<span style="color:var(--text-muted);">→</span>`
+         + `<span style="flex:1;text-align:right;color:${same ? 'inherit' : 'var(--accent)'};">${aName}</span>`
+         + `</div>`;
+  }
+  preview.innerHTML = html;
+  m.appendChild(preview);
+
   m.appendChild(el('button', {
     class: 'btn',
-    style: 'margin-top:8px;',
-    onclick: closeModal
-  }, 'Done'));
+    onclick: () => {
+      skipTodayCommit();
+      closeModal();
+      activeTab = 'home';
+      activeDayKey = null;
+      homeFocusExited = false;
+      render();
+      toast('Workout shifted to tomorrow');
+    }
+  }, 'Skip & shift'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Cancel'));
+
+  openModal(m);
+}
+
+function openChangeSessionModal() {
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Change today\'s session'));
+
+  const t = today();
+  const dow = todayDow();
+  const currentKey = effectiveDayKey(t);
+  const naturalKey = DAYS[dow] ? dow : null;
+
+  let pickedKey = currentKey; // 'skip' | dayKey
+
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:14px;' },
+    currentKey
+      ? `Today is ${DAYS[currentKey].name}${currentKey === naturalKey && !state.plan?.overrides?.[t] ? ' (planned)' : ''}.`
+      : 'Today is a rest day.'));
+
+  const options = [
+    ...[1, 2, 4, 6].map(k => ({ key: k, name: DAYS[k].name, focus: DAYS[k].focus })),
+    { key: 'skip', name: 'Skip — rest today', focus: 'Move today\'s session forward one slot' }
+  ];
+
+  const yKey = yesterdayDayKey();
+  const tmKey = tomorrowDayKey();
+  const warningEl = el('div', {
+    style: 'margin:12px 0;padding:10px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:10px;color:#fcd34d;font-size:12px;display:none;'
+  });
+
+  function refreshWarning() {
+    if (typeof pickedKey !== 'number') { warningEl.style.display = 'none'; return; }
+    const conflicts = [];
+    if (yKey && yKey === pickedKey) conflicts.push(`done yesterday (${DAYS[yKey].name})`);
+    if (tmKey && tmKey === pickedKey) conflicts.push(`planned tomorrow (${DAYS[tmKey].name})`);
+    if (conflicts.length) {
+      warningEl.style.display = 'block';
+      warningEl.innerHTML = `⚠ <b>Recovery conflict:</b> ${DAYS[pickedKey].name} was ${conflicts.join(' & ')}. Same muscles need 48h+ to recover.`;
+    } else {
+      warningEl.style.display = 'none';
+    }
+  }
+
+  const optsContainer = el('div', { style: 'display:flex;flex-direction:column;gap:8px;margin-bottom:8px;' });
+  function rebuildOptions() {
+    optsContainer.innerHTML = '';
+    options.forEach(opt => {
+      const isSel = pickedKey === opt.key;
+      const isPlanned = opt.key === naturalKey && !state.plan?.overrides?.[t];
+      const card = el('button', {
+        class: 'swap-option' + (isSel ? ' active' : ''),
+        onclick: () => { pickedKey = opt.key; rebuildOptions(); refreshWarning(); }
+      });
+      const top = el('div', { class: 'row between', style: 'align-items:center;width:100%;' }, [
+        el('div', { class: 'swap-name' }, opt.name),
+        isPlanned ? el('span', { class: 'chip accent' }, 'Planned') : (isSel ? el('span', { class: 'chip accent' }, '✓ Selected') : null)
+      ].filter(Boolean));
+      card.appendChild(top);
+      card.appendChild(el('div', { class: 'swap-tag' }, opt.focus));
+      optsContainer.appendChild(card);
+    });
+  }
+  rebuildOptions();
+  m.appendChild(optsContainer);
+  m.appendChild(warningEl);
+  refreshWarning();
+
+  m.appendChild(el('button', {
+    class: 'btn',
+    onclick: () => {
+      if (pickedKey === 'skip') {
+        skipTodayCommit();
+        toast('Workout shifted to tomorrow');
+      } else if (typeof pickedKey === 'number') {
+        setTodayOverride(pickedKey);
+        toast('Today: ' + DAYS[pickedKey].name);
+      }
+      closeModal();
+      activeTab = 'home';
+      activeDayKey = null;
+      homeFocusExited = false;
+      render();
+    }
+  }, 'Confirm'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Cancel'));
 
   openModal(m);
 }
@@ -3989,7 +4330,7 @@ function openExerciseNoteModal(date, dayKey, ex) {
 }
 
 function openSessionNoteModal(date) {
-  const w = ensureWorkout(date, activeDayKey ?? todayDow());
+  const w = ensureWorkout(date, activeDayKey ?? effectiveDayKey(date) ?? todayDow());
   const m = el('div');
   m.appendChild(el('h3', {}, 'Session note'));
   m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;' }, 'How did this session feel overall? Energy, focus, sleep impact.'));
