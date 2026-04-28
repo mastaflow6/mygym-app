@@ -1262,7 +1262,7 @@ const defaultState = {
   supplements: {},
   photos: [],
   notes: {},
-  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 8, notifications: false, warmupTargetSec: 300 }
+  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 8, notifications: false, warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0 }
 };
 
 let state;
@@ -1284,7 +1284,311 @@ try {
 } catch (e) {
   state = structuredClone(defaultState);
 }
-function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function save(opts) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (!opts || !opts.skipCloud) scheduleCloudPush();
+}
+
+/* =========== CLOUD BACKUP (GitHub Gist) =========== */
+const CLOUD_GIST_FILENAME = 'mygym-data.json';
+const CLOUD_GIST_DESC = 'MyGym backup';
+let cloudPushTimer = null;
+let cloudSyncStatus = 'idle';      // 'idle' | 'syncing' | 'synced' | 'error' | 'auth-error'
+let cloudLastError = '';
+
+function cloudHeaders() {
+  return {
+    'Authorization': 'Bearer ' + state.settings.cloudGistToken,
+    'Accept': 'application/vnd.github+json',
+    'Content-Type': 'application/json'
+  };
+}
+
+async function cloudCreateOrUpdate() {
+  const token = state.settings.cloudGistToken;
+  if (!token || cloudSyncStatus === 'auth-error') return { ok: false, reason: 'no-token' };
+  cloudSyncStatus = 'syncing';
+  refreshCloudStatusUI();
+
+  // Don't sync the token itself — strip from payload to avoid an attacker reading the gist
+  // ever finding it (and to keep the gist content portable across accounts).
+  const payload = { ...state, settings: { ...state.settings, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0 } };
+  const body = JSON.stringify({
+    description: CLOUD_GIST_DESC,
+    public: false,
+    files: { [CLOUD_GIST_FILENAME]: { content: JSON.stringify(payload, null, 2) } }
+  });
+  const id = state.settings.cloudGistId;
+  const url = id ? ('https://api.github.com/gists/' + id) : 'https://api.github.com/gists';
+  const method = id ? 'PATCH' : 'POST';
+
+  try {
+    const res = await fetch(url, { method, headers: cloudHeaders(), body });
+    if (res.status === 401 || res.status === 403) {
+      cloudSyncStatus = 'auth-error';
+      cloudLastError = 'Invalid token (' + res.status + ')';
+      refreshCloudStatusUI();
+      return { ok: false, reason: 'auth' };
+    }
+    if (!res.ok) {
+      cloudSyncStatus = 'error';
+      cloudLastError = 'HTTP ' + res.status;
+      refreshCloudStatusUI();
+      return { ok: false, reason: 'http-' + res.status };
+    }
+    const data = await res.json();
+    if (!id && data.id) state.settings.cloudGistId = data.id;
+    state.settings.cloudLastSyncAt = Date.now();
+    save({ skipCloud: true });
+    cloudSyncStatus = 'synced';
+    cloudLastError = '';
+    refreshCloudStatusUI();
+    return { ok: true, id: data.id };
+  } catch (e) {
+    cloudSyncStatus = 'error';
+    cloudLastError = e.message || 'network';
+    refreshCloudStatusUI();
+    return { ok: false, reason: e.message };
+  }
+}
+
+async function cloudPull() {
+  const token = state.settings.cloudGistToken;
+  const id = state.settings.cloudGistId;
+  if (!token || !id) return { ok: false, reason: 'not-configured' };
+  cloudSyncStatus = 'syncing';
+  refreshCloudStatusUI();
+  try {
+    const res = await fetch('https://api.github.com/gists/' + id, { headers: cloudHeaders() });
+    if (res.status === 401 || res.status === 403) {
+      cloudSyncStatus = 'auth-error'; cloudLastError = 'Invalid token';
+      refreshCloudStatusUI();
+      return { ok: false, reason: 'auth' };
+    }
+    if (!res.ok) {
+      cloudSyncStatus = 'error'; cloudLastError = 'HTTP ' + res.status;
+      refreshCloudStatusUI();
+      return { ok: false, reason: 'http-' + res.status };
+    }
+    const data = await res.json();
+    const content = data.files && data.files[CLOUD_GIST_FILENAME] && data.files[CLOUD_GIST_FILENAME].content;
+    if (!content) {
+      cloudSyncStatus = 'error'; cloudLastError = 'No backup file in gist';
+      refreshCloudStatusUI();
+      return { ok: false, reason: 'no-content' };
+    }
+    const remote = JSON.parse(content);
+    // Preserve cloud creds (token + gist id stay device-local)
+    const keepToken = state.settings.cloudGistToken;
+    const keepId = state.settings.cloudGistId;
+    state = remote;
+    if (!state.settings) state.settings = {};
+    state.settings.cloudGistToken = keepToken;
+    state.settings.cloudGistId = keepId;
+    state.settings.cloudLastSyncAt = Date.now();
+    // Backfill any newer default keys
+    for (const k of Object.keys(defaultState)) if (state[k] === undefined) state[k] = defaultState[k];
+    for (const k of Object.keys(defaultState.settings)) if (state.settings[k] === undefined) state.settings[k] = defaultState.settings[k];
+    save({ skipCloud: true });
+    cloudSyncStatus = 'synced';
+    cloudLastError = '';
+    refreshCloudStatusUI();
+    return { ok: true };
+  } catch (e) {
+    cloudSyncStatus = 'error'; cloudLastError = e.message || 'network';
+    refreshCloudStatusUI();
+    return { ok: false, reason: e.message };
+  }
+}
+
+async function cloudFindExisting() {
+  const token = state.settings.cloudGistToken;
+  if (!token) return null;
+  try {
+    const res = await fetch('https://api.github.com/gists?per_page=100', { headers: cloudHeaders() });
+    if (!res.ok) return null;
+    const list = await res.json();
+    return list.find(g => g.description === CLOUD_GIST_DESC && g.files && g.files[CLOUD_GIST_FILENAME]) || null;
+  } catch (e) { return null; }
+}
+
+async function cloudConnect(token) {
+  state.settings.cloudGistToken = token.trim();
+  state.settings.cloudGistId = '';
+  cloudSyncStatus = 'syncing';
+  cloudLastError = '';
+  save({ skipCloud: true });
+  refreshCloudStatusUI();
+  const existing = await cloudFindExisting();
+  if (existing) {
+    state.settings.cloudGistId = existing.id;
+    save({ skipCloud: true });
+    return { ok: true, foundExisting: true, updatedAt: existing.updated_at };
+  }
+  // No existing — push current state as the initial backup
+  const r = await cloudCreateOrUpdate();
+  return { ok: r.ok, foundExisting: false, ...r };
+}
+
+function cloudDisconnect() {
+  state.settings.cloudGistToken = '';
+  state.settings.cloudGistId = '';
+  state.settings.cloudLastSyncAt = 0;
+  cloudSyncStatus = 'idle';
+  cloudLastError = '';
+  if (cloudPushTimer) { clearTimeout(cloudPushTimer); cloudPushTimer = null; }
+  save({ skipCloud: true });
+  refreshCloudStatusUI();
+}
+
+function scheduleCloudPush() {
+  if (!state || !state.settings || !state.settings.cloudGistToken) return;
+  if (cloudSyncStatus === 'auth-error') return; // stop auto-retry on bad token
+  if (cloudPushTimer) clearTimeout(cloudPushTimer);
+  cloudPushTimer = setTimeout(() => { cloudPushTimer = null; cloudCreateOrUpdate(); }, 3000);
+}
+
+function refreshCloudStatusUI() {
+  // Re-render More tab if visible so the status row updates. Cheap because the More tab is small.
+  if (typeof activeTab !== 'undefined' && activeTab === 'more') render();
+}
+
+function fmtCloudWhen(ts) {
+  if (!ts) return 'never';
+  const ms = Date.now() - ts;
+  if (ms < 60000) return 'just now';
+  if (ms < 3600000) return Math.floor(ms / 60000) + 'm ago';
+  if (ms < 86400000) return Math.floor(ms / 3600000) + 'h ago';
+  return Math.floor(ms / 86400000) + 'd ago';
+}
+
+function buildCloudBackupCard() {
+  const card = el('div', { class: 'card cloud-backup' });
+  const head = el('div', { class: 'row between', style: 'margin-bottom:8px;align-items:center;' });
+  head.appendChild(el('div', { class: 'card-title', style: 'margin:0;' }, 'Cloud backup'));
+  // Status pill
+  const isConfig = !!state.settings.cloudGistToken;
+  let pillCls = 'chip';
+  let pillText = 'Off';
+  if (isConfig) {
+    if (cloudSyncStatus === 'syncing') { pillCls += ' accent'; pillText = '⟳ Syncing'; }
+    else if (cloudSyncStatus === 'error') { pillCls += ' warn'; pillText = '⚠ Error'; }
+    else if (cloudSyncStatus === 'auth-error') { pillCls += ' warn'; pillText = '⚠ Bad token'; }
+    else { pillCls += ' success'; pillText = '✓ Synced'; }
+  }
+  head.appendChild(el('span', { class: pillCls }, pillText));
+  card.appendChild(head);
+
+  if (!isConfig) {
+    card.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' },
+      'Auto-save every change to a private GitHub Gist. Survives reinstalls and device wipes.'));
+    card.appendChild(el('button', {
+      class: 'btn',
+      onclick: openCloudConnectModal
+    }, 'Connect GitHub'));
+    return card;
+  }
+
+  // Configured: show status + actions
+  card.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' },
+    cloudSyncStatus === 'auth-error'
+      ? ('Token rejected: ' + cloudLastError + '. Reconnect with a new token.')
+      : ('Last sync: ' + fmtCloudWhen(state.settings.cloudLastSyncAt) +
+         (state.settings.cloudGistId ? '' : ' · No backup yet, tap Backup now') +
+         (cloudLastError && cloudSyncStatus === 'error' ? ' · ' + cloudLastError : ''))
+  ));
+
+  const row = el('div', { class: 'row wrap', style: 'gap:8px;' });
+  row.appendChild(el('button', {
+    class: 'btn small',
+    style: 'flex:1;min-width:42%;',
+    onclick: async () => {
+      const r = await cloudCreateOrUpdate();
+      toast(r.ok ? '✓ Backed up' : ('Backup failed: ' + (cloudLastError || r.reason)));
+    }
+  }, 'Backup now'));
+  row.appendChild(el('button', {
+    class: 'btn small secondary',
+    style: 'flex:1;min-width:42%;',
+    onclick: async () => {
+      if (!confirm('Replace all local data with the cloud backup? Anything local that is newer will be overwritten.')) return;
+      const r = await cloudPull();
+      if (r.ok) { toast('✓ Restored from cloud'); render(); }
+      else toast('Restore failed: ' + (cloudLastError || r.reason));
+    }
+  }, 'Restore from cloud'));
+  card.appendChild(row);
+
+  card.appendChild(el('button', {
+    class: 'btn small secondary',
+    style: 'margin-top:8px;width:100%;',
+    onclick: () => {
+      if (!confirm('Disconnect cloud backup? Your data stays here, but new changes will not auto-sync. The Gist on GitHub is not deleted.')) return;
+      cloudDisconnect();
+      toast('Cloud backup disconnected');
+    }
+  }, 'Disconnect'));
+
+  if (state.settings.cloudGistId) {
+    card.appendChild(el('div', { class: 'small dim', style: 'margin-top:8px;word-break:break-all;' },
+      'Gist ID: ' + state.settings.cloudGistId.slice(0, 12) + '…'));
+  }
+  return card;
+}
+
+function openCloudConnectModal() {
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Connect GitHub backup'));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;line-height:1.55;' },
+    'Paste the GitHub Personal Access Token you created (the one with the gist scope). The app will look for an existing backup; if none, it will create a new private Gist.'));
+  m.appendChild(el('label', { style: 'display:block;font-size:12px;font-weight:600;margin-bottom:6px;' }, 'Token (starts with ghp_…)'));
+  const inp = el('input', {
+    type: 'password',
+    autocomplete: 'off',
+    autocorrect: 'off',
+    autocapitalize: 'off',
+    spellcheck: 'false',
+    placeholder: 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    style: 'width:100%;padding:12px;border-radius:10px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);font-family:monospace;font-size:13px;'
+  });
+  m.appendChild(inp);
+  const status = el('div', { class: 'small muted', style: 'margin-top:10px;min-height:16px;' });
+  m.appendChild(status);
+
+  const btnRow = el('div', { class: 'row', style: 'gap:8px;margin-top:14px;' });
+  btnRow.appendChild(el('button', {
+    class: 'btn secondary', style: 'flex:1;', onclick: closeModal
+  }, 'Cancel'));
+  btnRow.appendChild(el('button', {
+    class: 'btn', style: 'flex:1;',
+    onclick: async () => {
+      const token = (inp.value || '').trim();
+      if (!token || token.length < 20) { status.textContent = 'Token looks too short. Paste the full ghp_ token.'; return; }
+      status.textContent = 'Connecting…';
+      const r = await cloudConnect(token);
+      if (!r.ok) { status.textContent = 'Failed: ' + (cloudLastError || r.reason); return; }
+      closeModal();
+      if (r.foundExisting) {
+        if (confirm('Found an existing MyGym backup on GitHub (last updated ' + new Date(r.updatedAt).toLocaleString() + '). Restore it now and overwrite this device\'s data?')) {
+          const pr = await cloudPull();
+          if (pr.ok) { toast('✓ Restored from cloud'); render(); }
+          else toast('Restore failed');
+        } else {
+          // User chose to keep local — push local now to overwrite remote
+          const pushR = await cloudCreateOrUpdate();
+          toast(pushR.ok ? '✓ Local data uploaded' : 'Upload failed');
+          render();
+        }
+      } else {
+        toast('✓ Connected · backup created');
+        render();
+      }
+    }
+  }, 'Connect'));
+  m.appendChild(btnRow);
+  openModal(m);
+  setTimeout(() => inp.focus(), 100);
+}
 
 /* Idempotent seed for past 10 sessions (Apr 7 - Apr 25, 2026).
    Skips dates that already exist; runs every load to repair missing data. */
@@ -3374,6 +3678,9 @@ function renderMore() {
   ]));
   v.appendChild(tools);
 
+  // Cloud backup
+  v.appendChild(buildCloudBackupCard());
+
   // Settings
   const set = el('div', { class: 'card' });
   set.appendChild(el('div', { class: 'card-title' }, 'Settings'));
@@ -3447,7 +3754,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v1.1 · Started ${PROGRAM_START}`));
+  }, `MyGym · v1.3 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
