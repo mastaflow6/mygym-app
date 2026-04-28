@@ -21,13 +21,15 @@
     --text: #fafafa;
     --text-muted: #8e8e96;
     --text-dim: #5a5a62;
-    --accent: #fb923c;
-    --accent-strong: #f97316;
-    --accent-soft: rgba(251, 146, 60, 0.12);
+    --accent: #818cf8;
+    --accent-strong: #6366f1;
+    --accent-soft: rgba(129, 140, 248, 0.12);
     --success: #22c55e;
     --success-soft: rgba(34, 197, 94, 0.12);
     --warn: #f59e0b;
     --warn-soft: rgba(245, 158, 11, 0.12);
+    --info: #60a5fa;
+    --info-soft: rgba(96, 165, 250, 0.12);
     --danger: #ef4444;
     --danger-soft: rgba(239, 68, 68, 0.12);
     --pr: #facc15;
@@ -141,6 +143,7 @@
   .chip.accent { background: var(--accent-soft); color: var(--accent); }
   .chip.warn { background: var(--warn-soft); color: var(--warn); }
   .chip.success { background: var(--success-soft); color: var(--success); }
+  .chip.info { background: var(--info-soft); color: var(--info); }
   .chip.pr { background: var(--pr-soft); color: var(--pr); }
 
   .progress { margin-top: 14px; }
@@ -160,7 +163,7 @@
   }
 
   .coach-note {
-    background: var(--accent-soft); border: 1px solid rgba(251, 146, 60, 0.25);
+    background: var(--accent-soft); border: 1px solid rgba(129, 140, 248, 0.25);
     border-radius: 14px; padding: 12px 14px; color: #fed7aa; font-size: 13px;
     margin-bottom: 14px; display: flex; gap: 10px; align-items: flex-start;
   }
@@ -208,7 +211,7 @@
     color: var(--text-muted); display: flex; align-items: center; justify-content: center;
     border: 1px solid var(--border);
   }
-  .icon-btn.has-data { color: var(--accent); border-color: rgba(251, 146, 60, 0.3); }
+  .icon-btn.has-data { color: var(--accent); border-color: rgba(129, 140, 248, 0.3); }
   .icon-btn:active { transform: scale(0.92); }
   .icon-btn svg { width: 14px; height: 14px; }
 
@@ -400,28 +403,22 @@
 
   /* Skip workout button */
   .skip-cta {
-    width: 100%; padding: 12px; margin-top: 8px;
-    background: var(--surface-2); color: var(--text-muted);
-    border: 1px solid var(--border); border-radius: 12px;
-    font-size: 13px; font-weight: 600; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; padding: 14px 16px; margin: 16px 0 20px;
+    background: transparent; color: var(--text);
+    border: 1.5px dashed var(--border); border-radius: 14px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
     transition: all 0.15s;
   }
-  .skip-cta:hover { background: var(--surface-3); color: var(--text); }
-
-  /* Inline change link next to Today CTA */
-  .today-change {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 12px; color: var(--text-muted); cursor: pointer;
-    padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px;
-    background: var(--surface-2); transition: all 0.15s;
-  }
-  .today-change:hover { color: var(--text); border-color: var(--accent); }
+  .skip-cta .skip-icon { color: var(--text-muted); display: inline-flex; }
+  .skip-cta:hover { border-color: var(--text-muted); color: var(--text); background: var(--surface-2); }
+  .skip-cta:hover .skip-icon { color: var(--text); }
+  .skip-cta:active { transform: scale(0.98); }
 
   /* Plan-day card with override marker */
   .plan-shifted-tag {
     font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-    padding: 2px 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent);
+    padding: 2px 6px; border-radius: 4px; background: var(--info-soft); color: var(--info);
     margin-left: 6px;
   }
 
@@ -462,7 +459,7 @@
     transform: translateX(-50%) translateY(20px);
     background: var(--accent); color: white;
     padding: 10px 16px; border-radius: 999px;
-    box-shadow: 0 8px 24px rgba(251, 146, 60, 0.35);
+    box-shadow: 0 8px 24px rgba(129, 140, 248, 0.35);
     font-weight: 700; font-size: 14px;
     display: flex; align-items: center; gap: 10px;
     z-index: 35; opacity: 0; pointer-events: none; transition: all 0.25s;
@@ -641,7 +638,7 @@
   .icon-btn-labeled:active { transform: scale(0.94); }
   .icon-btn-labeled svg { width: 18px; height: 18px; }
   .icon-btn-labeled .label { font-size: 10px; }
-  .icon-btn-labeled.has-data { color: var(--accent); border-color: rgba(251, 146, 60, 0.3); }
+  .icon-btn-labeled.has-data { color: var(--accent); border-color: rgba(129, 140, 248, 0.3); }
 
   .sets-v2 { display: flex; flex-direction: column; }
   .set-v2 {
@@ -754,7 +751,7 @@
     position: absolute;
     top: -18px; left: 8px;
     font-size: 90px;
-    color: rgba(251, 146, 60, 0.18);
+    color: rgba(129, 140, 248, 0.18);
     font-family: Georgia, serif;
     pointer-events: none;
     line-height: 1;
@@ -771,14 +768,14 @@
   }
   .today-cta {
     width: 100%;
-    background: linear-gradient(155deg, var(--accent) 0%, #f97316 100%);
+    background: linear-gradient(155deg, var(--accent) 0%, var(--accent-strong) 100%);
     color: white;
     border-radius: 18px;
     padding: 18px 20px;
     margin-bottom: 14px;
     text-align: left;
     border: none;
-    box-shadow: 0 8px 24px rgba(251, 146, 60, 0.28);
+    box-shadow: 0 8px 24px rgba(129, 140, 248, 0.28);
     transition: transform 0.15s;
     cursor: pointer;
   }
@@ -906,7 +903,7 @@
     border-radius: 999px;
     background: var(--accent);
     color: #1a1004;
-    box-shadow: 0 10px 30px rgba(251, 146, 60, 0.42), 0 2px 6px rgba(0,0,0,0.4);
+    box-shadow: 0 10px 30px rgba(129, 140, 248, 0.42), 0 2px 6px rgba(0,0,0,0.4);
     display: flex; align-items: center; gap: 8px;
     font-size: 16px; font-weight: 800;
     letter-spacing: 0.02em;
@@ -915,7 +912,7 @@
   }
   .fab-pause:active {
     transform: scale(0.96);
-    box-shadow: 0 4px 14px rgba(251, 146, 60, 0.32);
+    box-shadow: 0 4px 14px rgba(129, 140, 248, 0.32);
   }
   .fab-pause svg { width: 22px; height: 22px; }
 
@@ -1977,66 +1974,90 @@ function bagToggle(id) {
   save();
 }
 
-/* =========== FLEXIBLE PLAN: skip / swap =========== */
-// Natural workout-day order (chronological, by dow): Mon→Push, Tue→Pull, Thu→Legs, Sat→Upper.
-// We don't hardcode this cycle — we read it dynamically by walking the calendar from PROGRAM_START,
-// so the math stays correct regardless of which weekday the program starts on.
-
-// Count natural workout slots from PROGRAM_START up to and including dateStr.
-// A natural slot = any date whose dow has a DAYS entry. Returns 0 for the very first slot.
-function naturalWorkoutSlotIndex(dateStr) {
-  const start = new Date(PROGRAM_START + 'T00:00:00');
-  const end = new Date(dateStr + 'T00:00:00');
-  if (end < start) return -1;
-  const days = Math.floor((end - start) / 86400000);
-  let count = 0;
-  for (let i = 0; i <= days; i++) {
-    const d = new Date(start.getTime() + i * 86400000);
-    if (DAYS[d.getDay()]) count++;
-  }
-  return count - 1; // 0-indexed
-}
-
-// Inverse of naturalWorkoutSlotIndex: which dayKey lives at the K-th natural slot
-// (counting from PROGRAM_START)? Returns null for negative K.
-function naturalSessionAtSlot(slot) {
-  if (slot < 0) return null;
-  const start = new Date(PROGRAM_START + 'T00:00:00');
-  let count = 0;
-  // 365 days is plenty for our forward-looking views.
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(start.getTime() + i * 86400000);
-    if (DAYS[d.getDay()]) {
-      if (count === slot) return d.getDay();
-      count++;
-    }
-  }
-  return null;
-}
-
-function countSkipsBefore(dateStr) {
-  if (!state.plan?.skippedDates?.length) return 0;
-  return state.plan.skippedDates.filter(d => d < dateStr).length;
-}
-
-// The session a date should run, accounting for skips and per-day overrides.
-// Returns dayKey (1, 2, 4, 6) or null for rest.
-function effectiveDayKey(dateStr) {
-  if (!state.plan) return DAYS[new Date(dateStr + 'T00:00:00').getDay()] ? new Date(dateStr + 'T00:00:00').getDay() : null;
-  if (state.plan.skippedDates?.includes(dateStr)) return null;
-  if (state.plan.overrides && state.plan.overrides[dateStr] != null) return state.plan.overrides[dateStr];
-  const dow = new Date(dateStr + 'T00:00:00').getDay();
-  if (!DAYS[dow]) return null; // Wed/Fri/Sun stay rest
-  const slot = naturalWorkoutSlotIndex(dateStr);
-  if (slot < 0) return dow;
-  const shift = countSkipsBefore(dateStr);
-  return naturalSessionAtSlot(slot - shift) ?? dow;
+/* =========== FLEXIBLE PLAN: skip with cascade =========== */
+// Local-time YYYY-MM-DD formatter (avoids the UTC/toISOString() timezone bug).
+function dateToLocal(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function nextDateStr(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0,10);
+  return dateToLocal(d);
+}
+
+// The session a date should run.
+// Priority: explicit skip → override (set when a skip cascades) → natural day-of-week mapping.
+// Returns dayKey (1, 2, 4, 6) or null for rest.
+function effectiveDayKey(dateStr) {
+  if (state.plan?.skippedDates?.includes(dateStr)) return null;
+  if (state.plan?.overrides && state.plan.overrides[dateStr] != null) return state.plan.overrides[dateStr];
+  const dow = new Date(dateStr + 'T00:00:00').getDay();
+  return DAYS[dow] ? dow : null;
+}
+
+// Skip a date and cascade the displaced session forward day-by-day until it lands on a rest slot.
+// Example: today is Tue (Pull). Skip → Tue=rest, Wed (was rest) absorbs Pull. Thu=Legs unchanged.
+// Example: skip Mon (Push) → Tue (was Pull) becomes Push, Wed (was rest) absorbs Pull, Thu=Legs unchanged.
+// Returns a preview {date, before, after}[] showing what each affected day will become.
+function planSkipCascade(skipDate, commit) {
+  if (!state.plan) state.plan = { skippedDates: [], overrides: {} };
+
+  // Snapshot what each upcoming day will be BEFORE the skip is applied.
+  const days = [];
+  let d = skipDate;
+  for (let i = 0; i < 14; i++) {
+    days.push({ date: d, before: effectiveDayKey(d) });
+    d = nextDateStr(d);
+  }
+  const pendingSession = days[0].before;
+  if (pendingSession == null) return null; // nothing to skip — already rest
+
+  // Compute the cascaded "after" state without mutating state yet.
+  const newSkippedDates = (state.plan.skippedDates || []).slice();
+  const newOverrides = { ...(state.plan.overrides || {}) };
+  if (!newSkippedDates.includes(skipDate)) newSkippedDates.push(skipDate);
+  delete newOverrides[skipDate];
+
+  let pending = pendingSession;
+  for (let i = 1; i < days.length && pending != null; i++) {
+    const dow = new Date(days[i].date + 'T00:00:00').getDay();
+    const naturalAtThisDay = DAYS[dow] ? dow : null;
+    const currentlyPlanned = days[i].before; // before the cascade
+
+    if (currentlyPlanned == null) {
+      // This was a rest day — absorbs the pending session, cascade ends.
+      newOverrides[days[i].date] = pending;
+      pending = null;
+    } else {
+      // This day already has a session — pending displaces it; old session cascades.
+      newOverrides[days[i].date] = pending;
+      pending = currentlyPlanned;
+    }
+  }
+
+  // Build "after" view by applying our staged changes virtually.
+  for (const row of days) {
+    const sk = newSkippedDates.includes(row.date);
+    const ov = newOverrides[row.date];
+    if (sk) row.after = null;
+    else if (ov != null) row.after = ov;
+    else {
+      const dow = new Date(row.date + 'T00:00:00').getDay();
+      row.after = DAYS[dow] ? dow : null;
+    }
+  }
+
+  if (commit) {
+    state.plan.skippedDates = newSkippedDates;
+    state.plan.overrides = newOverrides;
+    delete state.workouts[skipDate];
+    save();
+  }
+  return days;
 }
 
 // Return the next N dates' planned sessions, starting from `fromDate` inclusive.
@@ -2050,49 +2071,11 @@ function upcomingSessions(fromDate, n) {
   return out;
 }
 
-// Skip today: mark today as rest, persist, save. Today's session naturally
-// shifts to the next natural workout slot via effectiveDayKey.
-function skipTodayCommit() {
-  const t = today();
-  if (!state.plan) state.plan = { skippedDates: [], overrides: {} };
-  if (!state.plan.skippedDates.includes(t)) state.plan.skippedDates.push(t);
-  // Drop any override for today since we're now resting.
-  if (state.plan.overrides) delete state.plan.overrides[t];
-  // Discard any in-progress workout state for today.
-  delete state.workouts[t];
-  save();
-}
-
-function setTodayOverride(dayKey) {
-  const t = today();
-  if (!state.plan) state.plan = { skippedDates: [], overrides: {} };
-  // Un-skip if previously skipped.
-  state.plan.skippedDates = state.plan.skippedDates.filter(d => d !== t);
-  state.plan.overrides[t] = dayKey;
-  // If a workout was already initialized with a different dayKey, update it via ensureWorkout.
-  ensureWorkout(t, dayKey);
-  save();
-}
-
 function resetPlanOverrides() {
   if (!state.plan) state.plan = { skippedDates: [], overrides: {} };
   state.plan.skippedDates = [];
   state.plan.overrides = {};
   save();
-}
-
-// Return the dayKey actually performed yesterday (logged session if any, else effective plan).
-function yesterdayDayKey() {
-  const d = new Date(today() + 'T00:00:00');
-  d.setDate(d.getDate() - 1);
-  const yStr = d.toISOString().slice(0,10);
-  const w = state.workouts[yStr];
-  if (w && (w.finished || (w.logs && Object.values(w.logs).some(arr => arr.length)))) return w.dayKey;
-  return effectiveDayKey(yStr);
-}
-
-function tomorrowDayKey() {
-  return effectiveDayKey(nextDateStr(today()));
 }
 
 /* =========== TIMERS =========== */
@@ -2370,14 +2353,14 @@ function buildRing(opts) {
 function buildRingsRow() {
   const row = el('div', { class: 'rings-row' });
 
-  // Phase progress
+  // Phase progress — kept orange as the program's signature accent
   const total = totalSessions();
   const ph = currentPhase();
   const PHASE_TARGETS = { 1: 16, 2: 24, 3: 32, 4: 48 };
   const phaseTarget = PHASE_TARGETS[ph.num] || 16;
   row.appendChild(buildRing({
     value: total, total: phaseTarget,
-    color: 'var(--accent)',
+    color: '#fb923c',
     valueLabel: `${total} / ${phaseTarget}`,
     subLabel: `Phase ${ph.num}`
   }));
@@ -2601,7 +2584,6 @@ function renderHome() {
   const todayKey = effectiveDayKey(date);
   const day = todayKey != null ? DAYS[todayKey] : null;
   const isSkipped = state.plan?.skippedDates?.includes(date) || false;
-  const isOverride = state.plan?.overrides && state.plan.overrides[date] != null;
 
   // Focus takeover: while a phase is active (or session paused mid-flight), hide the rest of Home
   const wToday = state.workouts[date];
@@ -2637,8 +2619,7 @@ function renderHome() {
     const prog = workoutProgress(date, todayKey);
     const pct = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
     const wkout = state.workouts[date];
-    const tag = isOverride ? ' <span class="plan-shifted-tag">picked</span>'
-      : (todayKey !== dow && DAYS[dow]) ? ' <span class="plan-shifted-tag">shifted</span>' : '';
+    const tag = (todayKey !== dow && DAYS[dow]) ? ' <span class="plan-shifted-tag">shifted</span>' : '';
     cta.appendChild(el('div', { class: 'today-label', html: `${DAY_LABELS[dow]} · ${day.name} day${tag}` }));
     cta.appendChild(el('div', { class: 'today-stats' }, `${prog.done} / ${prog.total} sets`));
     cta.appendChild(el('div', { class: 'today-progress' }, [
@@ -2654,14 +2635,6 @@ function renderHome() {
     cta.appendChild(el('div', { class: 'today-cta-text' }, 'Pick a different day →'));
   }
   v.appendChild(cta);
-
-  // Change today's session — small pill below the CTA, on any day (workout or rest)
-  v.appendChild(el('div', { style: 'display:flex;justify-content:center;margin-top:-4px;margin-bottom:4px;' }, [
-    el('button', {
-      class: 'today-change',
-      onclick: () => openChangeSessionModal()
-    }, day ? 'Change today\'s session ›' : 'Pick a session for today ›')
-  ]));
 
   // Start warmup (focus mode) — only on workout days, not finished, no active phase
   if (day && !state.workouts[date]?.finished && !state.workouts[date]?.activePhase) {
@@ -2679,13 +2652,13 @@ function renderHome() {
       ])
     ]));
 
-    // Skip workout — moves today's session forward
+    // Skip workout — moves today's session forward by 1 calendar day
     v.appendChild(el('button', {
       class: 'skip-cta',
       onclick: () => openSkipConfirmModal()
     }, [
-      el('span', { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:-2px;"><polygon points="5 4 15 12 5 20"/><line x1="19" y1="5" x2="19" y2="19"/></svg>' }),
-      el('span', {}, 'Skip workout — move to tomorrow')
+      el('span', { class: 'skip-icon', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polygon points="5 4 15 12 5 20"/><line x1="19" y1="5" x2="19" y2="19"/></svg>' }),
+      el('span', {}, 'Skip today · move to tomorrow')
     ]));
   }
 
@@ -2732,8 +2705,7 @@ function renderHome() {
     const bagDone = checked.size;
     const bagTotal = BAG_ITEMS.length;
     const bagFull = bagDone === bagTotal;
-    // Auto-collapse when fully packed; user can also toggle manually.
-    const collapsed = state.settings.bagCollapsed || bagFull;
+    const collapsed = !!state.settings.bagCollapsed;
 
     const bagCard = el('div', { class: 'card' });
     const header = el('div', {
@@ -3546,14 +3518,13 @@ function renderPlan() {
   const v = $('view');
   const t = today();
   const skips = state.plan?.skippedDates?.length || 0;
-  const overrides = state.plan?.overrides ? Object.keys(state.plan.overrides).length : 0;
-  const isShifted = skips > 0 || overrides > 0;
+  const isShifted = skips > 0;
 
   v.appendChild(el('div', { class: 'card', style: 'padding:14px 16px;' }, [
     el('div', { class: 'card-title', style: 'margin-bottom:6px;' }, 'Next 7 days'),
     el('div', { class: 'small muted' },
       isShifted
-        ? `Plan shifted ${skips ? skips + ' skip' + (skips > 1 ? 's' : '') : ''}${skips && overrides ? ' · ' : ''}${overrides ? overrides + ' override' + (overrides > 1 ? 's' : '') : ''}`
+        ? `Plan shifted by ${skips} skip${skips > 1 ? 's' : ''}`
         : '4 training days · 3 rest days · ~60 min sessions')
   ]));
 
@@ -3563,14 +3534,12 @@ function renderPlan() {
     const day = dayKey ? DAYS[dayKey] : null;
     const isToday = i === 0;
     const isSkipped = state.plan?.skippedDates?.includes(date);
-    const isOverride = state.plan?.overrides && state.plan.overrides[date] != null;
     const naturalKey = DAYS[dow] ? dow : null;
-    const isShiftedDay = day && dayKey !== naturalKey && !isOverride;
+    const isShiftedDay = day && dayKey !== naturalKey;
 
     const card = el('div', { class: 'day-card' + (day ? '' : ' rest') });
     const headerRight = isToday ? el('span', { class: 'chip accent' }, 'Today')
-      : isOverride ? el('span', { class: 'chip accent' }, 'Picked')
-      : isShiftedDay ? el('span', { class: 'chip accent' }, 'Shifted')
+      : isShiftedDay ? el('span', { class: 'chip info' }, 'Shifted')
       : isSkipped ? el('span', { class: 'chip warn' }, 'Skipped')
       : day ? el('span', { class: 'chip' }, `${day.exercises.length} ex`)
       : null;
@@ -3785,8 +3754,8 @@ function buildLineChart(data, unit) {
     <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
       <defs>
         <linearGradient id="areaGrad" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="#fb923c" stop-opacity="0.4"/>
-          <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
+          <stop offset="0%" stop-color="#818cf8" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="#818cf8" stop-opacity="0"/>
         </linearGradient>
       </defs>
       <path class="area" d="${area}"/>
@@ -4059,15 +4028,31 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v1.5 · Started ${PROGRAM_START}`));
+  }, `MyGym · v1.6 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
 function openSkipConfirmModal() {
-  const m = el('div');
-  m.appendChild(el('h3', {}, 'Skip workout — move to tomorrow?'));
-
   const t = today();
+  const cascade = planSkipCascade(t, false); // dry-run
+
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Skip today\'s workout?'));
+
+  if (cascade == null) {
+    m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:14px;' },
+      'Today is already a rest day — nothing to skip.'));
+    m.appendChild(el('button', { class: 'btn', onclick: closeModal }, 'Close'));
+    openModal(m);
+    return;
+  }
+
+  const todayKey = effectiveDayKey(t);
+  const todayName = todayKey ? DAYS[todayKey].name : 'workout';
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;' },
+    `${todayName} moves to tomorrow. The rest of the week stays the same.`));
+
+  // Logs warning
   const w = state.workouts[t];
   const hasLogs = w && w.logs && Object.values(w.logs).some(arr => arr.length);
   if (hasLogs) {
@@ -4075,140 +4060,40 @@ function openSkipConfirmModal() {
       class: 'small',
       style: 'margin-bottom:12px;padding:10px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:#fca5a5;'
     }, '⚠ You\'ve already logged sets today. Skipping will discard them.'));
-  } else {
-    m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;' },
-      'Today becomes a rest day. Your sequence (Push → Pull → Legs → Upper) shifts forward one slot.'));
   }
 
-  // Before/after preview
-  const before = upcomingSessions(t, 7);
-  // Simulate: temporarily add today to skippedDates and re-compute
-  const origSkips = (state.plan?.skippedDates || []).slice();
-  if (!state.plan) state.plan = { skippedDates: [], overrides: {} };
-  state.plan.skippedDates = [...origSkips, t];
-  const after = upcomingSessions(t, 7);
-  state.plan.skippedDates = origSkips; // restore
-
-  const preview = el('div', {
-    class: 'small',
-    style: 'margin-bottom:14px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;font-family:ui-monospace,monospace;font-size:11px;line-height:1.6;'
+  // Cascade preview — show only the changing rows (plus the skipped one).
+  const previewBox = el('div', {
+    style: 'margin-bottom:14px;padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.7;'
   });
-  let html = '<div style="color:var(--text-muted);margin-bottom:6px;font-weight:700;">NEXT 7 DAYS</div>';
-  for (let i = 0; i < before.length; i++) {
-    const b = before[i], a = after[i];
-    const dow = new Date(b.date + 'T00:00:00').getDay();
-    const lbl = DAY_LABELS[dow];
-    const bName = b.dayKey ? DAYS[b.dayKey].name : '—';
-    const aName = a.dayKey ? DAYS[a.dayKey].name : '—';
+  let html = '';
+  for (const row of cascade.slice(0, 7)) {
+    const ddow = new Date(row.date + 'T00:00:00').getDay();
+    const bName = row.before != null ? DAYS[row.before].name : 'Rest';
+    const aName = row.after != null ? DAYS[row.after].name : 'Rest';
     const same = bName === aName;
-    html += `<div style="display:flex;justify-content:space-between;${same ? 'opacity:0.55;' : ''}">`
-         + `<span style="min-width:34px;color:var(--text-muted);">${lbl}</span>`
-         + `<span style="flex:1;">${bName}</span>`
+    html += `<div style="display:flex;align-items:center;gap:8px;${same ? 'opacity:0.45;' : ''}">`
+         + `<span style="min-width:30px;color:var(--text-muted);">${DAY_LABELS[ddow]}</span>`
+         + `<span style="flex:1;color:var(--text-muted);">${bName}</span>`
          + `<span style="color:var(--text-muted);">→</span>`
-         + `<span style="flex:1;text-align:right;color:${same ? 'inherit' : 'var(--accent)'};">${aName}</span>`
+         + `<span style="flex:1;text-align:right;color:${same ? 'var(--text-muted)' : 'var(--info)'};font-weight:${same ? '400' : '700'};">${aName}</span>`
          + `</div>`;
   }
-  preview.innerHTML = html;
-  m.appendChild(preview);
+  previewBox.innerHTML = html;
+  m.appendChild(previewBox);
 
   m.appendChild(el('button', {
     class: 'btn',
     onclick: () => {
-      skipTodayCommit();
+      planSkipCascade(t, true);
       closeModal();
       activeTab = 'home';
       activeDayKey = null;
       homeFocusExited = false;
       render();
-      toast('Workout shifted to tomorrow');
+      toast('Workout moved to tomorrow');
     }
-  }, 'Skip & shift'));
-  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Cancel'));
-
-  openModal(m);
-}
-
-function openChangeSessionModal() {
-  const m = el('div');
-  m.appendChild(el('h3', {}, 'Change today\'s session'));
-
-  const t = today();
-  const dow = todayDow();
-  const currentKey = effectiveDayKey(t);
-  const naturalKey = DAYS[dow] ? dow : null;
-
-  let pickedKey = currentKey; // 'skip' | dayKey
-
-  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:14px;' },
-    currentKey
-      ? `Today is ${DAYS[currentKey].name}${currentKey === naturalKey && !state.plan?.overrides?.[t] ? ' (planned)' : ''}.`
-      : 'Today is a rest day.'));
-
-  const options = [
-    ...[1, 2, 4, 6].map(k => ({ key: k, name: DAYS[k].name, focus: DAYS[k].focus })),
-    { key: 'skip', name: 'Skip — rest today', focus: 'Move today\'s session forward one slot' }
-  ];
-
-  const yKey = yesterdayDayKey();
-  const tmKey = tomorrowDayKey();
-  const warningEl = el('div', {
-    style: 'margin:12px 0;padding:10px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:10px;color:#fcd34d;font-size:12px;display:none;'
-  });
-
-  function refreshWarning() {
-    if (typeof pickedKey !== 'number') { warningEl.style.display = 'none'; return; }
-    const conflicts = [];
-    if (yKey && yKey === pickedKey) conflicts.push(`done yesterday (${DAYS[yKey].name})`);
-    if (tmKey && tmKey === pickedKey) conflicts.push(`planned tomorrow (${DAYS[tmKey].name})`);
-    if (conflicts.length) {
-      warningEl.style.display = 'block';
-      warningEl.innerHTML = `⚠ <b>Recovery conflict:</b> ${DAYS[pickedKey].name} was ${conflicts.join(' & ')}. Same muscles need 48h+ to recover.`;
-    } else {
-      warningEl.style.display = 'none';
-    }
-  }
-
-  const optsContainer = el('div', { style: 'display:flex;flex-direction:column;gap:8px;margin-bottom:8px;' });
-  function rebuildOptions() {
-    optsContainer.innerHTML = '';
-    options.forEach(opt => {
-      const isSel = pickedKey === opt.key;
-      const isPlanned = opt.key === naturalKey && !state.plan?.overrides?.[t];
-      const card = el('button', {
-        class: 'swap-option' + (isSel ? ' active' : ''),
-        onclick: () => { pickedKey = opt.key; rebuildOptions(); refreshWarning(); }
-      });
-      const top = el('div', { class: 'row between', style: 'align-items:center;width:100%;' }, [
-        el('div', { class: 'swap-name' }, opt.name),
-        isPlanned ? el('span', { class: 'chip accent' }, 'Planned') : (isSel ? el('span', { class: 'chip accent' }, '✓ Selected') : null)
-      ].filter(Boolean));
-      card.appendChild(top);
-      card.appendChild(el('div', { class: 'swap-tag' }, opt.focus));
-      optsContainer.appendChild(card);
-    });
-  }
-  rebuildOptions();
-  m.appendChild(optsContainer);
-  m.appendChild(warningEl);
-  refreshWarning();
-
-  m.appendChild(el('button', {
-    class: 'btn',
-    onclick: () => {
-      if (pickedKey === 'skip') {
-        skipTodayCommit();
-        toast('Workout shifted to tomorrow');
-      } else if (typeof pickedKey === 'number') {
-        setTodayOverride(pickedKey);
-        toast('Today: ' + DAYS[pickedKey].name);
-      }
-      closeModal();
-      activeTab = 'home';
-      activeDayKey = null;
-      homeFocusExited = false;
-      render();
-    }
-  }, 'Confirm'));
+  }, 'Skip · move to tomorrow'));
   m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Cancel'));
 
   openModal(m);
