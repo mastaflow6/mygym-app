@@ -764,6 +764,127 @@
     font-size: 14px; font-weight: 700;
     display: flex; align-items: center; gap: 6px;
   }
+  .warmup-cta {
+    width: 100%;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 12px;
+    text-align: left;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+    transition: transform 0.15s;
+  }
+  .warmup-cta:active { transform: scale(0.99); }
+  .warmup-cta .warmup-cta-icon {
+    width: 36px; height: 36px; flex-shrink: 0;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .warmup-cta .warmup-cta-icon svg { width: 20px; height: 20px; }
+  .warmup-cta .warmup-cta-text { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+
+  .home-focus {
+    padding: 8px 4px 24px;
+    display: flex; flex-direction: column; align-items: stretch;
+  }
+  .home-focus .focus-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .home-focus .focus-exit {
+    color: var(--text-muted);
+    font-size: 13px; font-weight: 600;
+    padding: 8px 10px; margin: -8px -10px;
+    border-radius: 10px;
+  }
+  .home-focus .focus-exit:active { background: var(--surface-2); }
+  .home-focus .focus-day {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+  .home-focus .focus-label {
+    text-align: center;
+    font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.18em;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .home-focus .focus-countdown,
+  .home-focus .focus-timer {
+    text-align: center;
+    font-size: 72px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.04em;
+    color: var(--text);
+    margin: 4px 0 18px;
+    line-height: 1;
+  }
+  .home-focus .focus-progress {
+    height: 8px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 0 8px 10px;
+  }
+  .home-focus .focus-progress > span {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+    border-radius: 999px;
+    transition: width 0.3s linear;
+  }
+  .home-focus .focus-meta {
+    display: flex; justify-content: space-between;
+    padding: 0 8px;
+    font-size: 12px; color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 6px;
+  }
+  .home-focus .focus-upnext {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+  .home-focus .focus-hint {
+    margin-top: 14px;
+    padding: 8px 12px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    display: inline-flex; align-self: center; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text-muted);
+    font-weight: 500;
+  }
+  .home-focus .focus-hint svg { color: var(--accent); }
+
+  /* Floating Pause FAB — always visible during an active phase, sits above the tab bar bottom-right */
+  .fab-pause {
+    position: fixed;
+    right: 20px;
+    bottom: calc(var(--tab-h) + var(--safe-bottom) + 18px);
+    z-index: 50;
+    height: 60px;
+    padding: 0 22px 0 18px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #1a1004;
+    box-shadow: 0 10px 30px rgba(251, 146, 60, 0.42), 0 2px 6px rgba(0,0,0,0.4);
+    display: flex; align-items: center; gap: 8px;
+    font-size: 16px; font-weight: 800;
+    letter-spacing: 0.02em;
+    border: none;
+    transition: transform 0.12s, box-shadow 0.2s;
+  }
+  .fab-pause:active {
+    transform: scale(0.96);
+    box-shadow: 0 4px 14px rgba(251, 146, 60, 0.32);
+  }
+  .fab-pause svg { width: 22px; height: 22px; }
+
   .quick-log {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1141,7 +1262,7 @@ const defaultState = {
   supplements: {},
   photos: [],
   notes: {},
-  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 8, notifications: false }
+  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 8, notifications: false, warmupTargetSec: 300 }
 };
 
 let state;
@@ -1354,6 +1475,20 @@ function isCurrentSetPR(exId, date, currentSet) {
   return !pr || e > pr.e;
 }
 
+// Per-set rep targets — hard exercises ramp 12·10·10, easy ramp 15·12·12.
+// Classification: timed (planks) keeps its own range; repsMax >= 12 → easy; everything else → hard.
+function getSetTargets(ex) {
+  if (ex.timed) {
+    const arr = []; for (let i = 0; i < ex.sets; i++) arr.push(ex.repsMin);
+    return arr;
+  }
+  const easy = ex.repsMax >= 12 && ex.repsMin >= 12;
+  const base = easy ? [15, 12, 12] : [12, 10, 10];
+  const arr = [];
+  for (let i = 0; i < ex.sets; i++) arr.push(base[Math.min(i, base.length - 1)]);
+  return arr;
+}
+
 function workoutProgress(date, dayKey) {
   const day = DAYS[dayKey]; if (!day) return { done: 0, total: 0 };
   let total = 0, done = 0;
@@ -1470,9 +1605,42 @@ let activeTab = 'home';
 let activeDayKey = null;
 let expandedExId = null;     // null = auto-expand first incomplete; 'none' = all collapsed; ex.id = manual
 let editingSetKey = null;    // `${exId}-${setIdx}` while inline-editing a set
+let homeFocusExited = false; // user dismissed focus takeover on Home; reset on next phase change or Home tab tap
 let restTimer = null;
 let restEndAt = 0;
 let phaseTickInterval = null;
+let wakeLockSentinel = null;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator) || wakeLockSentinel) return;
+  try {
+    wakeLockSentinel = await navigator.wakeLock.request('screen');
+    wakeLockSentinel.addEventListener('release', () => { wakeLockSentinel = null; });
+  } catch (e) { /* permission/visibility/system can deny — silently ignore */ }
+}
+function releaseWakeLock() {
+  if (!wakeLockSentinel) return;
+  try { wakeLockSentinel.release(); } catch (e) {}
+  wakeLockSentinel = null;
+}
+async function ensureNotificationPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') {
+    if (!state.settings.notifications) { state.settings.notifications = true; save(); }
+    return true;
+  }
+  if (Notification.permission === 'denied') return false;
+  try {
+    const r = await Notification.requestPermission();
+    state.settings.notifications = (r === 'granted'); save();
+    return r === 'granted';
+  } catch (e) { return false; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  const w = state.workouts[today()];
+  if (w && w.activePhase) requestWakeLock();
+});
 
 /* === v0.3 helpers: alternatives, swaps, accordion === */
 function getAlternatives(ex) {
@@ -1536,6 +1704,28 @@ function setPhase(date, phase) {
     w.activePhase = phase; w.phaseStart = now;
     if (!w.started) w.started = now;
   }
+  if (phase === 'workout') w._warmupAdvanced = true; // prevent re-fire after manual end
+  if (phase === 'warmup') w._warmupAdvanced = false;
+  homeFocusExited = false;
+  if (w.activePhase) requestWakeLock(); else releaseWakeLock();
+  save();
+  startPhaseTick();
+  render();
+}
+
+function endWarmupAndStartWorkout(date) {
+  const w = ensureWorkout(date, activeDayKey ?? todayDow());
+  const now = Date.now();
+  if (w.activePhase === 'warmup' && w.phaseStart) {
+    w.timers.warmup = (w.timers.warmup || 0) + (now - w.phaseStart);
+  }
+  w.activePhase = 'workout';
+  w.phaseStart = now;
+  if (!w.started) w.started = now;
+  w._warmupAdvanced = true;
+  homeFocusExited = false;
+  expandedExId = null;
+  requestWakeLock();
   save();
   startPhaseTick();
   render();
@@ -1545,16 +1735,53 @@ function startPhaseTick() {
   if (phaseTickInterval) clearInterval(phaseTickInterval);
   phaseTickInterval = setInterval(() => {
     const w = state.workouts[today()];
-    if (w && w.activePhase && activeTab === 'today') {
+    if (!w) return;
+    const now = Date.now();
+    if (w.activePhase && activeTab === 'today') {
       const els = document.querySelectorAll('.phase-btn .t');
       const phases = ['warmup', 'workout'];
-      const now = Date.now();
       els.forEach((node, i) => {
         const p = phases[i];
         let ms = w.timers[p] || 0;
         if (w.activePhase === p && w.phaseStart) ms += now - w.phaseStart;
         node.textContent = fmtTime(ms);
       });
+    }
+    if (activeTab === 'home' && !homeFocusExited && w.activePhase) {
+      const target = (state.settings.warmupTargetSec || 300) * 1000;
+      if (w.activePhase === 'warmup') {
+        const wmEl = document.getElementById('focusWarmupSecs');
+        const wmBar = document.getElementById('focusWarmupBar');
+        const wmPct = document.getElementById('focusWarmupPct');
+        let ms = (w.timers.warmup || 0) + (w.phaseStart ? now - w.phaseStart : 0);
+        const remain = Math.max(0, target - ms);
+        if (wmEl) wmEl.textContent = fmtTime(remain);
+        const pct = Math.min(100, ms / target * 100);
+        if (wmBar) wmBar.style.width = pct + '%';
+        if (wmPct) wmPct.textContent = Math.round(pct) + '%';
+        if (ms >= target && !w._warmupAdvanced) {
+          w._warmupAdvanced = true;
+          if (navigator.vibrate) navigator.vibrate([180, 80, 180, 80, 180]);
+          toast("Warmup done — let's go", 'celebrate');
+          if ('Notification' in window && Notification.permission === 'granted') {
+            try {
+              new Notification('Warmup done', {
+                body: "Time to start your first exercise",
+                tag: 'mygym-warmup-done',
+                icon: 'apple-touch-icon.png',
+                renotify: true
+              });
+            } catch (e) {}
+          }
+          endWarmupAndStartWorkout(today());
+        }
+      } else if (w.activePhase === 'workout') {
+        const wkEl = document.getElementById('focusWorkoutSecs');
+        if (wkEl) {
+          let ms = (w.timers.workout || 0) + (w.phaseStart ? now - w.phaseStart : 0);
+          wkEl.textContent = fmtTime(ms);
+        }
+      }
     }
   }, 500);
 }
@@ -1580,6 +1807,7 @@ $('modalBg').addEventListener('click', e => { if (e.target === $('modalBg')) clo
 /* =========== ROOT RENDER =========== */
 function render() {
   $('view').innerHTML = '';
+  hideFloatingPauseBtn(); // each tab/focus path opts back in if it wants the FAB
   if (activeTab === 'home') renderHome();
   if (activeTab === 'today') renderToday();
   if (activeTab === 'plan') renderPlan();
@@ -1710,11 +1938,180 @@ function makeQuickBtn(label, icon, onclick) {
   ]);
 }
 
+function makeTimerRow({ timerId, timerText }) {
+  // Just the big timer. Pause is a floating FAB so it's always reachable while you scroll exercises.
+  return el('div', { class: 'focus-countdown', id: timerId }, timerText);
+}
+
+function ensureFloatingPauseBtn(onPause) {
+  let btn = document.getElementById('floatingPauseBtn');
+  if (btn) {
+    btn.onclick = onPause;
+    btn.style.display = 'flex';
+    return;
+  }
+  btn = document.createElement('button');
+  btn.id = 'floatingPauseBtn';
+  btn.className = 'fab-pause';
+  btn.setAttribute('aria-label', 'Pause');
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg><span>Pause</span>';
+  btn.onclick = onPause;
+  document.body.appendChild(btn);
+}
+function hideFloatingPauseBtn() {
+  const btn = document.getElementById('floatingPauseBtn');
+  if (btn) btn.style.display = 'none';
+}
+
+function renderHomeFocus(date, dayKey, w) {
+  const v = $('view');
+  const day = DAYS[dayKey];
+  const target = (state.settings.warmupTargetSec || 300) * 1000;
+  const wrap = el('div', { class: 'home-focus' });
+
+  // Top row: exit link + day label
+  const topRow = el('div', { class: 'focus-top' });
+  topRow.appendChild(el('button', {
+    class: 'focus-exit',
+    onclick: () => { homeFocusExited = true; render(); }
+  }, '← Exit focus'));
+  topRow.appendChild(el('div', { class: 'focus-day' }, day ? `${DAY_LABELS[dayKey]} · ${day.name}` : DAY_LABELS[dayKey]));
+  wrap.appendChild(topRow);
+
+  if (w.activePhase === 'warmup') {
+    const elapsed = (w.timers.warmup || 0) + (w.phaseStart ? Date.now() - w.phaseStart : 0);
+    const remain = Math.max(0, target - elapsed);
+    const pct = Math.min(100, elapsed / target * 100);
+    wrap.appendChild(el('div', { class: 'focus-label' }, 'WARMUP'));
+    wrap.appendChild(makeTimerRow({
+      timerId: 'focusWarmupSecs',
+      timerText: fmtTime(remain),
+      onPause: () => setPhase(date, 'warmup')
+    }));
+    const bar = el('div', { class: 'focus-progress' }, [
+      el('span', { id: 'focusWarmupBar', style: `width:${pct}%` })
+    ]);
+    wrap.appendChild(bar);
+    wrap.appendChild(el('div', { class: 'focus-meta' }, [
+      el('span', { id: 'focusWarmupPct' }, `${Math.round(pct)}%`),
+      el('span', { class: 'dim' }, `target ${Math.round(target/60000)} min`)
+    ]));
+    wrap.appendChild(el('button', {
+      class: 'btn',
+      style: 'margin-top:18px;',
+      onclick: () => endWarmupAndStartWorkout(date)
+    }, 'End warmup early →'));
+    // Status row — keeps you informed that screen will stay on + you'll get a buzz at 0:00
+    const hint = el('div', { class: 'focus-hint' });
+    hint.appendChild(el('span', { html: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' }));
+    const hasNotif = ('Notification' in window) && Notification.permission === 'granted';
+    hint.appendChild(el('span', {}, hasNotif ? 'Screen stays on · buzz at 0:00' : 'Screen stays on · enable notifications in Settings for a buzz'));
+    wrap.appendChild(hint);
+  } else if (w.activePhase === 'workout') {
+    const ms = (w.timers.workout || 0) + (w.phaseStart ? Date.now() - w.phaseStart : 0);
+    const prog = workoutProgress(date, dayKey);
+    wrap.appendChild(el('div', { class: 'focus-label' }, 'WORKOUT'));
+    wrap.appendChild(makeTimerRow({
+      timerId: 'focusWorkoutSecs',
+      timerText: fmtTime(ms),
+      onPause: () => setPhase(date, 'workout')
+    }));
+    wrap.appendChild(el('div', { class: 'focus-meta' }, [
+      el('span', {}, `${prog.done}/${prog.total} sets`),
+      el('span', { class: 'dim' }, prog.total ? `${Math.round(prog.done/prog.total*100)}%` : '')
+    ]));
+
+    // Current exercise — find first-incomplete directly so it stays open even after the user
+    // taps the header (which would otherwise set expandedExId = 'none' and hide it).
+    let curId = null;
+    for (const candidate of day.exercises) {
+      const lg = w.logs?.[candidate.id] || [];
+      if (lg.filter(s => s.d).length < candidate.sets) { curId = candidate.id; break; }
+    }
+    if (curId) {
+      expandedExId = curId;
+      const ex = day.exercises.find(e => e.id === curId);
+      if (ex) wrap.appendChild(renderExercise(ex, date, dayKey));
+
+      // Up next
+      const idx = day.exercises.findIndex(e => e.id === curId);
+      const upNext = day.exercises.slice(idx + 1, idx + 3);
+      if (upNext.length) {
+        const un = el('div', { class: 'focus-upnext' });
+        un.appendChild(el('div', { class: 'card-title', style: 'margin:0 0 8px;' }, 'Up next'));
+        upNext.forEach(nx => un.appendChild(el('div', { class: 'small dim' }, '· ' + nx.name)));
+        wrap.appendChild(un);
+      }
+    } else {
+      wrap.appendChild(el('div', { class: 'card center', style: 'padding:24px 16px;' }, [
+        el('div', { class: 'bold', style: 'margin-bottom:6px;' }, 'All sets done'),
+        el('div', { class: 'small muted' }, 'Tap finish to save the session.')
+      ]));
+    }
+
+    // Finish button
+    wrap.appendChild(el('button', {
+      class: 'btn',
+      style: 'margin-top:16px;',
+      onclick: () => {
+        if (w.activePhase && w.phaseStart) {
+          w.timers[w.activePhase] = (w.timers[w.activePhase] || 0) + (Date.now() - w.phaseStart);
+          w.activePhase = null; w.phaseStart = null;
+        }
+        w.finished = Date.now();
+        save(); toast('Workout saved 🎯', 'celebrate'); stopRest();
+        if (phaseTickInterval) clearInterval(phaseTickInterval);
+        releaseWakeLock();
+        homeFocusExited = false;
+        render();
+      }
+    }, prog.done === prog.total ? 'Finish workout' : `Finish (${prog.done}/${prog.total} sets)`));
+  } else {
+    // No active phase but session has elapsed time — paused mid-flight
+    const inWorkout = (w.timers?.workout || 0) > 0;
+    wrap.appendChild(el('div', { class: 'focus-label' }, 'PAUSED'));
+    wrap.appendChild(el('div', { class: 'focus-timer' }, fmtTime((w.timers?.warmup || 0) + (w.timers?.workout || 0))));
+    wrap.appendChild(el('div', { class: 'small muted center', style: 'margin:0 0 18px;' }, inWorkout ? 'Workout paused' : 'Warmup paused'));
+    if (inWorkout) {
+      wrap.appendChild(el('button', {
+        class: 'btn',
+        onclick: () => setPhase(date, 'workout')
+      }, '▶ Resume workout'));
+    } else {
+      wrap.appendChild(el('button', {
+        class: 'btn',
+        onclick: () => setPhase(date, 'warmup')
+      }, '▶ Resume warmup'));
+      wrap.appendChild(el('button', {
+        class: 'btn secondary',
+        style: 'margin-top:8px;',
+        onclick: () => endWarmupAndStartWorkout(date)
+      }, 'Skip to workout →'));
+    }
+  }
+
+  v.appendChild(wrap);
+  if (w.activePhase) {
+    startPhaseTick();
+    ensureFloatingPauseBtn(() => setPhase(date, w.activePhase));
+  } else {
+    hideFloatingPauseBtn();
+  }
+}
+
 function renderHome() {
   const v = $('view');
   const date = today();
   const dow = todayDow();
   const day = DAYS[dow];
+
+  // Focus takeover: while a phase is active (or session paused mid-flight), hide the rest of Home
+  const wToday = state.workouts[date];
+  const sessionStarted = wToday && ((wToday.timers?.warmup || 0) > 0 || (wToday.timers?.workout || 0) > 0);
+  const inFocus = day && wToday && !wToday.finished && !homeFocusExited && (
+    wToday.activePhase === 'warmup' || wToday.activePhase === 'workout' || sessionStarted
+  );
+  if (inFocus) { renderHomeFocus(date, dow, wToday); return; }
 
   // Greeting
   const hour = new Date().getHours();
@@ -1756,6 +2153,23 @@ function renderHome() {
     cta.appendChild(el('div', { class: 'today-cta-text' }, 'Pick a different day →'));
   }
   v.appendChild(cta);
+
+  // Start warmup (focus mode) — only on workout days, not finished, no active phase
+  if (day && !state.workouts[date]?.finished && !state.workouts[date]?.activePhase) {
+    v.appendChild(el('button', {
+      class: 'btn warmup-cta',
+      onclick: async () => {
+        await ensureNotificationPermission();
+        setPhase(date, 'warmup');
+      }
+    }, [
+      el('span', { class: 'warmup-cta-icon', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' }),
+      el('span', { class: 'warmup-cta-text' }, [
+        el('span', { class: 'bold' }, '▶ Start warmup'),
+        el('span', { class: 'small dim' }, `${Math.round((state.settings.warmupTargetSec || 300)/60)} min · then auto-start workout`)
+      ])
+    ]));
+  }
 
   // Stat grid
   const grid = el('div', { class: 'stat-grid' });
@@ -1941,6 +2355,7 @@ function renderToday() {
         w.finished = Date.now();
         save(); toast('Workout saved 🎯'); stopRest();
         if (phaseTickInterval) clearInterval(phaseTickInterval);
+        releaseWakeLock();
         render();
       }
     }, prog.done === prog.total ? 'Finish workout' : `Finish (${prog.done}/${prog.total} sets)`));
@@ -2067,9 +2482,12 @@ function renderExercise(ex, date, dayKey) {
     () => openStrengthChart(ex)));
   body.appendChild(icons);
 
-  // Spec line
+  // Spec line — show the per-set rep scheme (e.g. "12 · 10 · 10 reps")
+  const repsHtml = ex.timed
+    ? `<b style="color:var(--text)">${ex.repsMin}–${ex.repsMax}s</b>`
+    : `<b style="color:var(--text)">${getSetTargets(ex).join(' · ')}</b>`;
   body.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:6px;', html:
-    `<b style="color:var(--text)">${ex.sets}</b> sets × <b style="color:var(--text)">${ex.timed ? `${ex.repsMin}–${ex.repsMax}s` : `${ex.repsMin}–${ex.repsMax}`}</b> reps · target <b style="color:var(--text)">${ex.bw ? 'BW' : ex.weight + 'kg'}</b>`
+    `<b style="color:var(--text)">${ex.sets}</b> sets × ${repsHtml} reps · target <b style="color:var(--text)">${ex.bw ? 'BW' : ex.weight + 'kg'}</b>`
   }));
 
   if (ex.warn) {
@@ -2116,7 +2534,7 @@ function renderSetRow(ex, date, dayKey, logs, i, lastSession) {
 
   if (isEditing) {
     if (!s.w && !ex.bw) s.w = String(lastSet?.w ?? ex.weight);
-    if (!s.r) s.r = String(lastSet?.r ?? ex.repsMin);
+    if (!s.r) s.r = String(lastSet?.r ?? getSetTargets(ex)[i] ?? ex.repsMin);
 
     if (!ex.bw && !ex.timed) {
       body.appendChild(makeStepperRow('kg', s.w, 2.5, val => { logs[i].w = val; save(); render(); }));
@@ -2151,7 +2569,7 @@ function renderSetRow(ex, date, dayKey, logs, i, lastSession) {
       body.appendChild(el('div', { class: 'last-hint' }, `Last: ${ex.bw ? 'BW' : lastSet.w + 'kg'} × ${lastSet.r}${ex.timed ? 's' : ''}`));
     }
     const tapW = parseFloat(s.w) || lastSet?.w || ex.weight;
-    const tapR = parseFloat(s.r) || lastSet?.r || ex.repsMin;
+    const tapR = parseFloat(s.r) || lastSet?.r || getSetTargets(ex)[i] || ex.repsMin;
     const tapVal = ex.bw ? `BW × ${tapR}${ex.timed ? 's' : ''}` : `${tapW} kg × ${tapR}${ex.timed ? 's' : ''}`;
     body.appendChild(el('button', {
       class: 'tap-to-log',
@@ -2984,6 +3402,20 @@ function renderMore() {
   ]));
   set.appendChild(el('div', {
     class: 'list-item',
+    onclick: () => {
+      const opts = [180, 240, 300, 360, 420, 480, 600];
+      const cur = state.settings.warmupTargetSec || 300;
+      const idx = opts.indexOf(cur);
+      const next = opts[(idx + 1) % opts.length];
+      state.settings.warmupTargetSec = next; save(); render();
+      toast('Warmup target: ' + Math.round(next / 60) + ' min');
+    }
+  }, [
+    el('div', {}, 'Warmup target'),
+    el('div', { class: 'right' }, [el('span', {}, Math.round((state.settings.warmupTargetSec || 300) / 60) + ' min'), el('span', {}, '›')])
+  ]));
+  set.appendChild(el('div', {
+    class: 'list-item',
     onclick: async () => {
       if (!('Notification' in window)) { toast('Not supported'); return; }
       if (Notification.permission !== 'granted') {
@@ -3297,6 +3729,7 @@ document.querySelectorAll('nav.tabs button').forEach(b => {
     activeDayKey = null;
     expandedExId = null;
     editingSetKey = null;
+    if (activeTab === 'home') homeFocusExited = false;
     render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
