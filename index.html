@@ -1590,7 +1590,7 @@ function openCloudConnectModal() {
   setTimeout(() => inp.focus(), 100);
 }
 
-/* Idempotent seed for past 10 sessions (Apr 7 - Apr 25, 2026).
+/* Idempotent seed for past sessions through Apr 27, 2026.
    Skips dates that already exist; runs every load to repair missing data. */
 function seedPastSessions() {
   const seed = [
@@ -1606,7 +1606,9 @@ function seedPastSessions() {
     { date: '2026-04-20', dayKey: 1, repFloor: 'target' },
     { date: '2026-04-21', dayKey: 2, repFloor: 'target' },
     { date: '2026-04-23', dayKey: 4, repFloor: 'target' },
-    { date: '2026-04-25', dayKey: 6, repFloor: 'target' }
+    { date: '2026-04-25', dayKey: 6, repFloor: 'target' },
+    // Week 4 (Apr 27): Push session restored after device wipe — defaults to mid-range target reps
+    { date: '2026-04-27', dayKey: 1, repFloor: 'target' }
   ];
   let added = 0;
   for (const s of seed) {
