@@ -1794,6 +1794,18 @@ function ensureWorkout(date, dayKey) {
   }
   return state.workouts[date];
 }
+function resetTodayWorkout() {
+  const date = today();
+  const dayKey = activeDayKey ?? effectiveDayKey(date);
+  if (!confirm("Reset today's workout? All sets, timers, and progress for today will be cleared. Other days are not affected.")) return;
+  delete state.workouts[date];
+  ensureWorkout(date, dayKey);
+  expandedExId = null;
+  editingSetKey = null;
+  save();
+  render();
+  toast('Today reset');
+}
 function getSetLogs(date, dayKey, ex) {
   const w = ensureWorkout(date, dayKey);
   if (!w.logs[ex.id]) w.logs[ex.id] = Array(ex.sets).fill(0).map(() => ({ w: '', r: '', d: false }));
@@ -2886,6 +2898,19 @@ function renderToday() {
     }, d.name));
   });
   v.appendChild(sw);
+
+  // Reset today (only when there's something to reset)
+  const hasProgress = prog.done > 0 || w.started || w.activePhase ||
+    (w.timers && (w.timers.warmup || w.timers.workout || w.timers.cooldown));
+  if (hasProgress && !w.finished) {
+    v.appendChild(el('div', { class: 'row', style: 'justify-content:flex-end;margin-bottom:8px;' }, [
+      el('button', {
+        class: 'btn secondary',
+        style: 'font-size:12px;padding:6px 12px;color:var(--danger);',
+        onclick: resetTodayWorkout
+      }, '↺ Reset today')
+    ]));
+  }
 
   // Exercises
   day.exercises.forEach(ex => v.appendChild(renderExercise(ex, date, dayKey)));
