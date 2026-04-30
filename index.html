@@ -1030,9 +1030,37 @@
   .entry-list .date { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
   .entry-list .val { font-size: 15px; font-weight: 600; margin-top: 2px; }
   .entry-list .actions { display: flex; gap: 6px; }
+
+  .lock-screen {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--bg); padding: 24px; gap: 14px;
+  }
+  .lock-screen .lock-title { font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: 0.5px; }
+  .lock-screen .lock-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 6px; }
+  .lock-screen input {
+    width: 220px; max-width: 80vw; text-align: center; font-size: 18px;
+    padding: 14px 16px; border-radius: 12px; border: 1px solid var(--surface-2);
+    background: var(--surface-1); color: var(--text); outline: none;
+  }
+  .lock-screen input#lockPin { letter-spacing: 8px; font-size: 22px; }
+  .lock-screen input:focus { border-color: var(--accent); }
+  .lock-screen button {
+    margin-top: 4px; padding: 12px 32px; font-size: 16px; font-weight: 600;
+    background: var(--accent); color: white; border: none; border-radius: 12px; cursor: pointer;
+  }
+  .lock-screen .lock-error { color: var(--danger); font-size: 13px; min-height: 18px; }
+  body.locked > div:not(.lock-screen), body.locked > nav { display: none !important; }
 </style>
 </head>
 <body>
+<div id="lockScreen" class="lock-screen" style="display:none;">
+  <div class="lock-title">MyGym</div>
+  <div class="lock-sub">Enter password</div>
+  <input id="lockPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Password" maxlength="16" />
+  <button id="lockUnlock">Unlock</button>
+  <div id="lockError" class="lock-error"></div>
+</div>
 <div class="app">
   <header class="topbar">
     <h1 id="topTitle">Dashboard</h1>
@@ -1084,6 +1112,57 @@
 
 <script>
 "use strict";
+
+/* =========== LOCK GATE =========== */
+const APP_PASSWORD = '8420';
+const PIN_FLAG = 'mygym-unlocked-v1';
+
+function _showLock() {
+  document.body.classList.add('locked');
+  const el = document.getElementById('lockScreen');
+  if (el) {
+    el.style.display = 'flex';
+    setTimeout(() => document.getElementById('lockPin')?.focus(), 50);
+  }
+}
+
+function _hideLock() {
+  document.body.classList.remove('locked');
+  const el = document.getElementById('lockScreen');
+  if (el) el.style.display = 'none';
+}
+
+function _tryUnlock(pwd) {
+  const errEl = document.getElementById('lockError');
+  if (errEl) errEl.textContent = '';
+  const p = (pwd || '').trim();
+  if (!p) return;
+  if (p === APP_PASSWORD) {
+    localStorage.setItem(PIN_FLAG, 'yes');
+    _hideLock();
+  } else {
+    if (errEl) errEl.textContent = 'Wrong password';
+    const inp = document.getElementById('lockPin');
+    if (inp) { inp.value = ''; inp.focus(); }
+  }
+}
+
+function _initLockUI() {
+  const btn = document.getElementById('lockUnlock');
+  const pinEl = document.getElementById('lockPin');
+  const submit = () => _tryUnlock(pinEl?.value || '');
+  if (btn) btn.addEventListener('click', submit);
+  if (pinEl) pinEl.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+}
+
+if (localStorage.getItem(PIN_FLAG) !== 'yes') {
+  _showLock();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initLockUI);
+  } else {
+    _initLockUI();
+  }
+}
 
 /* =========== PROGRAM DATA =========== */
 const PROGRAM_START = '2026-04-07';
@@ -4154,6 +4233,17 @@ function renderMore() {
   set.appendChild(el('div', {
     class: 'list-item',
     onclick: () => {
+      if (!confirm('Lock the app? You\'ll need to enter the password again on next visit.')) return;
+      localStorage.removeItem(PIN_FLAG);
+      location.reload();
+    }
+  }, [
+    el('div', {}, 'Lock app'),
+    el('div', { class: 'right' }, [el('span', {}, '›')])
+  ]));
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: () => {
       if (!confirm('Clear all logged data? This cannot be undone.')) return;
       state = structuredClone(defaultState);
       seedPastSessions();
@@ -4168,7 +4258,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v2.0 · Started ${PROGRAM_START}`));
+  }, `MyGym · v2.3 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
