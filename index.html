@@ -1108,7 +1108,7 @@ const DAYS = {
     note: 'Squeeze the back on every row. Reverse curl added Week 8 to address forearm weakness.',
     exercises: [
       { id: 'tue-1', name: 'Lat pulldown', sets: 3, repsMin: 8, repsMax: 10, weight: 32, target: 'Lats, biceps', alt: 'Assisted pull-up / Neutral grip lat pulldown', alternatives: ['Assisted pull-up', 'Neutral grip lat pulldown'], muscles: ['back','biceps'] },
-      { id: 'tue-2', name: 'Chest-supported row', sets: 3, repsMin: 8, repsMax: 10, weight: 25, target: 'Mid-back, lats', alt: 'Seated cable row / Machine row', alternatives: ['Seated cable row', 'Machine row'], muscles: ['back'] },
+      { id: 'tue-2', name: 'One-arm dumbbell row', sets: 3, repsMin: 8, repsMax: 10, weight: 25, target: 'Mid-back, lats', alt: 'Seated cable row / Machine row', alternatives: ['Seated cable row', 'Machine row'], muscles: ['back'] },
       { id: 'tue-3', name: 'Cable row / one-arm row', sets: 3, repsMin: 8, repsMax: 10, weight: 10, target: 'Lats, mid-back', alt: 'Single-arm dumbbell row / T-bar row', alternatives: ['Single-arm dumbbell row', 'T-bar row'], muscles: ['back'] },
       { id: 'tue-4', name: 'Face pull', sets: 3, repsMin: 12, repsMax: 15, weight: 18, target: 'Rear delt, rotators', alt: 'Reverse pec deck / Cable rear delt fly', alternatives: ['Reverse pec deck', 'Cable rear delt fly'], muscles: ['shoulders'] },
       { id: 'tue-5', name: 'Rear delt fly', sets: 3, repsMin: 12, repsMax: 15, weight: 10, target: 'Rear delt, mid-trap', alt: 'Reverse pec deck / Bent-over dumbbell rear delt fly', alternatives: ['Reverse pec deck', 'Bent-over dumbbell rear delt fly'], muscles: ['shoulders'] },
@@ -1138,7 +1138,7 @@ const DAYS = {
     exercises: [
       { id: 'sat-1', name: 'Flat chest press machine', sets: 3, repsMin: 8, repsMax: 10, weight: 12, target: 'Chest, triceps', alt: 'Flat dumbbell bench press / Barbell bench press', alternatives: ['Flat dumbbell bench press', 'Barbell bench press'], muscles: ['chest','triceps'] },
       { id: 'sat-2', name: 'Lat pulldown', sets: 3, repsMin: 8, repsMax: 10, weight: 32, target: 'Lats, biceps', alt: 'Assisted pull-up / Neutral grip lat pulldown', alternatives: ['Assisted pull-up', 'Neutral grip lat pulldown'], muscles: ['back','biceps'] },
-      { id: 'sat-3', name: 'Chest-supported row', sets: 3, repsMin: 8, repsMax: 10, weight: 32, target: 'Mid-back, lats', alt: 'Seated cable row / Machine row', alternatives: ['Seated cable row', 'Machine row'], muscles: ['back'] },
+      { id: 'sat-3', name: 'One-arm dumbbell row', sets: 3, repsMin: 8, repsMax: 10, weight: 32, target: 'Mid-back, lats', alt: 'Seated cable row / Machine row', alternatives: ['Seated cable row', 'Machine row'], muscles: ['back'] },
       { id: 'sat-4', name: 'Lateral raise', sets: 3, repsMin: 12, repsMax: 15, weight: 5, target: 'Side delt', alt: 'Cable lateral raise / Machine lateral raise', alternatives: ['Cable lateral raise', 'Machine lateral raise'], muscles: ['shoulders'] },
       { id: 'sat-5', name: 'Cable biceps curl', sets: 3, repsMin: 10, repsMax: 12, weight: 5, target: 'Biceps', alt: 'Dumbbell biceps curl / EZ bar curl', alternatives: ['Dumbbell biceps curl', 'EZ bar curl'], muscles: ['biceps'] },
       { id: 'sat-6', name: 'Rope triceps pushdown', sets: 3, repsMin: 10, repsMax: 12, weight: 9, target: 'Triceps', alt: 'Straight bar triceps pushdown / Single-arm cable pushdown', alternatives: ['Straight bar triceps pushdown', 'Single-arm cable pushdown'], muscles: ['triceps'] }
@@ -1311,7 +1311,7 @@ const defaultState = {
   plan: { skippedDates: [], overrides: {} },
   photos: [],
   notes: {},
-  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false }
+  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false }
 };
 
 let state;
@@ -1665,11 +1665,12 @@ function seedPastSessions() {
     const day = DAYS[s.dayKey]; if (!day) continue;
     const logs = {};
     for (const ex of day.exercises) {
-      const reps = s.repFloor === 'target' ? ex.repsMin + Math.floor((ex.repsMax - ex.repsMin) / 2) : ex.repsMin;
+      const targets = getSetTargets(ex);
       const weight = ex.bw ? '' : String(ex.weight);
       logs[ex.id] = [];
       for (let i = 0; i < ex.sets; i++) {
-        logs[ex.id].push({ w: weight, r: String(reps), d: true });
+        const r = targets[i] ?? targets[targets.length - 1] ?? ex.repsMin;
+        logs[ex.id].push({ w: weight, r: String(r), d: true });
       }
     }
     const start = new Date(s.date + 'T15:00:00').getTime();
@@ -1719,6 +1720,26 @@ function migrateWaterTo500ml() {
   save({ skipCloud: true });
 }
 migrateWaterTo500ml();
+
+// One-time migration: rewrite all logged reps to the 12·10·10 pyramid (skips timed exercises).
+function migrateRepsToPyramid() {
+  if (state.settings.migratedRepsToPyramid) return;
+  for (const [date, w] of Object.entries(state.workouts)) {
+    const day = DAYS[w.dayKey]; if (!day) continue;
+    for (const ex of day.exercises) {
+      if (ex.timed) continue;
+      if (!w.logs[ex.id]) continue;
+      const targets = getSetTargets(ex);
+      for (let i = 0; i < w.logs[ex.id].length; i++) {
+        const t = targets[i] ?? targets[targets.length - 1] ?? ex.repsMin;
+        w.logs[ex.id][i].r = String(t);
+      }
+    }
+  }
+  state.settings.migratedRepsToPyramid = true;
+  save();
+}
+migrateRepsToPyramid();
 
 /* =========== HELPERS =========== */
 function $(id) { return document.getElementById(id); }
@@ -1815,7 +1836,7 @@ function getSetLogs(date, dayKey, ex) {
 
 function getLastSession(exId, beforeDate) {
   const dates = Object.keys(state.workouts)
-    .filter(d => d < beforeDate && state.workouts[d].finished && (state.workouts[d].logs[exId] || []).some(s => s.d))
+    .filter(d => d < beforeDate && (state.workouts[d].logs[exId] || []).some(s => s.d))
     .sort()
     .reverse();
   if (!dates.length) return null;
@@ -1853,15 +1874,14 @@ function isCurrentSetPR(exId, date, currentSet) {
   return !pr || e > pr.e;
 }
 
-// Per-set rep targets — hard exercises ramp 12·10·10, easy ramp 15·12·12.
-// Classification: timed (planks) keeps its own range; repsMax >= 12 → easy; everything else → hard.
+// Per-set rep targets — default pyramid 12·10·8 for all reps-based exercises.
+// Timed (planks) keeps its own range in seconds.
 function getSetTargets(ex) {
   if (ex.timed) {
     const arr = []; for (let i = 0; i < ex.sets; i++) arr.push(ex.repsMin);
     return arr;
   }
-  const easy = ex.repsMax >= 12 && ex.repsMin >= 12;
-  const base = easy ? [15, 12, 12] : [12, 10, 10];
+  const base = [12, 10, 10];
   const arr = [];
   for (let i = 0; i < ex.sets; i++) arr.push(base[Math.min(i, base.length - 1)]);
   return arr;
@@ -2157,6 +2177,26 @@ function getActiveExId(date, dayKey) {
   return null;
 }
 
+let _pipCtx = null;
+function playPip() {
+  if (!state.settings.restSound) return;
+  try {
+    _pipCtx = _pipCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = _pipCtx;
+    if (ctx.state === 'suspended') ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.25);
+  } catch (e) { /* silently ignore */ }
+}
+
 function startRest(secs) {
   secs = secs || state.settings.restSec;
   restEndAt = Date.now() + secs * 1000;
@@ -2171,6 +2211,7 @@ function updateRest() {
   $('restSecs').textContent = `${m}:${String(s).padStart(2, '0')}`;
   if (left <= 0) {
     stopRest();
+    playPip();
     if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
     toast('Rest done — next set');
     if (state.settings.notifications && 'Notification' in window && Notification.permission === 'granted') {
@@ -2511,27 +2552,39 @@ function renderHomeFocus(date, dayKey, w) {
       el('span', { class: 'dim' }, prog.total ? `${Math.round(prog.done/prog.total*100)}%` : '')
     ]));
 
-    // Current exercise — find first-incomplete directly so it stays open even after the user
-    // taps the header (which would otherwise set expandedExId = 'none' and hide it).
+    // Current exercise — honor explicit expandedExId, otherwise auto-pick first incomplete.
     let curId = null;
-    for (const candidate of day.exercises) {
-      const lg = w.logs?.[candidate.id] || [];
-      if (lg.filter(s => s.d).length < candidate.sets) { curId = candidate.id; break; }
+    const explicit = day.exercises.find(e => e.id === expandedExId);
+    if (explicit) {
+      curId = explicit.id;
+    } else {
+      for (const candidate of day.exercises) {
+        const lg = w.logs?.[candidate.id] || [];
+        if (lg.filter(s => s.d).length < candidate.sets) { curId = candidate.id; break; }
+      }
     }
+
+    // Exercise switcher strip — tap any chip to jump.
+    const strip = el('div', {
+      class: 'focus-ex-strip',
+      style: 'display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;'
+    });
+    day.exercises.forEach((ex, i) => {
+      const lg = w.logs?.[ex.id] || [];
+      const doneSets = lg.filter(s => s.d).length;
+      const isDone = doneSets >= ex.sets;
+      const isCurrent = ex.id === curId;
+      strip.appendChild(el('button', {
+        class: 'chip' + (isCurrent ? ' accent' : ''),
+        style: 'padding:8px 10px;flex-shrink:0;font-size:12px;font-weight:600;' + (isDone ? 'opacity:0.6;' : ''),
+        onclick: e => { e.preventDefault(); expandedExId = ex.id; render(); }
+      }, `${i + 1}. ${isDone ? '✓ ' : ''}${ex.name}`));
+    });
+    wrap.appendChild(strip);
+
     if (curId) {
-      expandedExId = curId;
       const ex = day.exercises.find(e => e.id === curId);
       if (ex) wrap.appendChild(renderExercise(ex, date, dayKey));
-
-      // Up next
-      const idx = day.exercises.findIndex(e => e.id === curId);
-      const upNext = day.exercises.slice(idx + 1, idx + 3);
-      if (upNext.length) {
-        const un = el('div', { class: 'focus-upnext' });
-        un.appendChild(el('div', { class: 'card-title', style: 'margin:0 0 8px;' }, 'Up next'));
-        upNext.forEach(nx => un.appendChild(el('div', { class: 'small dim' }, '· ' + nx.name)));
-        wrap.appendChild(un);
-      }
     } else {
       wrap.appendChild(el('div', { class: 'card center', style: 'padding:24px 16px;' }, [
         el('div', { class: 'bold', style: 'margin-bottom:6px;' }, 'All sets done'),
@@ -3038,7 +3091,7 @@ function renderExercise(ex, date, dayKey) {
   const icons = el('div', { class: 'ex-icons-row' });
   icons.appendChild(makeActionBtn('Demo',
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
-    () => openVideoSearch(ex)));
+    () => openVideoSearch(displayName)));
   icons.appendChild(makeActionBtn('Swap',
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4v16M17 20V4M3 8l4-4 4 4M21 16l-4 4-4-4"/></svg>',
     () => openSwapModal(ex, date),
@@ -3054,14 +3107,6 @@ function renderExercise(ex, date, dayKey) {
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/></svg>',
     () => openStrengthChart(ex)));
   body.appendChild(icons);
-
-  // Spec line — show the per-set rep scheme (e.g. "12 · 10 · 10 reps")
-  const repsHtml = ex.timed
-    ? `<b style="color:var(--text)">${ex.repsMin}–${ex.repsMax}s</b>`
-    : `<b style="color:var(--text)">${getSetTargets(ex).join(' · ')}</b>`;
-  body.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:6px;', html:
-    `<b style="color:var(--text)">${ex.sets}</b> sets × ${repsHtml} reps · target <b style="color:var(--text)">${ex.bw ? 'BW' : ex.weight + 'kg'}</b>`
-  }));
 
   if (ex.warn) {
     body.appendChild(el('div', { class: 'coach-note warn', style: 'font-size:12px;padding:8px 10px;margin:6px 0;' }, [el('span', {}, '⚠ ' + ex.warn)]));
@@ -3110,7 +3155,11 @@ function renderSetRow(ex, date, dayKey, logs, i, lastSession) {
     if (!s.r) s.r = String(lastSet?.r ?? getSetTargets(ex)[i] ?? ex.repsMin);
 
     if (!ex.bw && !ex.timed) {
-      body.appendChild(makeStepperRow('kg', s.w, 2.5, val => { logs[i].w = val; save(); render(); }));
+      if (ex.barbell) {
+        body.appendChild(makeStepperRow('kg', s.w, 2.5, val => { logs[i].w = val; save(); render(); }));
+      } else {
+        body.appendChild(makeWeightPickerRow(s.w, val => { logs[i].w = val; save(); render(); }));
+      }
     }
     body.appendChild(makeStepperRow(ex.timed ? 'sec' : 'reps', s.r, 1, val => { logs[i].r = val; save(); render(); }));
     body.appendChild(el('button', {
@@ -3234,6 +3283,45 @@ function makeStepperRow(label, value, step, onChange) {
         const cur = parseFloat(value) || 0;
         onChange(String(+(cur + step).toFixed(2)));
       }
+    }, '+')
+  ]);
+}
+
+function makeWeightPickerRow(currentVal, onChange) {
+  const list = (state.settings.dumbbellWeights || []).slice().sort((a, b) => a - b);
+  const curNum = parseFloat(currentVal) || 0;
+
+  function prevInList(v) {
+    let prev = null;
+    for (const x of list) { if (x < v - 0.001) prev = x; else break; }
+    return prev != null ? prev : Math.max(0, +(v - 1).toFixed(2));
+  }
+  function nextInList(v) {
+    for (const x of list) { if (x > v + 0.001) return x; }
+    return +(v + 1).toFixed(2);
+  }
+
+  return el('div', { class: 'stepper-row' }, [
+    el('span', { class: 'stepper-label' }, 'kg'),
+    el('button', {
+      class: 'stepper-btn',
+      onclick: e => { e.stopPropagation(); onChange(String(prevInList(curNum))); }
+    }, '−'),
+    el('div', {
+      class: 'stepper-value',
+      style: 'cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;',
+      title: 'Tap to type any weight',
+      onclick: e => {
+        e.stopPropagation();
+        const input = prompt('Weight (kg):', String(curNum));
+        if (input == null) return;
+        const v = parseFloat(input);
+        if (!isNaN(v) && v >= 0) onChange(String(+v.toFixed(2)));
+      }
+    }, String(curNum)),
+    el('button', {
+      class: 'stepper-btn',
+      onclick: e => { e.stopPropagation(); onChange(String(nextInList(curNum))); }
     }, '+')
   ]);
 }
@@ -3533,8 +3621,8 @@ function openImageModal(displayName) {
   openModal(m);
 }
 
-function openVideoSearch(ex) {
-  const q = encodeURIComponent(ex.name + ' form how to');
+function openVideoSearch(name) {
+  const q = encodeURIComponent(name + ' form how to');
   window.open(`https://www.youtube.com/results?search_query=${q}`, '_blank', 'noopener');
 }
 
@@ -4039,6 +4127,33 @@ function renderMore() {
   set.appendChild(el('div', {
     class: 'list-item',
     onclick: () => {
+      state.settings.restSound = !state.settings.restSound;
+      save(); render();
+      if (state.settings.restSound) playPip();
+    }
+  }, [
+    el('div', {}, 'Rest end pip sound'),
+    el('div', { class: 'right' }, [el('span', {}, state.settings.restSound ? 'On' : 'Off'), el('span', {}, '›')])
+  ]));
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: () => {
+      const cur = (state.settings.dumbbellWeights || []).join(', ');
+      const input = prompt('Available dumbbell weights at your gym (kg, comma-separated):', cur);
+      if (input == null) return;
+      const parsed = input.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n) && n > 0).sort((a, b) => a - b);
+      if (!parsed.length) { toast('No valid weights'); return; }
+      state.settings.dumbbellWeights = parsed;
+      save(); render();
+      toast('Dumbbell list saved');
+    }
+  }, [
+    el('div', {}, 'My dumbbell weights (kg)'),
+    el('div', { class: 'right' }, [el('span', { class: 'small dim' }, (state.settings.dumbbellWeights || []).join(', ')), el('span', {}, '›')])
+  ]));
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: () => {
       if (!confirm('Clear all logged data? This cannot be undone.')) return;
       state = structuredClone(defaultState);
       seedPastSessions();
@@ -4053,7 +4168,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v1.6 · Started ${PROGRAM_START}`));
+  }, `MyGym · v2.0 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
