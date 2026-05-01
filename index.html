@@ -1390,7 +1390,7 @@ const defaultState = {
   plan: { skippedDates: [], overrides: {} },
   photos: [],
   notes: {},
-  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false }
+  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false }
 };
 
 let state;
@@ -2299,6 +2299,26 @@ function updateRest() {
   }
 }
 function stopRest() { if (restTimer) clearInterval(restTimer); restTimer = null; $('restTimer').classList.remove('show'); }
+
+function checkBedtimeReminder() {
+  if (!state.settings.notifications) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const target = state.settings.bedtime || '23:00';
+  const [hh, mm] = target.split(':').map(Number);
+  const now = new Date();
+  const bed = new Date(now); bed.setHours(hh, mm, 0, 0);
+  const oneHourBefore = new Date(bed.getTime() - 60 * 60 * 1000);
+  const today = now.toISOString().slice(0, 10);
+  if (state.settings.lastBedtimeNotifDate === today) return;
+  if (now >= oneHourBefore && now < bed) {
+    new Notification('Time to wind down', { body: `Bedtime in 1 hour (${target})` });
+    if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+    state.settings.lastBedtimeNotifDate = today;
+    save({ skipCloud: true });
+  }
+}
+checkBedtimeReminder();
+setInterval(checkBedtimeReminder, 60 * 1000);
 $('restSkip').onclick = stopRest;
 $('restAdd').onclick = () => { restEndAt += 15000; updateRest(); };
 
@@ -2506,14 +2526,15 @@ function buildRingsRow() {
     subLabel: 'This week'
   }));
 
-  // Sleep avg over last 7 nights / target
-  const sleepAvg = getSleepAvgLast7();
-  const sleepTarget = state.settings.sleepTarget || 8;
+  // Bedtime: live countdown + 7-night compliance vs target time
+  const bedtime = state.settings.bedtime || '23:00';
+  const compliance = getBedtimeComplianceLast7();
+  const countdown = getBedtimeCountdownLabel(bedtime);
   row.appendChild(buildRing({
-    percent: sleepAvg ? Math.min(1, sleepAvg / sleepTarget) : 0,
+    percent: compliance ?? 0,
     color: '#818cf8',
-    valueLabel: sleepAvg ? `${sleepAvg.toFixed(1)} h` : '—',
-    subLabel: 'Sleep avg'
+    valueLabel: countdown,
+    subLabel: `Bedtime · ${bedtime}`
   }));
 
   return row;
@@ -2526,6 +2547,29 @@ function getSleepAvgLast7() {
   const recent = state.sleep.filter(s => s.date >= cutKey);
   if (!recent.length) return null;
   return recent.reduce((a, s) => a + s.hours, 0) / recent.length;
+}
+
+function getBedtimeComplianceLast7() {
+  if (!state.sleep.length) return null;
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+  const cutKey = cutoff.toISOString().slice(0, 10);
+  const target = state.settings.bedtime || '23:00';
+  const recent = state.sleep.filter(s => s.date >= cutKey && s.bedtime);
+  if (!recent.length) return null;
+  const onTime = recent.filter(s => s.bedtime <= target).length;
+  return onTime / recent.length;
+}
+
+function getBedtimeCountdownLabel(target) {
+  const [hh, mm] = (target || '23:00').split(':').map(Number);
+  const now = new Date();
+  const t = new Date(now); t.setHours(hh, mm, 0, 0);
+  const diffMin = Math.round((t - now) / 60000);
+  if (diffMin <= -60) return 'past';
+  if (diffMin <= 0) return 'now';
+  const h = Math.floor(diffMin / 60);
+  const m = diffMin % 60;
+  return h ? `in ${h}h ${m}m` : `in ${m}m`;
 }
 
 function totalTimeThisWeek() {
@@ -3278,23 +3322,11 @@ function renderSetRow(ex, date, dayKey, logs, i, lastSession) {
         e.stopPropagation();
         if (!logs[i].w && !ex.bw) logs[i].w = String(tapW);
         if (!logs[i].r) logs[i].r = String(tapR);
-        // capture PR state BEFORE marking done (PR check excludes current date)
-        const prevPR = getPR(ex.id, date);
-        logs[i].d = true;
-        if (!w.started) w.started = Date.now();
+        editingSetKey = setKey;
         save(); render();
-        startRest();
-        if (navigator.vibrate) navigator.vibrate(20);
-        // Celebrate if new PR
-        const e1 = epley(logs[i].w, logs[i].r);
-        if (e1 > 0 && (!prevPR || e1 > prevPR.e)) {
-          const lift = ex.bw ? `BW × ${logs[i].r}` : `${logs[i].w}kg × ${logs[i].r}`;
-          toast(`★ NEW PR · ${lift}`, 'celebrate');
-          if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 100]);
-        }
       }
     }, [
-      el('span', { class: 'tap-label' }, 'Tap to log'),
+      el('span', { class: 'tap-label' }, 'Tap to edit'),
       el('span', { class: 'tap-value' }, tapVal)
     ]));
   }
@@ -4189,6 +4221,22 @@ function renderMore() {
   ]));
   set.appendChild(el('div', {
     class: 'list-item',
+    onclick: () => {
+      const opts = ['21:30', '22:00', '22:30', '23:00', '23:30', '00:00'];
+      const cur = state.settings.bedtime || '23:00';
+      const idx = opts.indexOf(cur);
+      const next = opts[(idx + 1) % opts.length];
+      state.settings.bedtime = next;
+      state.settings.lastBedtimeNotifDate = '';
+      save(); render();
+      toast('Bedtime: ' + next);
+    }
+  }, [
+    el('div', {}, 'Bedtime'),
+    el('div', { class: 'right' }, [el('span', {}, state.settings.bedtime || '23:00'), el('span', {}, '›')])
+  ]));
+  set.appendChild(el('div', {
+    class: 'list-item',
     onclick: async () => {
       if (!('Notification' in window)) { toast('Not supported'); return; }
       if (Notification.permission !== 'granted') {
@@ -4258,7 +4306,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v2.3 · Started ${PROGRAM_START}`));
+  }, `MyGym · v2.5 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
