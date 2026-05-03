@@ -757,7 +757,7 @@
     line-height: 1;
   }
   .quote-text {
-    font-size: 15px; font-style: italic;
+    font-size: 16px; font-style: italic;
     line-height: 1.5; color: var(--text);
     position: relative;
   }
@@ -1127,20 +1127,32 @@
   .ml-stat .s-val { font-size: 18px; font-weight: 800; color: var(--text); line-height: 1.05; }
   .ml-stat .s-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
-  /* Bedtime bar */
+  /* Info bar (Bedtime / Work / Gym) — bigger so each line reads easily on phone */
   .bedtime-bar {
     display: flex; align-items: center; justify-content: space-between;
-    border-radius: 14px; padding: 14px 16px; margin: 0;
+    border-radius: 16px; padding: 16px 18px; margin: 0;
     background: var(--surface-1); border: 1px solid var(--surface-2);
-    text-align: left; gap: 10px; cursor: pointer;
+    text-align: left; gap: 12px; cursor: pointer;
+    width: 100%;
   }
   .bedtime-bar:active { background: var(--surface-2); }
-  .bedtime-bar .b-icon { width: 32px; height: 32px; border-radius: 10px; background: var(--surface-2); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .bedtime-bar .b-icon svg { width: 18px; height: 18px; }
-  .bedtime-bar .b-mid { flex: 1; }
-  .bedtime-bar .b-mid b { display: block; font-size: 14px; font-weight: 700; color: var(--text); }
-  .bedtime-bar .b-mid span { font-size: 12px; color: var(--text-muted); }
-  .bedtime-bar .b-right { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .bedtime-bar .b-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: var(--surface-2); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .bedtime-bar .b-icon svg { width: 22px; height: 22px; }
+  .bedtime-bar .b-mid { flex: 1; min-width: 0; }
+  .bedtime-bar .b-mid b {
+    display: block; font-size: 16px; font-weight: 700; color: var(--text);
+    margin-bottom: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .bedtime-bar .b-mid span { font-size: 13px; color: var(--text-muted); }
+  .bedtime-bar .b-right {
+    font-size: 13px; color: var(--text-muted);
+    font-variant-numeric: tabular-nums; font-weight: 600; flex-shrink: 0;
+  }
 
   /* Tasks list */
   .tasks-add-row { display: flex; gap: 8px; align-items: center; padding: 10px 14px; }
@@ -1177,19 +1189,36 @@
     padding: 18px 14px; text-align: center; color: var(--text-muted); font-size: 13px;
   }
 
-  /* AI parser hero button */
+  /* AI parser hero — full-width banner CTA */
   .ai-parse-cta {
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    width: 100%; padding: 14px 16px; margin-bottom: 14px;
-    background: linear-gradient(135deg, rgba(129,140,248,0.18), rgba(99,102,241,0.18));
-    color: var(--text); border: 1px solid rgba(129,140,248,0.35);
-    border-radius: 14px; font-size: 14px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; gap: 14px;
+    width: 100%; padding: 16px 18px;
+    background: linear-gradient(135deg, rgba(129,140,248,0.20), rgba(99,102,241,0.20));
+    color: var(--text); border: 1px solid rgba(129,140,248,0.45);
+    border-radius: 16px; cursor: pointer;
     transition: all 0.15s;
+    text-align: left;
   }
-  .ai-parse-cta:hover { border-color: var(--accent); background: linear-gradient(135deg, rgba(129,140,248,0.28), rgba(99,102,241,0.28)); }
-  .ai-parse-cta:active { transform: scale(0.98); }
-  .ai-parse-cta .ai-spark { color: var(--accent); }
-  .ai-parse-cta.disabled { background: var(--surface-1); border-color: var(--surface-2); color: var(--text-muted); }
+  .ai-parse-cta:hover {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, rgba(129,140,248,0.28), rgba(99,102,241,0.28));
+  }
+  .ai-parse-cta:active { transform: scale(0.99); }
+  .ai-parse-cta .ai-spark {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: var(--accent-soft); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0; line-height: 1;
+  }
+  .ai-parse-cta .ai-text {
+    flex: 1; display: flex; flex-direction: column; gap: 2px;
+  }
+  .ai-parse-cta .ai-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .ai-parse-cta .ai-sub { font-size: 13px; color: var(--text-muted); }
+  .ai-parse-cta .ai-arrow { color: var(--text-dim); flex-shrink: 0; }
+  .ai-parse-cta.disabled { background: var(--surface-1); border-color: var(--surface-2); }
+  .ai-parse-cta.disabled .ai-spark { background: var(--surface-2); color: var(--text-muted); }
+  .ai-parse-cta.disabled .ai-title { color: var(--text-muted); }
 
   /* Schedule rows on dashboard / Tasks tab */
   .schedule-list { list-style: none; padding: 0; margin: 0; }
@@ -1231,6 +1260,7 @@
   .cat-personal { background: rgba(244,114,182,0.18); color: #f9a8d4; }
   .cat-gym { background: rgba(167,139,250,0.18); color: #c4b5fd; }
   .cat-health { background: rgba(74,222,128,0.18); color: #86efac; }
+  .cat-family { background: rgba(251,191,36,0.18); color: #fcd34d; }
 
   /* Group headers in Tasks list */
   .group-head {
@@ -1296,25 +1326,32 @@
   }
   .ml-quote .author { display: block; font-size: 11px; color: var(--text-dim); font-style: normal; margin-top: 2px; }
 
-  /* Daily focus input card */
+  /* Gratitude / focus input card — matches the info bar size */
   .focus-card {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 14px; background: var(--surface-1); border: 1px solid var(--surface-2);
-    border-radius: 14px; transition: border-color 0.15s;
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 18px;
+    background: var(--surface-1); border: 1px solid var(--surface-2);
+    border-radius: 16px; transition: border-color 0.15s;
   }
   .focus-card:focus-within { border-color: var(--accent); }
-  .focus-card .focus-ico { color: var(--accent); flex-shrink: 0; }
-  .focus-card .focus-ico svg { width: 16px; height: 16px; }
+  .focus-card .focus-ico {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: var(--surface-2); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .focus-card .focus-ico svg { width: 22px; height: 22px; }
   .focus-card input {
-    flex: 1; background: transparent; border: none; outline: none;
-    color: var(--text); font-size: 14px; font-weight: 600;
+    flex: 1; min-width: 0;
+    background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 16px; font-weight: 600;
   }
   .focus-card input::placeholder { color: var(--text-dim); font-weight: 400; }
   .focus-card .polish-btn {
     flex-shrink: 0; background: var(--accent-soft); color: var(--accent);
-    border: none; padding: 8px 12px; border-radius: 10px;
-    font-size: 14px; font-weight: 700; cursor: pointer;
+    border: none; padding: 10px 14px; border-radius: 10px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
     transition: all 0.15s; line-height: 1;
+    min-width: 44px;
   }
   .focus-card .polish-btn:hover { background: rgba(129,140,248,0.22); }
   .focus-card .polish-btn:active { transform: scale(0.94); }
@@ -1473,32 +1510,47 @@
   .qlog-btn .qicon svg { width: 18px; height: 18px; }
   .qlog-btn .qlbl { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--text-muted); }
 
-  /* Reminders (soft) */
+  /* Reminders (soft) — sized to match the info bars at the top */
   .reminders-list { list-style: none; padding: 0; margin: 0; }
   .reminders-list li {
     display: flex; align-items: center; gap: 12px;
-    padding: 10px 14px; border-top: 1px solid var(--surface-2);
+    padding: 16px 18px; border-top: 1px solid var(--surface-2);
     cursor: pointer; transition: background 0.12s;
   }
   .reminders-list li:first-child { border-top: none; }
   .reminders-list li:active { background: var(--surface-2); }
   .reminders-list .r-icon {
-    width: 28px; height: 28px; border-radius: 8px;
+    width: 42px; height: 42px; border-radius: 12px;
     background: var(--surface-2); color: var(--info, var(--accent));
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .reminders-list .r-icon svg { width: 15px; height: 15px; }
+  .reminders-list .r-icon svg { width: 22px; height: 22px; }
   .reminders-list li.met .r-icon { background: var(--success-soft); color: var(--success); }
   .reminders-list .r-body { flex: 1; min-width: 0; }
-  .reminders-list .r-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .reminders-list .r-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
   .reminders-list li.met .r-title { color: var(--text-muted); }
-  .reminders-list .r-meta { font-size: 11px; color: var(--text-muted); }
+  .reminders-list .r-meta { font-size: 13px; color: var(--text-muted); }
   .reminders-list .r-progress {
-    height: 3px; background: var(--surface-3); border-radius: 999px;
-    overflow: hidden; margin-top: 4px; max-width: 90px;
+    height: 4px; background: var(--surface-3); border-radius: 999px;
+    overflow: hidden; margin-top: 6px; max-width: 110px;
   }
   .reminders-list .r-progress > span { display: block; height: 100%; background: var(--info, var(--accent)); border-radius: 999px; }
-  .reminders-list .r-status { font-size: 11px; color: var(--text-muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .reminders-list .r-status { font-size: 13px; color: var(--text-muted); flex-shrink: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .reminders-list .r-water-ctrls {
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .reminders-list .water-btn {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--surface-2); color: var(--text-muted);
+    border: 1px solid var(--surface-3);
+    font-size: 18px; font-weight: 700; line-height: 1;
+    cursor: pointer; transition: all 0.12s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .reminders-list .water-btn:hover { color: var(--text); border-color: var(--accent); }
+  .reminders-list .water-btn:active { transform: scale(0.92); }
+  .reminders-list .water-btn.primary { background: var(--accent-soft); color: var(--accent); border-color: rgba(129,140,248,0.35); }
+  .reminders-list .water-btn.primary:hover { background: rgba(129,140,248,0.22); }
 
   /* Recent wins */
   .wins-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -3209,6 +3261,7 @@ const ML_ICONS = {
   trend:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>',
   briefcase:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>',
   heart:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+  users:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
 };
 
 function getDailyFocus() {
@@ -3253,6 +3306,25 @@ function hasUsedSupplementsRecently() {
 }
 
 // Build week-strip cells (Mon→Sun) for the current week.
+function buildAIParseBanner(wrapperStyle) {
+  const hasKey = !!state.settings.anthropicApiKey;
+  const title = hasKey ? 'Paste with AI' : 'Set up AI key';
+  const sub = hasKey ? 'Drop a casual day plan, get tasks back' : 'Add your Anthropic key to paste lists';
+  const btn = el('button', {
+    class: 'ai-parse-cta' + (hasKey ? '' : ' disabled'),
+    onclick: () => hasKey ? openAIParseModal() : openAIKeyModal()
+  }, [
+    el('span', { class: 'ai-spark' }, '✨'),
+    el('span', { class: 'ai-text' }, [
+      el('span', { class: 'ai-title' }, title),
+      el('span', { class: 'ai-sub' }, sub)
+    ]),
+    el('span', { class: 'ai-arrow', html: ML_ICONS.arrow })
+  ]);
+  // Wrapper holds the margin so the button itself stays width:100% without overflowing the parent.
+  return el('div', { style: wrapperStyle || '' }, [btn]);
+}
+
 function buildWeekStripCells() {
   const t = new Date();
   const dow = t.getDay() || 7; // 1..7 with Mon=1
@@ -3323,7 +3395,53 @@ function renderMastaHome() {
     el('div', { class: 'quote-author' }, '— ' + q.author)
   ]));
 
-  // 2. INFO BARS (Bedtime / Work / Gym) — pinned at top
+  // 2. GRATITUDE (right after the quote)
+  const gratSection = el('div', { class: 'ml-section' });
+  gratSection.appendChild(el('div', { class: 'ml-section-head' }, [
+    el('span', {}, 'Gratitude')
+  ]));
+  const gratInp = el('input', {
+    type: 'text',
+    placeholder: 'What are you grateful for today?',
+    maxlength: '200',
+    value: getDailyGratitude()
+  });
+  let gratTimer = null;
+  gratInp.oninput = () => {
+    clearTimeout(gratTimer);
+    gratTimer = setTimeout(() => setDailyGratitude(gratInp.value), 400);
+  };
+  gratInp.onblur = () => setDailyGratitude(gratInp.value);
+
+  const polishBtn = el('button', { class: 'polish-btn', type: 'button' }, '✨');
+  polishBtn.onclick = async () => {
+    const raw = gratInp.value.trim();
+    if (!raw) { toast('Type something first'); return; }
+    if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
+    polishBtn.disabled = true;
+    polishBtn.textContent = '…';
+    try {
+      const polished = await polishGratitudeWithAI(raw);
+      gratInp.value = polished;
+      setDailyGratitude(polished);
+      toast('✓ Polished');
+    } catch (e) {
+      toast(String(e.message || 'Failed').slice(0, 80));
+    } finally {
+      polishBtn.disabled = false;
+      polishBtn.textContent = '✨';
+    }
+  };
+
+  const gratCard = el('div', { class: 'focus-card' }, [
+    el('span', { class: 'focus-ico', html: ML_ICONS.heart }),
+    gratInp,
+    polishBtn
+  ]);
+  gratSection.appendChild(gratCard);
+  v.appendChild(gratSection);
+
+  // 3. INFO BARS (Bedtime / Work / Gym) — pinned at top
   const bedtime = state.settings.bedtime || '23:00';
   const barsSection = el('div', { class: 'ml-section', style: 'display:flex;flex-direction:column;gap:8px;' });
 
@@ -3412,6 +3530,44 @@ function renderMastaHome() {
     el('span', { class: 'b-right' }, gymRight)
   ]));
 
+  // Family bar — next pending family-category task
+  const todayFamilyTasks = tasksFor(date).filter(t => t.category === 'family');
+  const famTodayPending = todayFamilyTasks.filter(t => !t._done);
+  const famTodayDone = todayFamilyTasks.filter(t => t._done);
+  let famTitle, famSub, famRight;
+  if (famTodayPending.length) {
+    const next = famTodayPending[0];
+    famTitle = next.title;
+    famSub = next.time ? `${next.time} · ${famTodayPending.length} pending today` : `${famTodayPending.length} pending today`;
+    famRight = next.time || `${todayFamilyTasks.length} task${todayFamilyTasks.length === 1 ? '' : 's'}`;
+  } else if (famTodayDone.length) {
+    famTitle = 'Family time';
+    famSub = `✓ ${famTodayDone.length} done today`;
+    famRight = 'all clear';
+  } else {
+    let upcoming = null;
+    let dCheck = nextDateStr(date);
+    for (let i = 0; i < 7; i++) {
+      const ts = tasksFor(dCheck).filter(t => t.category === 'family');
+      if (ts.length) { upcoming = { date: dCheck, tasks: ts }; break; }
+      dCheck = nextDateStr(dCheck);
+    }
+    famTitle = 'Family time';
+    famSub = upcoming ? `Next: ${upcoming.tasks[0].title}` : 'Add a family task to see it here';
+    famRight = upcoming ? friendlyDateLabel(upcoming.date) : '—';
+  }
+  barsSection.appendChild(el('button', {
+    class: 'bedtime-bar',
+    onclick: () => { setGlobalTab('tasks'); render(); }
+  }, [
+    el('span', { class: 'b-icon', html: ML_ICONS.users }),
+    el('span', { class: 'b-mid' }, [
+      el('b', {}, famTitle),
+      el('span', {}, famSub)
+    ]),
+    el('span', { class: 'b-right' }, famRight)
+  ]));
+
   v.appendChild(barsSection);
 
   // 3. TODAY hero — next pending action
@@ -3491,52 +3647,7 @@ function renderMastaHome() {
   }
   v.appendChild(el('div', { class: 'ml-section' }, [hero]));
 
-  // 4. GRATITUDE
-  const gratSection = el('div', { class: 'ml-section' });
-  gratSection.appendChild(el('div', { class: 'ml-section-head' }, [
-    el('span', {}, 'Gratitude')
-  ]));
-  const gratInp = el('input', {
-    type: 'text',
-    placeholder: 'What are you grateful for today?',
-    maxlength: '200',
-    value: getDailyGratitude()
-  });
-  let gratTimer = null;
-  gratInp.oninput = () => {
-    clearTimeout(gratTimer);
-    gratTimer = setTimeout(() => setDailyGratitude(gratInp.value), 400);
-  };
-  gratInp.onblur = () => setDailyGratitude(gratInp.value);
-
-  const polishBtn = el('button', { class: 'polish-btn', type: 'button' }, '✨');
-  polishBtn.onclick = async () => {
-    const raw = gratInp.value.trim();
-    if (!raw) { toast('Type something first'); return; }
-    if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
-    polishBtn.disabled = true;
-    polishBtn.textContent = '…';
-    try {
-      const polished = await polishGratitudeWithAI(raw);
-      gratInp.value = polished;
-      setDailyGratitude(polished);
-      toast('✓ Polished');
-    } catch (e) {
-      toast(String(e.message || 'Failed').slice(0, 80));
-    } finally {
-      polishBtn.disabled = false;
-      polishBtn.textContent = '✨';
-    }
-  };
-
-  const gratCard = el('div', { class: 'focus-card' }, [
-    el('span', { class: 'focus-ico', html: ML_ICONS.heart }),
-    gratInp,
-    polishBtn
-  ]);
-  gratSection.appendChild(gratCard);
-  v.appendChild(gratSection);
-
+  // 4. (gratitude moved up to right after the quote)
   // 5. (week calendar moved to the Calendar tab)
   // 6. (quick log removed)
 
@@ -3554,35 +3665,14 @@ function renderMastaHome() {
     items.forEach(it => ul.appendChild(_todoRow(it)));
     todoCard.appendChild(ul);
   }
-  // AI parse + manual add inside the To-do card
-  const hasKey = !!state.settings.anthropicApiKey;
-  const aiCta = el('button', {
-    class: 'ai-parse-cta' + (hasKey ? '' : ' disabled'),
-    style: 'margin:10px 14px 4px;width:auto;',
-    onclick: () => hasKey ? openAIParseModal() : openAIKeyModal()
-  }, [
-    el('span', { class: 'ai-spark' }, '✨'),
-    el('span', {}, hasKey ? 'Paste & parse with AI' : 'Set up AI key to paste a list')
-  ]);
-  todoCard.appendChild(aiCta);
-  const addInp = el('input', { type: 'text', placeholder: 'Or add one manually…', maxlength: '120' });
-  const addBtn = el('button', {}, 'Add');
-  const submitTask = () => {
-    const v2 = addInp.value.trim();
-    if (!v2) return;
-    addMastaTask({ title: v2, date: today() });
-    addInp.value = '';
-    render();
-  };
-  addBtn.onclick = submitTask;
-  addInp.onkeydown = (e) => { if (e.key === 'Enter') submitTask(); };
-  todoCard.appendChild(el('div', { class: 'tasks-add-row' }, [addInp, addBtn]));
+  // AI parse — only entry point on the dashboard (manual add lives in the Tasks tab)
+  todoCard.appendChild(buildAIParseBanner('margin:14px;'));
   todoSection.appendChild(todoCard);
   v.appendChild(todoSection);
 
   // 8. REMINDERS (soft prompts — auto-show/hide based on usage)
   const reminders = [];
-  // Water — always show
+  // Water — always show, with inline +/- controls (no navigation)
   const waterTarget = state.settings.waterTarget || 4;
   const waterDone = todaysWater();
   reminders.push({
@@ -3592,7 +3682,7 @@ function renderMastaHome() {
     progress: Math.min(1, waterTarget ? waterDone / waterTarget : 0),
     status: `${waterDone}/${waterTarget}`,
     met: waterDone >= waterTarget,
-    onclick: () => { setGlobalTab('gym'); activeTab = 'more'; render(); }
+    waterControls: true
   });
   // Sleep — only if last night isn't logged
   const ls = state.sleep[state.sleep.length - 1];
@@ -3631,7 +3721,7 @@ function renderMastaHome() {
     const remCard = el('div', { class: 'ml-card', style: 'padding:0;' });
     const remUl = el('ul', { class: 'reminders-list' });
     reminders.forEach(r => {
-      const li = el('li', { class: r.met ? 'met' : '', onclick: r.onclick });
+      const li = el('li', { class: r.met ? 'met' : '', onclick: r.waterControls ? null : r.onclick });
       li.appendChild(el('span', { class: 'r-icon', html: ML_ICONS[r.icon] }));
       const body = el('div', { class: 'r-body' });
       body.appendChild(el('div', { class: 'r-title' }, r.title));
@@ -3640,7 +3730,37 @@ function renderMastaHome() {
         body.appendChild(el('div', { class: 'r-progress' }, [el('span', { style: `width:${Math.round(r.progress * 100)}%` })]));
       }
       li.appendChild(body);
-      if (r.status) li.appendChild(el('span', { class: 'r-status' }, r.status));
+      if (r.waterControls) {
+        const controls = el('div', { class: 'r-water-ctrls' });
+        const minus = el('button', {
+          class: 'water-btn',
+          onclick: (e) => {
+            e.stopPropagation();
+            const cur = todaysWater();
+            if (cur <= 0) return;
+            state.water[today()] = cur - 1;
+            save(); render();
+          }
+        }, '−');
+        const status = el('span', { class: 'r-status', style: 'min-width:42px;text-align:center;' }, r.status);
+        const plus = el('button', {
+          class: 'water-btn primary',
+          onclick: (e) => {
+            e.stopPropagation();
+            const cur = todaysWater();
+            const max = (state.settings.waterTarget || 4) * 2;
+            if (cur >= max) return;
+            state.water[today()] = cur + 1;
+            save(); render();
+          }
+        }, '+');
+        controls.appendChild(minus);
+        controls.appendChild(status);
+        controls.appendChild(plus);
+        li.appendChild(controls);
+      } else if (r.status) {
+        li.appendChild(el('span', { class: 'r-status' }, r.status));
+      }
       remUl.appendChild(li);
     });
     remCard.appendChild(remUl);
@@ -3697,14 +3817,7 @@ function renderMastaTasks() {
   const hasKey = !!state.settings.anthropicApiKey;
 
   // Hero — Paste & parse with AI
-  const aiCta = el('button', {
-    class: 'ai-parse-cta' + (hasKey ? '' : ' disabled'),
-    onclick: () => hasKey ? openAIParseModal() : openAIKeyModal()
-  }, [
-    el('span', { class: 'ai-spark' }, '✨'),
-    el('span', {}, hasKey ? 'Paste & parse with AI' : 'Set up AI key to paste & parse')
-  ]);
-  v.appendChild(aiCta);
+  v.appendChild(buildAIParseBanner('margin-bottom:14px;'));
 
   // Manual add row
   const addCard = el('div', { class: 'ml-card', style: 'padding:0;margin-bottom:14px;' });
@@ -3829,15 +3942,7 @@ function renderMastaCalendar() {
   v.appendChild(el('div', { class: 'calendar-range' }, rangeStr));
 
   // AI parse hero — quick way to populate days
-  const hasKey = !!state.settings.anthropicApiKey;
-  v.appendChild(el('button', {
-    class: 'ai-parse-cta' + (hasKey ? '' : ' disabled'),
-    style: 'margin-bottom:14px;',
-    onclick: () => hasKey ? openAIParseModal() : openAIKeyModal()
-  }, [
-    el('span', { class: 'ai-spark' }, '✨'),
-    el('span', {}, hasKey ? 'Paste & parse with AI' : 'Set up AI key to paste a list')
-  ]));
+  v.appendChild(buildAIParseBanner('margin-bottom:14px;'));
 
   // Determine grouping: today, rest of this week (Mon-start), next week
   // We use a "this week ends Sunday" boundary based on today.
@@ -3898,6 +4003,7 @@ function renderMastaCalendar() {
       const catIcon = t.category === 'work' ? 'briefcase'
         : t.category === 'gym' ? 'dumbbell'
         : t.category === 'health' ? 'pill'
+        : t.category === 'family' ? 'users'
         : 'briefcase';
       const block = el('div', {
         class: 'cdb-gym' + (t._done ? ' done' : ''),
@@ -5835,7 +5941,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.8 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.13 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
@@ -6025,7 +6131,7 @@ Schema for each task:
   "time": "HH:MM" (24h) or null,
   "date": "YYYY-MM-DD" or null,
   "repeat": "daily" | "weekdays" | "weekly:1,3" (dow numbers 0-6) | "monthly:15" | null,
-  "category": "work" | "personal" | "gym" | "health" | null
+  "category": "work" | "personal" | "family" | "gym" | "health" | null
 }
 
 Rules:
@@ -6034,7 +6140,7 @@ Rules:
 - If a recurrence is mentioned ("every monday", "daily"), set repeat AND set date to the next occurrence on/after reference date.
 - Times: assume the list flows chronologically. Bare numbers like "02" or "03" appearing AFTER morning entries (8, 9, 10, 11) mean afternoon (14:00, 15:00).
 - "08" or "8" first thing in the morning => 08:00. "9 breakfast" => 09:00.
-- Category guesses: "gym session" / "workout" => gym; "preworkout meal" / "post workout" / "breakfast" / "meal" => health; "meeting" / "work" / "call" with colleagues => work; "passport photo" / "papers" / "errand" / "shopping" => personal.
+- Category guesses: "gym session" / "workout" => gym; "preworkout meal" / "post workout" / "breakfast" / "meal" => health; "meeting" / "work" / "call" with colleagues => work; "family time" / "kids" / "wife" / "parents" / "dinner with family" / "with family" => family; "passport photo" / "papers" / "errand" / "shopping" => personal.
 - If a line has no time, set time to null. Don't invent times.
 - Skip header/preamble lines like "Tasks i have tomorrow".
 - Output ONLY the JSON array, nothing before or after.`;
@@ -6124,7 +6230,7 @@ function openAIPreviewModal(parsedTasks, referenceDate) {
     time: t.time && /^\d{1,2}:\d{2}$/.test(t.time) ? t.time.padStart(5, '0') : null,
     date: t.date || referenceDate,
     repeat: t.repeat || null,
-    category: ['work', 'personal', 'gym', 'health'].includes(t.category) ? t.category : null,
+    category: ['work', 'personal', 'family', 'gym', 'health'].includes(t.category) ? t.category : null,
     skipped: false,
     expanded: false
   }));
@@ -6211,7 +6317,7 @@ function openAIPreviewModal(parsedTasks, referenceDate) {
 
         edit.appendChild(el('label', {}, 'Category'));
         const catSel = el('select');
-        [['', 'None'], ['work', 'Work'], ['personal', 'Personal'], ['gym', 'Gym'], ['health', 'Health']].forEach(([v, lbl]) => {
+        [['', 'None'], ['work', 'Work'], ['personal', 'Personal'], ['family', 'Family'], ['gym', 'Gym'], ['health', 'Health']].forEach(([v, lbl]) => {
           const o = el('option', { value: v }, lbl);
           if ((r.category || '') === v) o.selected = true;
           catSel.appendChild(o);
