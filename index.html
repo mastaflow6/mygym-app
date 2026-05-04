@@ -37,6 +37,29 @@
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-top: env(safe-area-inset-top, 0px);
     --tab-h: 68px;
+    --progress-from: #818cf8;
+    --progress-to: #a78bfa;
+  }
+
+  body[data-theme="ocean"] {
+    --bg: #050a0d; --surface: #0f1518; --surface-2: #15212a; --surface-3: #1f2d38; --border: #1e3a44;
+    --accent: #22d3ee; --accent-strong: #06b6d4; --accent-soft: rgba(34,211,238,0.12);
+    --progress-from: #06b6d4; --progress-to: #14b8a6;
+  }
+  body[data-theme="forest"] {
+    --bg: #060a07; --surface: #0f1612; --surface-2: #16241a; --surface-3: #1d2f23; --border: #233b2a;
+    --accent: #34d399; --accent-strong: #10b981; --accent-soft: rgba(52,211,153,0.12);
+    --progress-from: #10b981; --progress-to: #84cc16;
+  }
+  body[data-theme="sunset"] {
+    --bg: #0c0807; --surface: #1a1311; --surface-2: #261812; --surface-3: #321e16; --border: #3b261b;
+    --accent: #fb923c; --accent-strong: #f97316; --accent-soft: rgba(251,146,60,0.12);
+    --progress-from: #f97316; --progress-to: #ec4899;
+  }
+  body[data-theme="oled"] {
+    --bg: #000000; --surface: #0a0a0a; --surface-2: #141414; --surface-3: #1f1f1f; --border: #262626;
+    --accent: #facc15; --accent-strong: #eab308; --accent-soft: rgba(250,204,21,0.10);
+    --progress-from: #facc15; --progress-to: #f59e0b;
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -737,6 +760,57 @@
     color: var(--text-muted);
     letter-spacing: -0.01em;
   }
+
+  .day-card {
+    background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 18px 14px;
+    margin: 4px 0 14px;
+  }
+  .day-card .d-greet {
+    font-size: 22px; font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .day-card .d-date {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .day-card .d-chips {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin: 14px 0 12px;
+  }
+  .day-card .d-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 5px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+    color: var(--text);
+  }
+  .day-card .d-chip svg { width: 13px; height: 13px; opacity: 0.75; }
+  .day-card .d-bar {
+    height: 6px; background: var(--surface-2);
+    border-radius: 999px; overflow: hidden;
+  }
+  .day-card .d-bar > span {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, var(--progress-from) 0%, var(--progress-to) 100%);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+  }
+  .day-card .d-bar-meta {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: var(--text-muted);
+    margin-top: 6px;
+    font-weight: 500;
+  }
+  .day-card .d-bar-meta b { color: var(--text); font-weight: 700; }
   .quote-card {
     background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
     border: 1px solid var(--border);
@@ -1982,7 +2056,7 @@ const defaultState = {
   dailyGratitude: { date: '', text: '' },
   photos: [],
   notes: {},
-  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false, anthropicApiKey: '' }
+  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false, anthropicApiKey: '', theme: 'indigo' }
 };
 
 let state;
@@ -2788,6 +2862,27 @@ function _ensureTaskArr() {
 function _newTaskId() {
   return 't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
 }
+
+// Keyword-based auto-categorization. Returns one of: 'family' | 'work' | 'gym' | 'health' | 'personal' | null.
+// Used both at add time (persisted) and at render time (fallback for older tasks without category).
+function inferCategory(title) {
+  const t = (title || '').toLowerCase();
+  if (!t) return null;
+  // Family — \bfam matches family, familay, familly, fam, etc.
+  if (/\bfam/.test(t)) return 'family';
+  if (/\b(wife|husband|kids?|child|children|son|daughter|mom|mum|dad|parent|spouse|partner|girlfriend|boyfriend|date night|anniversary)\b/.test(t)) return 'family';
+  // Work
+  if (/\b(meeting|call|email|client|report|deck|slides?|presentation|launch|deploy|review|standup|stand-?up|1:1|one[- ]?on[- ]?one|interview|hire|deadline|project|sprint|jira|ticket|demo|kickoff|sync|q[1-4]|okr|kpi)\b/.test(t)) return 'work';
+  // Gym
+  if (/\b(gym|workout|run|jog|lift|cardio|stretch|push day|pull day|leg day|legs?|deadlift|squat|bench|press|curl|row)\b/.test(t)) return 'gym';
+  // Health
+  if (/\b(doctor|dentist|vitamin|supplement|med|medication|pill|appointment|therapy|checkup|massage|physio)\b/.test(t)) return 'health';
+  return null; // unknown — won't auto-show in any focus row
+}
+
+function taskCategory(t) {
+  return t.category || inferCategory(t.title);
+}
 function addMastaTask(input) {
   // Accepts either a plain title string (legacy) or an object { title, time, date, repeat, category }
   _ensureTaskArr();
@@ -2935,9 +3030,17 @@ function friendlyDateLabel(dateStr) {
 
 /* =========== TIMERS =========== */
 let activeTab = 'home';
+let tasksFilterCategory = null; // when set, Tasks tab shows only this category (cleared by direct nav)
 const GTAB_KEY = 'mastalife-gtab-v1';
 let globalTab = localStorage.getItem(GTAB_KEY) || 'home';
 function setGlobalTab(t) { globalTab = t; localStorage.setItem(GTAB_KEY, t); }
+
+function applyTheme(name) {
+  const valid = ['indigo', 'ocean', 'forest', 'sunset', 'oled'];
+  const t = valid.includes(name) ? name : 'indigo';
+  document.body.dataset.theme = t;
+  state.settings.theme = t;
+}
 
 const MODE_KEY = 'mastalife-mode-v1';
 const MODES = ['all', 'work', 'personal'];
@@ -3384,22 +3487,222 @@ function renderMastaHome() {
   const userName = getMastaUserName();
   const hour = new Date().getHours();
   const tod = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
+  const bedtime = state.settings.bedtime || '23:00';
 
-  // 1. GREETING + QUOTE
-  v.appendChild(el('div', { class: 'greeting' }, [
-    el('div', { class: 'name' }, `Good ${tod}, ${userName}`)
-  ]));
-  const q = getLifeQuote();
-  v.appendChild(el('div', { class: 'quote-card' }, [
-    el('div', { class: 'quote-text' }, q.text),
-    el('div', { class: 'quote-author' }, '— ' + q.author)
-  ]));
+  // 1+2. DAY CARD — greeting, date, chips, day progress
+  const allTodayTasks = tasksFor(date);
+  const dayLabel = day ? `${day.name} day` : 'Rest day';
 
-  // 2. GRATITUDE (right after the quote)
-  const gratSection = el('div', { class: 'ml-section' });
-  gratSection.appendChild(el('div', { class: 'ml-section-head' }, [
-    el('span', {}, 'Gratitude')
+  // Calc overall day progress: gym day = 2 trackables (session + bag) + each task = 1 trackable
+  let dDone = 0, dTotal = 0;
+  if (day) {
+    // Gym session — 1 trackable, done when workout finished
+    dTotal += 1;
+    if (wToday && wToday.finished) dDone += 1;
+    // Gym bag — 1 trackable, done when fully packed
+    if (typeof BAG_ITEMS !== 'undefined' && BAG_ITEMS.length) {
+      dTotal += 1;
+      if (todaysBag().length >= BAG_ITEMS.length) dDone += 1;
+    }
+  }
+  allTodayTasks.forEach(t => {
+    dTotal += 1;
+    if (t._done) dDone += 1;
+  });
+  const dPct = dTotal ? Math.round(dDone / dTotal * 100) : 0;
+
+  // Friendly date
+  const _dObj = new Date(date + 'T00:00:00');
+  const _DAYS_LONG = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const _MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dateLine = `${_DAYS_LONG[_dObj.getDay()]} · ${_MONTHS[_dObj.getMonth()]} ${_dObj.getDate()}`;
+
+  const dayCard = el('div', { class: 'day-card' });
+  dayCard.appendChild(el('div', { class: 'd-greet' }, `Good ${tod}, ${userName}`));
+  dayCard.appendChild(el('div', { class: 'd-date' }, dateLine));
+
+  const _mkChip = (iconKey, label) => {
+    const chip = el('span', { class: 'd-chip' });
+    chip.appendChild(el('span', { class: 'd-chip-ico', html: ML_ICONS[iconKey] }));
+    chip.appendChild(el('span', {}, label));
+    return chip;
+  };
+  const chipsRow = el('div', { class: 'd-chips' });
+  chipsRow.appendChild(_mkChip('briefcase', `${allTodayTasks.length} task${allTodayTasks.length === 1 ? '' : 's'}`));
+  chipsRow.appendChild(_mkChip('dumbbell', dayLabel));
+  chipsRow.appendChild(_mkChip('moon', `Bedtime ${bedtime}`));
+  dayCard.appendChild(chipsRow);
+
+  dayCard.appendChild(el('div', { class: 'd-bar' }, [el('span', { style: `width:${dPct}%` })]));
+  const meta = el('div', { class: 'd-bar-meta' });
+  meta.appendChild(el('span', { html: `<b>${dDone}</b> of ${dTotal} done` }));
+  meta.appendChild(el('span', {}, `${dPct}%`));
+  dayCard.appendChild(meta);
+
+  v.appendChild(dayCard);
+
+  // 3. TODAY FOCUS — only shows rows that have items today
+  const _focusRow = (icon, title, meta, onclick) => {
+    const li = el('li', { onclick });
+    li.appendChild(el('span', { class: 'r-icon', html: ML_ICONS[icon] }));
+    const body = el('div', { class: 'r-body' });
+    body.appendChild(el('div', { class: 'r-title' }, title));
+    body.appendChild(el('div', { class: 'r-meta' }, meta));
+    li.appendChild(body);
+    li.appendChild(el('span', { class: 'r-status', html: ML_ICONS.arrow || '›' }));
+    return li;
+  };
+
+  const focusRows = [];
+
+  // Gym — show on workout days OR if there are gym-category tasks
+  const gymTasks = allTodayTasks.filter(t => taskCategory(t) === 'gym');
+  if (day || gymTasks.length) {
+    let gymMeta;
+    if (day) {
+      const finished = !!(wToday && wToday.finished);
+      const bagTotal = (typeof BAG_ITEMS !== 'undefined') ? BAG_ITEMS.length : 0;
+      const bagDone = bagTotal ? todaysBag().length : 0;
+      const bagFull = bagTotal && bagDone >= bagTotal;
+      const parts = [];
+      parts.push(finished ? 'session ✓' : 'session pending');
+      if (bagTotal) parts.push(bagFull ? 'bag ✓' : `bag ${bagDone}/${bagTotal}`);
+      gymMeta = `${day.name} day · ${parts.join(' · ')}`;
+      if (gymTasks.length) gymMeta += ` · +${gymTasks.length} task${gymTasks.length === 1 ? '' : 's'}`;
+    } else {
+      const pending = gymTasks.filter(t => !t._done).length;
+      gymMeta = `${pending} pending · ${gymTasks.length} total`;
+    }
+    focusRows.push(_focusRow('dumbbell', 'Gym', gymMeta,
+      () => { setGlobalTab('gym'); activeTab = 'home'; render(); }));
+  }
+
+  // Work
+  const workTasks = allTodayTasks.filter(t => taskCategory(t) === 'work');
+  if (workTasks.length) {
+    const pending = workTasks.filter(t => !t._done).length;
+    focusRows.push(_focusRow('briefcase', 'Work',
+      `${pending} pending · ${workTasks.length} total`,
+      () => { tasksFilterCategory = 'work'; setGlobalTab('tasks'); render(); }));
+  }
+
+  // Personal
+  const personalTasks = allTodayTasks.filter(t => taskCategory(t) === 'personal');
+  if (personalTasks.length) {
+    const pending = personalTasks.filter(t => !t._done).length;
+    focusRows.push(_focusRow('star', 'Personal',
+      `${pending} pending · ${personalTasks.length} total`,
+      () => { tasksFilterCategory = 'personal'; setGlobalTab('tasks'); render(); }));
+  }
+
+  // Family
+  const famTasks = allTodayTasks.filter(t => taskCategory(t) === 'family');
+  if (famTasks.length) {
+    const pending = famTasks.filter(t => !t._done).length;
+    focusRows.push(_focusRow('users', 'Family',
+      `${pending} pending · ${famTasks.length} total`,
+      () => { tasksFilterCategory = 'family'; setGlobalTab('tasks'); render(); }));
+  }
+
+  // Health
+  const healthTasks = allTodayTasks.filter(t => taskCategory(t) === 'health');
+  if (healthTasks.length) {
+    const pending = healthTasks.filter(t => !t._done).length;
+    focusRows.push(_focusRow('pill', 'Health',
+      `${pending} pending · ${healthTasks.length} total`,
+      () => { tasksFilterCategory = 'health'; setGlobalTab('tasks'); render(); }));
+  }
+
+  if (focusRows.length) {
+    const focusSection = el('div', { class: 'ml-section' });
+    focusSection.appendChild(el('div', { class: 'ml-section-head' }, [el('span', {}, 'Today focus')]));
+    const focusCard = el('div', { class: 'ml-card', style: 'padding:0;' });
+    const focusUl = el('ul', { class: 'reminders-list' });
+    focusRows.forEach(r => focusUl.appendChild(r));
+    focusCard.appendChild(focusUl);
+    focusSection.appendChild(focusCard);
+    v.appendChild(focusSection);
+  }
+
+  // 5. REMINDERS — compact: water + sleep only
+  const reminders = [];
+  const waterTarget = state.settings.waterTarget || 4;
+  const waterDone = todaysWater();
+  reminders.push({
+    icon: 'drop',
+    title: 'Drink water',
+    meta: `${(waterDone * 0.5).toFixed(1)}L of ${(waterTarget * 0.5).toFixed(1)}L`,
+    status: `${waterDone}/${waterTarget}`,
+    met: waterDone >= waterTarget,
+    waterControls: true
+  });
+  const ls = state.sleep[state.sleep.length - 1];
+  const yDate = (() => { const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() - 1); return dateToLocal(d); })();
+  const haveLastNight = ls && (ls.date === date || ls.date === yDate);
+  if (!haveLastNight) {
+    reminders.push({
+      icon: 'moon',
+      title: 'Log last night\'s sleep',
+      meta: 'Tap to log hours',
+      status: '',
+      met: false,
+      onclick: () => openSleepModal()
+    });
+  }
+  const remSection = el('div', { class: 'ml-section' });
+  remSection.appendChild(el('div', { class: 'ml-section-head' }, [
+    el('span', {}, 'Reminders'),
+    el('span', { class: 'ml-section-meta' }, `${reminders.filter(r => r.met).length} / ${reminders.length}`)
   ]));
+  const remCard = el('div', { class: 'ml-card', style: 'padding:0;' });
+  const remUl = el('ul', { class: 'reminders-list' });
+  reminders.forEach(r => {
+    const li = el('li', { class: r.met ? 'met' : '', onclick: r.waterControls ? null : r.onclick });
+    li.appendChild(el('span', { class: 'r-icon', html: ML_ICONS[r.icon] }));
+    const body = el('div', { class: 'r-body' });
+    body.appendChild(el('div', { class: 'r-title' }, r.title));
+    body.appendChild(el('div', { class: 'r-meta' }, r.meta));
+    li.appendChild(body);
+    if (r.waterControls) {
+      const controls = el('div', { class: 'r-water-ctrls' });
+      const minus = el('button', {
+        class: 'water-btn',
+        onclick: (e) => {
+          e.stopPropagation();
+          const cur = todaysWater();
+          if (cur <= 0) return;
+          state.water[today()] = cur - 1;
+          save(); render();
+        }
+      }, '−');
+      const status = el('span', { class: 'r-status', style: 'min-width:42px;text-align:center;' }, r.status);
+      const plus = el('button', {
+        class: 'water-btn primary',
+        onclick: (e) => {
+          e.stopPropagation();
+          const cur = todaysWater();
+          const max = (state.settings.waterTarget || 4) * 2;
+          if (cur >= max) return;
+          state.water[today()] = cur + 1;
+          save(); render();
+        }
+      }, '+');
+      controls.appendChild(minus);
+      controls.appendChild(status);
+      controls.appendChild(plus);
+      li.appendChild(controls);
+    } else if (r.status) {
+      li.appendChild(el('span', { class: 'r-status' }, r.status));
+    }
+    remUl.appendChild(li);
+  });
+  remCard.appendChild(remUl);
+  remSection.appendChild(remCard);
+  v.appendChild(remSection);
+
+  // 6. EVENING — gratitude moved here
+  const eveSection = el('div', { class: 'ml-section' });
+  eveSection.appendChild(el('div', { class: 'ml-section-head' }, [el('span', {}, 'Evening')]));
   const gratInp = el('input', {
     type: 'text',
     placeholder: 'What are you grateful for today?',
@@ -3412,7 +3715,6 @@ function renderMastaHome() {
     gratTimer = setTimeout(() => setDailyGratitude(gratInp.value), 400);
   };
   gratInp.onblur = () => setDailyGratitude(gratInp.value);
-
   const polishBtn = el('button', { class: 'polish-btn', type: 'button' }, '✨');
   polishBtn.onclick = async () => {
     const raw = gratInp.value.trim();
@@ -3432,342 +3734,13 @@ function renderMastaHome() {
       polishBtn.textContent = '✨';
     }
   };
-
   const gratCard = el('div', { class: 'focus-card' }, [
     el('span', { class: 'focus-ico', html: ML_ICONS.heart }),
     gratInp,
     polishBtn
   ]);
-  gratSection.appendChild(gratCard);
-  v.appendChild(gratSection);
-
-  // 3. INFO BARS (Bedtime / Work / Gym) — pinned at top
-  const bedtime = state.settings.bedtime || '23:00';
-  const barsSection = el('div', { class: 'ml-section', style: 'display:flex;flex-direction:column;gap:8px;' });
-
-  // Bedtime bar
-  barsSection.appendChild(el('button', {
-    class: 'bedtime-bar',
-    onclick: () => { setGlobalTab('gym'); activeTab = 'more'; render(); }
-  }, [
-    el('span', { class: 'b-icon', html: ML_ICONS.moon }),
-    el('span', { class: 'b-mid' }, [
-      el('b', {}, 'Bedtime'),
-      el('span', {}, getBedtimeCountdownLabel(bedtime))
-    ]),
-    el('span', { class: 'b-right' }, `goal ${bedtime}`)
-  ]));
-
-  // Work bar — next pending work task (today first, then any upcoming)
-  const todayWorkTasks = tasksFor(date).filter(t => t.category === 'work');
-  const workTodayPending = todayWorkTasks.filter(t => !t._done);
-  const workTodayDone = todayWorkTasks.filter(t => t._done);
-  let workTitle, workSub, workRight;
-  if (workTodayPending.length) {
-    const next = workTodayPending[0];
-    workTitle = next.title;
-    workSub = next.time ? `${next.time} · ${workTodayPending.length} pending today` : `${workTodayPending.length} pending today`;
-    workRight = next.time || `${todayWorkTasks.length} task${todayWorkTasks.length === 1 ? '' : 's'}`;
-  } else if (workTodayDone.length) {
-    workTitle = 'Work';
-    workSub = `✓ ${workTodayDone.length} done today`;
-    workRight = 'all clear';
-  } else {
-    // Look ahead 7 days
-    let upcoming = null;
-    let dCheck = nextDateStr(date);
-    for (let i = 0; i < 7; i++) {
-      const ts = tasksFor(dCheck).filter(t => t.category === 'work');
-      if (ts.length) { upcoming = { date: dCheck, tasks: ts }; break; }
-      dCheck = nextDateStr(dCheck);
-    }
-    workTitle = 'Work';
-    workSub = upcoming ? `Next: ${upcoming.tasks[0].title}` : 'No work tasks';
-    workRight = upcoming ? friendlyDateLabel(upcoming.date) : '—';
-  }
-  barsSection.appendChild(el('button', {
-    class: 'bedtime-bar',
-    onclick: () => { setGlobalTab('tasks'); render(); }
-  }, [
-    el('span', { class: 'b-icon', html: ML_ICONS.briefcase }),
-    el('span', { class: 'b-mid' }, [
-      el('b', {}, workTitle),
-      el('span', {}, workSub)
-    ]),
-    el('span', { class: 'b-right' }, workRight)
-  ]));
-
-  // Gym bar — today's planned session
-  let gymTitle, gymSub, gymRight;
-  if (day) {
-    const prog = workoutProgress(date, todayKey);
-    const finished = !!(wToday && wToday.finished);
-    gymTitle = day.name + ' day';
-    gymSub = finished ? '✓ Workout complete' : (prog.done > 0 ? 'In progress' : day.focus);
-    gymRight = finished ? 'done' : `${prog.done}/${prog.total} sets`;
-  } else {
-    // Look ahead for next workout day
-    let upcoming = null;
-    let dCheck = nextDateStr(date);
-    for (let i = 0; i < 7; i++) {
-      const k = effectiveDayKey(dCheck);
-      if (k != null) { upcoming = { date: dCheck, key: k }; break; }
-      dCheck = nextDateStr(dCheck);
-    }
-    gymTitle = 'Rest day';
-    gymSub = upcoming ? `Next: ${DAYS[upcoming.key].name}` : 'No upcoming sessions';
-    gymRight = upcoming ? friendlyDateLabel(upcoming.date) : '—';
-  }
-  barsSection.appendChild(el('button', {
-    class: 'bedtime-bar',
-    onclick: () => { setGlobalTab('gym'); activeTab = 'home'; render(); }
-  }, [
-    el('span', { class: 'b-icon', html: ML_ICONS.dumbbell }),
-    el('span', { class: 'b-mid' }, [
-      el('b', {}, gymTitle),
-      el('span', {}, gymSub)
-    ]),
-    el('span', { class: 'b-right' }, gymRight)
-  ]));
-
-  // Family bar — next pending family-category task
-  const todayFamilyTasks = tasksFor(date).filter(t => t.category === 'family');
-  const famTodayPending = todayFamilyTasks.filter(t => !t._done);
-  const famTodayDone = todayFamilyTasks.filter(t => t._done);
-  let famTitle, famSub, famRight;
-  if (famTodayPending.length) {
-    const next = famTodayPending[0];
-    famTitle = next.title;
-    famSub = next.time ? `${next.time} · ${famTodayPending.length} pending today` : `${famTodayPending.length} pending today`;
-    famRight = next.time || `${todayFamilyTasks.length} task${todayFamilyTasks.length === 1 ? '' : 's'}`;
-  } else if (famTodayDone.length) {
-    famTitle = 'Family time';
-    famSub = `✓ ${famTodayDone.length} done today`;
-    famRight = 'all clear';
-  } else {
-    let upcoming = null;
-    let dCheck = nextDateStr(date);
-    for (let i = 0; i < 7; i++) {
-      const ts = tasksFor(dCheck).filter(t => t.category === 'family');
-      if (ts.length) { upcoming = { date: dCheck, tasks: ts }; break; }
-      dCheck = nextDateStr(dCheck);
-    }
-    famTitle = 'Family time';
-    famSub = upcoming ? `Next: ${upcoming.tasks[0].title}` : 'Add a family task to see it here';
-    famRight = upcoming ? friendlyDateLabel(upcoming.date) : '—';
-  }
-  barsSection.appendChild(el('button', {
-    class: 'bedtime-bar',
-    onclick: () => { setGlobalTab('tasks'); render(); }
-  }, [
-    el('span', { class: 'b-icon', html: ML_ICONS.users }),
-    el('span', { class: 'b-mid' }, [
-      el('b', {}, famTitle),
-      el('span', {}, famSub)
-    ]),
-    el('span', { class: 'b-right' }, famRight)
-  ]));
-
-  v.appendChild(barsSection);
-
-  // 3. TODAY hero — next pending action
-  // Build to-do items first so we know what's pending.
-  const items = [];
-  if (day) {
-    const prog = workoutProgress(date, todayKey);
-    const finished = !!(wToday && wToday.finished);
-    const started = (prog.done > 0) || !!(wToday && wToday.started);
-    items.push({
-      icon: 'dumbbell',
-      title: `${day.name} day`,
-      meta: finished ? 'Workout complete' : (started ? 'In progress' : 'Not started yet'),
-      status: `${prog.done} / ${prog.total}`,
-      done: finished,
-      onclick: () => { setGlobalTab('gym'); activeTab = 'today'; render(); }
-    });
-    if (BAG_ITEMS && BAG_ITEMS.length) {
-      const bagDone = todaysBag().length;
-      const bagTotal = BAG_ITEMS.length;
-      items.push({
-        icon: 'bag',
-        title: 'Pack gym bag',
-        meta: bagDone === bagTotal ? 'Ready to go' : 'Check your bag',
-        status: `${bagDone} / ${bagTotal}`,
-        done: bagDone === bagTotal,
-        onclick: () => { setGlobalTab('gym'); activeTab = 'home'; state.settings.bagCollapsed = false; save(); render(); }
-      });
-    }
-  }
-  // Schedule items (timed tasks for today) merge into TO DO TODAY
-  const schedule = tasksFor(date);
-  schedule.forEach(t => {
-    items.push({
-      icon: t.category === 'gym' ? 'dumbbell' : (t.category === 'health' ? 'pill' : 'star'),
-      title: t.title + (t.repeat ? ' ↻' : ''),
-      meta: t.time ? t.time : (t.category || 'task'),
-      status: '',
-      done: !!t._done,
-      onclick: () => { toggleMastaTask(t.id, date); render(); }
-    });
-  });
-  // Untimed pending tasks (top 3)
-  const pending = pendingMastaTasks().filter(t => !t.date && !t.repeat).slice(0, 3);
-  pending.forEach(t => {
-    items.push({
-      icon: 'star',
-      title: t.title,
-      meta: 'task',
-      status: '',
-      done: false,
-      onclick: () => { toggleMastaTask(t.id, date); render(); }
-    });
-  });
-
-  const firstPending = items.find(it => !it.done);
-  const heroIsActive = !!(firstPending && firstPending.icon === 'dumbbell');
-  const hero = el('button', { class: 'ml-hero' + (heroIsActive ? ' is-active' : '') });
-  if (firstPending) {
-    hero.appendChild(el('div', { class: 'h-top' }, `${DAY_LABELS[dow]} · TODAY`));
-    hero.appendChild(el('div', { class: 'h-big' }, firstPending.title.replace(' ↻', '')));
-    const totalItems = items.length;
-    const doneItems = items.filter(it => it.done).length;
-    const pct = totalItems ? Math.round(doneItems / totalItems * 100) : 0;
-    hero.appendChild(el('div', { class: 'h-bar' }, [el('span', { style: `width:${pct}%` })]));
-    hero.appendChild(el('div', { class: 'h-cta' }, [
-      el('span', {}, `${doneItems} of ${totalItems} done · tap to continue`),
-      el('span', { class: 't-chev', html: ML_ICONS.arrow })
-    ]));
-    hero.onclick = firstPending.onclick;
-  } else {
-    hero.appendChild(el('div', { class: 'h-top' }, `${DAY_LABELS[dow]} · TODAY`));
-    hero.appendChild(el('div', { class: 'h-big' }, 'All done for today'));
-    hero.appendChild(el('div', { class: 'h-bar' }, [el('span', { style: 'width:100%' })]));
-    hero.appendChild(el('div', { class: 'h-cta' }, 'Nothing left on the list'));
-    hero.onclick = () => {};
-  }
-  v.appendChild(el('div', { class: 'ml-section' }, [hero]));
-
-  // 4. (gratitude moved up to right after the quote)
-  // 5. (week calendar moved to the Calendar tab)
-  // 6. (quick log removed)
-
-  // 7. TO DO TODAY (must-do items: workout, bag, scheduled tasks, top untimed tasks)
-  const todoSection = el('div', { class: 'ml-section' });
-  todoSection.appendChild(el('div', { class: 'ml-section-head' }, [
-    el('span', {}, 'To do today'),
-    el('span', { class: 'ml-section-meta' }, `${items.filter(i => i.done).length} / ${items.length}`)
-  ]));
-  const todoCard = el('div', { class: 'ml-card', style: 'padding:0;' });
-  if (items.length === 0) {
-    todoCard.appendChild(el('div', { class: 'ml-empty' }, 'Nothing on the list — enjoy.'));
-  } else {
-    const ul = el('ul', { class: 'todo-list' });
-    items.forEach(it => ul.appendChild(_todoRow(it)));
-    todoCard.appendChild(ul);
-  }
-  // AI parse — only entry point on the dashboard (manual add lives in the Tasks tab)
-  todoCard.appendChild(buildAIParseBanner('margin:14px;'));
-  todoSection.appendChild(todoCard);
-  v.appendChild(todoSection);
-
-  // 8. REMINDERS (soft prompts — auto-show/hide based on usage)
-  const reminders = [];
-  // Water — always show, with inline +/- controls (no navigation)
-  const waterTarget = state.settings.waterTarget || 4;
-  const waterDone = todaysWater();
-  reminders.push({
-    icon: 'drop',
-    title: 'Drink water',
-    meta: `${(waterDone * 0.5).toFixed(1)}L of ${(waterTarget * 0.5).toFixed(1)}L`,
-    progress: Math.min(1, waterTarget ? waterDone / waterTarget : 0),
-    status: `${waterDone}/${waterTarget}`,
-    met: waterDone >= waterTarget,
-    waterControls: true
-  });
-  // Sleep — only if last night isn't logged
-  const ls = state.sleep[state.sleep.length - 1];
-  const yDate = (() => { const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() - 1); return dateToLocal(d); })();
-  const haveLastNight = ls && (ls.date === date || ls.date === yDate);
-  if (!haveLastNight) {
-    reminders.push({
-      icon: 'moon',
-      title: 'Log last night\'s sleep',
-      meta: 'Tap to log hours',
-      status: '',
-      met: false,
-      onclick: () => openSleepModal()
-    });
-  }
-  // Supplements — only if used in the last 7 days
-  if (hasUsedSupplementsRecently() && typeof SUPPLEMENTS !== 'undefined' && SUPPLEMENTS.length) {
-    const sups = state.supplements?.[date] || {};
-    const supDone = SUPPLEMENTS.filter(s => sups[s.id]).length;
-    const supTotal = SUPPLEMENTS.length;
-    reminders.push({
-      icon: 'pill',
-      title: 'Take supplements',
-      meta: supDone === supTotal ? 'All taken today' : 'Check your stack',
-      status: `${supDone}/${supTotal}`,
-      met: supDone === supTotal,
-      onclick: () => { setGlobalTab('gym'); activeTab = 'more'; render(); }
-    });
-  }
-  if (reminders.length) {
-    const remSection = el('div', { class: 'ml-section' });
-    remSection.appendChild(el('div', { class: 'ml-section-head' }, [
-      el('span', {}, 'Reminders'),
-      el('span', { class: 'ml-section-meta' }, `${reminders.filter(r => r.met).length} / ${reminders.length}`)
-    ]));
-    const remCard = el('div', { class: 'ml-card', style: 'padding:0;' });
-    const remUl = el('ul', { class: 'reminders-list' });
-    reminders.forEach(r => {
-      const li = el('li', { class: r.met ? 'met' : '', onclick: r.waterControls ? null : r.onclick });
-      li.appendChild(el('span', { class: 'r-icon', html: ML_ICONS[r.icon] }));
-      const body = el('div', { class: 'r-body' });
-      body.appendChild(el('div', { class: 'r-title' }, r.title));
-      body.appendChild(el('div', { class: 'r-meta' }, r.meta));
-      if (typeof r.progress === 'number') {
-        body.appendChild(el('div', { class: 'r-progress' }, [el('span', { style: `width:${Math.round(r.progress * 100)}%` })]));
-      }
-      li.appendChild(body);
-      if (r.waterControls) {
-        const controls = el('div', { class: 'r-water-ctrls' });
-        const minus = el('button', {
-          class: 'water-btn',
-          onclick: (e) => {
-            e.stopPropagation();
-            const cur = todaysWater();
-            if (cur <= 0) return;
-            state.water[today()] = cur - 1;
-            save(); render();
-          }
-        }, '−');
-        const status = el('span', { class: 'r-status', style: 'min-width:42px;text-align:center;' }, r.status);
-        const plus = el('button', {
-          class: 'water-btn primary',
-          onclick: (e) => {
-            e.stopPropagation();
-            const cur = todaysWater();
-            const max = (state.settings.waterTarget || 4) * 2;
-            if (cur >= max) return;
-            state.water[today()] = cur + 1;
-            save(); render();
-          }
-        }, '+');
-        controls.appendChild(minus);
-        controls.appendChild(status);
-        controls.appendChild(plus);
-        li.appendChild(controls);
-      } else if (r.status) {
-        li.appendChild(el('span', { class: 'r-status' }, r.status));
-      }
-      remUl.appendChild(li);
-    });
-    remCard.appendChild(remUl);
-    remSection.appendChild(remCard);
-    v.appendChild(remSection);
-  }
-
+  eveSection.appendChild(gratCard);
+  v.appendChild(eveSection);
 }
 
 function _scheduleRow(t, dateForToggle) {
@@ -3792,7 +3765,7 @@ function _scheduleRow(t, dateForToggle) {
   const titleEl = el('div', { class: 's-title' });
   titleEl.appendChild(el('span', {}, t.title));
   if (t.repeat) titleEl.appendChild(el('span', { class: 'repeat-ico', html: '↻' }));
-  if (t.category) titleEl.appendChild(el('span', { class: 'cat-chip cat-' + t.category }, t.category));
+  { const _c = taskCategory(t); if (_c) titleEl.appendChild(el('span', { class: 'cat-chip cat-' + _c }, _c)); }
   body.appendChild(titleEl);
   const metaParts = [];
   if (t.repeat) metaParts.push(describeRepeat(t.repeat));
@@ -3813,8 +3786,30 @@ function _scheduleRow(t, dateForToggle) {
 function renderMastaTasks() {
   const v = $('view');
   _ensureTaskArr();
-  const all = state.mastalifeTasks;
+  let all = state.mastalifeTasks;
   const hasKey = !!state.settings.anthropicApiKey;
+
+  // Category filter banner (set by Today focus row clicks)
+  if (tasksFilterCategory) {
+    const banner = el('div', {
+      class: 'filter-banner',
+      style: 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--border);margin-bottom:14px;'
+    });
+    banner.appendChild(el('span', {
+      style: 'display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;'
+    }, [
+      el('span', {}, 'Showing'),
+      el('span', { class: 'cat-chip cat-' + tasksFilterCategory }, tasksFilterCategory),
+      el('span', { style: 'color:var(--text-muted);font-weight:500;' }, 'only')
+    ]));
+    const clearBtn = el('button', {
+      style: 'background:transparent;border:none;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;padding:4px 8px;',
+      onclick: () => { tasksFilterCategory = null; render(); }
+    }, '× Clear');
+    banner.appendChild(clearBtn);
+    v.appendChild(banner);
+    all = all.filter(t => taskCategory(t) === tasksFilterCategory);
+  }
 
   // Hero — Paste & parse with AI
   v.appendChild(buildAIParseBanner('margin-bottom:14px;'));
@@ -3826,7 +3821,7 @@ function renderMastaTasks() {
   const submit = () => {
     const v2 = addInp.value.trim();
     if (!v2) return;
-    addMastaTask({ title: v2, date: today() });
+    addMastaTask({ title: v2, date: today(), category: inferCategory(v2) });
     addInp.value = '';
     render();
   };
@@ -4026,7 +4021,7 @@ function renderMastaCalendar() {
       row.appendChild(el('span', { class: 'cdb-task-time' }, t.time || '—'));
       const txt = el('span', { class: 'cdb-task-text' });
       txt.appendChild(el('span', {}, t.title));
-      if (t.category) txt.appendChild(el('span', { class: 'cat-chip cat-' + t.category }, t.category));
+      { const _c = taskCategory(t); if (_c) txt.appendChild(el('span', { class: 'cat-chip cat-' + _c }, _c)); }
       row.appendChild(txt);
       const check = el('span', {
         class: 'cdb-task-check', html: ML_ICONS.check,
@@ -5872,6 +5867,24 @@ function renderMore() {
   ]));
   set.appendChild(el('div', {
     class: 'list-item',
+    onclick: () => {
+      const opts = ['indigo', 'ocean', 'forest', 'sunset', 'oled'];
+      const cur = state.settings.theme || 'indigo';
+      const idx = opts.indexOf(cur);
+      const next = opts[(idx + 1) % opts.length];
+      applyTheme(next);
+      save(); render();
+      toast('Theme: ' + next);
+    }
+  }, [
+    el('div', {}, 'Theme'),
+    el('div', { class: 'right' }, [
+      el('span', {}, (state.settings.theme || 'indigo').replace(/^./, c => c.toUpperCase())),
+      el('span', {}, '›')
+    ])
+  ]));
+  set.appendChild(el('div', {
+    class: 'list-item',
     onclick: async () => {
       if (!('Notification' in window)) { toast('Not supported'); return; }
       if (Notification.permission !== 'granted') {
@@ -5941,7 +5954,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.13 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.19 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
@@ -6647,6 +6660,7 @@ document.querySelectorAll('#gymNav button').forEach(b => {
 
 document.querySelectorAll('#globalNav button').forEach(b => {
   b.addEventListener('click', () => {
+    tasksFilterCategory = null; // direct nav clears any active category filter
     setGlobalTab(b.dataset.gtab);
     render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -6664,6 +6678,7 @@ document.getElementById('topMode').addEventListener('click', e => {
   cycleMastaMode();
 });
 
+applyTheme(state.settings.theme || 'indigo');
 render();
 </script>
 </body>
