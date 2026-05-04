@@ -3302,6 +3302,8 @@ function render() {
   hideFloatingPauseBtn(); // each tab/focus path opts back in if it wants the FAB
 
   const inGym = globalTab === 'gym';
+  // Gym module is locked to indigo theme; other modules use the user's chosen theme
+  document.body.dataset.theme = inGym ? 'indigo' : (state.settings.theme || 'indigo');
   $('gymNav').style.display = inGym ? '' : 'none';
   $('globalNav').style.display = inGym ? 'none' : '';
   $('gymBackLink').style.display = inGym ? '' : 'none';
@@ -3555,61 +3557,67 @@ function renderMastaHome() {
 
   const focusRows = [];
 
-  // Gym — show on workout days OR if there are gym-category tasks
+  // Gym — only show if something is still pending (session, bag, or gym task)
   const gymTasks = allTodayTasks.filter(t => taskCategory(t) === 'gym');
+  const gymTasksPending = gymTasks.filter(t => !t._done).length;
   if (day || gymTasks.length) {
-    let gymMeta;
-    if (day) {
-      const finished = !!(wToday && wToday.finished);
-      const bagTotal = (typeof BAG_ITEMS !== 'undefined') ? BAG_ITEMS.length : 0;
-      const bagDone = bagTotal ? todaysBag().length : 0;
-      const bagFull = bagTotal && bagDone >= bagTotal;
-      const parts = [];
-      parts.push(finished ? 'session ✓' : 'session pending');
-      if (bagTotal) parts.push(bagFull ? 'bag ✓' : `bag ${bagDone}/${bagTotal}`);
-      gymMeta = `${day.name} day · ${parts.join(' · ')}`;
-      if (gymTasks.length) gymMeta += ` · +${gymTasks.length} task${gymTasks.length === 1 ? '' : 's'}`;
-    } else {
-      const pending = gymTasks.filter(t => !t._done).length;
-      gymMeta = `${pending} pending · ${gymTasks.length} total`;
+    const finished = day && !!(wToday && wToday.finished);
+    const bagTotal = (typeof BAG_ITEMS !== 'undefined') ? BAG_ITEMS.length : 0;
+    const bagDone = bagTotal ? todaysBag().length : 0;
+    const bagFull = bagTotal && bagDone >= bagTotal;
+    const sessionPending = day && !finished;
+    const bagPending = day && bagTotal && !bagFull;
+    const anythingPending = sessionPending || bagPending || gymTasksPending > 0;
+    if (anythingPending) {
+      let gymMeta;
+      if (day) {
+        const parts = [];
+        if (sessionPending) parts.push('session pending');
+        else parts.push('session ✓');
+        if (bagTotal) parts.push(bagPending ? `bag ${bagDone}/${bagTotal}` : 'bag ✓');
+        gymMeta = `${day.name} day · ${parts.join(' · ')}`;
+        if (gymTasksPending) gymMeta += ` · +${gymTasksPending} task${gymTasksPending === 1 ? '' : 's'}`;
+      } else {
+        gymMeta = `${gymTasksPending} pending · ${gymTasks.length} total`;
+      }
+      focusRows.push(_focusRow('dumbbell', 'Gym', gymMeta,
+        () => { setGlobalTab('gym'); activeTab = 'home'; render(); }));
     }
-    focusRows.push(_focusRow('dumbbell', 'Gym', gymMeta,
-      () => { setGlobalTab('gym'); activeTab = 'home'; render(); }));
   }
 
-  // Work
+  // Work — only show if there are pending work tasks
   const workTasks = allTodayTasks.filter(t => taskCategory(t) === 'work');
-  if (workTasks.length) {
-    const pending = workTasks.filter(t => !t._done).length;
+  const workPending = workTasks.filter(t => !t._done).length;
+  if (workPending > 0) {
     focusRows.push(_focusRow('briefcase', 'Work',
-      `${pending} pending · ${workTasks.length} total`,
+      `${workPending} pending · ${workTasks.length} total`,
       () => { tasksFilterCategory = 'work'; setGlobalTab('tasks'); render(); }));
   }
 
-  // Personal
+  // Personal — only show if there are pending personal tasks
   const personalTasks = allTodayTasks.filter(t => taskCategory(t) === 'personal');
-  if (personalTasks.length) {
-    const pending = personalTasks.filter(t => !t._done).length;
+  const personalPending = personalTasks.filter(t => !t._done).length;
+  if (personalPending > 0) {
     focusRows.push(_focusRow('star', 'Personal',
-      `${pending} pending · ${personalTasks.length} total`,
+      `${personalPending} pending · ${personalTasks.length} total`,
       () => { tasksFilterCategory = 'personal'; setGlobalTab('tasks'); render(); }));
   }
 
-  // Family
+  // Family — only show if there are pending family tasks
   const famTasks = allTodayTasks.filter(t => taskCategory(t) === 'family');
-  if (famTasks.length) {
-    const pending = famTasks.filter(t => !t._done).length;
+  const famPending = famTasks.filter(t => !t._done).length;
+  if (famPending > 0) {
     focusRows.push(_focusRow('users', 'Family',
-      `${pending} pending · ${famTasks.length} total`,
+      `${famPending} pending · ${famTasks.length} total`,
       () => { tasksFilterCategory = 'family'; setGlobalTab('tasks'); render(); }));
   }
 
-  // Health
+  // Health — only show if there are pending health tasks
   const healthTasks = allTodayTasks.filter(t => taskCategory(t) === 'health');
-  if (healthTasks.length) {
-    const pending = healthTasks.filter(t => !t._done).length;
+  const healthPending = healthTasks.filter(t => !t._done).length;
+  if (healthPending > 0) {
     focusRows.push(_focusRow('pill', 'Health',
-      `${pending} pending · ${healthTasks.length} total`,
+      `${healthPending} pending · ${healthTasks.length} total`,
       () => { tasksFilterCategory = 'health'; setGlobalTab('tasks'); render(); }));
   }
 
@@ -3814,16 +3822,45 @@ function renderMastaTasks() {
   // Hero — Paste & parse with AI
   v.appendChild(buildAIParseBanner('margin-bottom:14px;'));
 
-  // Manual add row
+  // Manual add row — Claude parses date/time/category from natural language
   const addCard = el('div', { class: 'ml-card', style: 'padding:0;margin-bottom:14px;' });
-  const addInp = el('input', { type: 'text', placeholder: 'Add a task…', maxlength: '120' });
+  const addInp = el('input', {
+    type: 'text',
+    placeholder: hasKey ? 'e.g. "Call mom tomorrow at 10am"' : 'Add a task…',
+    maxlength: '160'
+  });
   const addBtn = el('button', {}, 'Add');
-  const submit = () => {
+  const submit = async () => {
     const v2 = addInp.value.trim();
     if (!v2) return;
-    addMastaTask({ title: v2, date: today(), category: inferCategory(v2) });
-    addInp.value = '';
-    render();
+    if (state.settings.anthropicApiKey) {
+      addBtn.disabled = true;
+      addBtn.textContent = '…';
+      try {
+        const parsed = await parseQuickTaskWithAI(v2);
+        addMastaTask({
+          title: parsed.title || v2,
+          date: parsed.date || today(),
+          time: parsed.time || null,
+          category: parsed.category || inferCategory(v2)
+        });
+        addInp.value = '';
+        render();
+      } catch (e) {
+        // Fallback to local-only inference on any AI error
+        addMastaTask({ title: v2, date: today(), category: inferCategory(v2) });
+        addInp.value = '';
+        toast('AI parse failed — added as plain task');
+        render();
+      } finally {
+        addBtn.disabled = false;
+        addBtn.textContent = 'Add';
+      }
+    } else {
+      addMastaTask({ title: v2, date: today(), category: inferCategory(v2) });
+      addInp.value = '';
+      render();
+    }
   };
   addBtn.onclick = submit;
   addInp.onkeydown = (e) => { if (e.key === 'Enter') submit(); };
@@ -4066,7 +4103,192 @@ function renderMastaCalendar() {
     }
   }
 }
-function renderMastaMore() { _mastaPlaceholder('More', 'Coming soon'); }
+function renderMastaMore() {
+  const v = $('view');
+
+  // ===== HEALTH =====
+  const health = el('div', { class: 'card' });
+  health.appendChild(el('div', { class: 'card-title' }, 'Health'));
+  health.appendChild(el('div', {
+    class: 'list-item', onclick: openSleepModal
+  }, [
+    el('div', {}, 'Sleep'),
+    el('div', { class: 'right' }, [
+      el('span', {}, (() => {
+        const ls = state.sleep[state.sleep.length - 1];
+        return ls ? `${ls.hours.toFixed(1)} h` : '—';
+      })()),
+      el('span', {}, '›')
+    ])
+  ]));
+  health.appendChild(el('div', {
+    class: 'list-item', onclick: () => {
+      const cur = todaysWater();
+      const target = state.settings.waterTarget || 4;
+      toast(`Water: ${cur}/${target} bottles · ${(cur*0.5).toFixed(1)}L`);
+    }
+  }, [
+    el('div', {}, 'Water today'),
+    el('div', { class: 'right' }, [
+      el('span', {}, `${todaysWater()} / ${state.settings.waterTarget || 4}`),
+      el('span', {}, '›')
+    ])
+  ]));
+  if (typeof openSupplementsModal === 'function') {
+    health.appendChild(el('div', {
+      class: 'list-item', onclick: openSupplementsModal
+    }, [
+      el('div', {}, 'Supplements'),
+      el('div', { class: 'right' }, [el('span', {}, '›')])
+    ]));
+  }
+  if (typeof openMacrosModal === 'function') {
+    health.appendChild(el('div', {
+      class: 'list-item', onclick: openMacrosModal
+    }, [
+      el('div', {}, 'Macros'),
+      el('div', { class: 'right' }, [el('span', {}, '›')])
+    ]));
+  }
+  v.appendChild(health);
+
+  // ===== SETTINGS =====
+  const set = el('div', { class: 'card', style: 'margin-top:14px;' });
+  set.appendChild(el('div', { class: 'card-title' }, 'Settings'));
+
+  // AI key
+  set.appendChild(el('div', {
+    class: 'list-item', onclick: openAIKeyModal
+  }, [
+    el('div', {}, 'AI key (Anthropic)'),
+    el('div', { class: 'right' }, [
+      el('span', { style: state.settings.anthropicApiKey ? 'color:var(--success);' : 'color:var(--text-dim);' },
+        state.settings.anthropicApiKey ? '✓ set' : 'not set'),
+      el('span', {}, '›')
+    ])
+  ]));
+
+  // Theme
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: () => {
+      const opts = ['indigo', 'ocean', 'forest', 'sunset', 'oled'];
+      const cur = state.settings.theme || 'indigo';
+      const idx = opts.indexOf(cur);
+      const next = opts[(idx + 1) % opts.length];
+      applyTheme(next);
+      save(); render();
+      toast('Theme: ' + next);
+    }
+  }, [
+    el('div', {}, 'Theme'),
+    el('div', { class: 'right' }, [
+      el('span', {}, (state.settings.theme || 'indigo').replace(/^./, c => c.toUpperCase())),
+      el('span', {}, '›')
+    ])
+  ]));
+
+  // Bedtime
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: () => {
+      const opts = ['21:30', '22:00', '22:30', '23:00', '23:30', '00:00'];
+      const cur = state.settings.bedtime || '23:00';
+      const idx = opts.indexOf(cur);
+      const next = opts[(idx + 1) % opts.length];
+      state.settings.bedtime = next;
+      state.settings.lastBedtimeNotifDate = '';
+      save(); render();
+      toast('Bedtime: ' + next);
+    }
+  }, [
+    el('div', {}, 'Bedtime'),
+    el('div', { class: 'right' }, [el('span', {}, state.settings.bedtime || '23:00'), el('span', {}, '›')])
+  ]));
+
+  // Browser notifications
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: async () => {
+      if (!('Notification' in window)) { toast('Not supported'); return; }
+      if (Notification.permission !== 'granted') {
+        const r = await Notification.requestPermission();
+        state.settings.notifications = (r === 'granted'); save(); render();
+        if (r === 'granted') toast('Notifications enabled');
+      } else {
+        state.settings.notifications = !state.settings.notifications; save(); render();
+      }
+    }
+  }, [
+    el('div', {}, 'Browser notifications'),
+    el('div', { class: 'right' }, [el('span', {}, state.settings.notifications ? 'On' : 'Off'), el('span', {}, '›')])
+  ]));
+
+  // Water target
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: () => {
+      const opts = [3, 4, 5, 6, 8];
+      const cur = state.settings.waterTarget;
+      const idx = opts.indexOf(cur);
+      const next = opts[(idx + 1) % opts.length];
+      state.settings.waterTarget = next; save(); render();
+      toast('Water target: ' + next + ' bottles (' + (next * 0.5).toFixed(1) + 'L)');
+    }
+  }, [
+    el('div', {}, 'Water target'),
+    el('div', { class: 'right' }, [el('span', {}, state.settings.waterTarget + ' bottles · ' + (state.settings.waterTarget * 0.5).toFixed(1) + 'L'), el('span', {}, '›')])
+  ]));
+
+  // Lock app
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: () => {
+      if (!confirm('Lock the app? You\'ll need to enter the password again on next visit.')) return;
+      localStorage.removeItem(PIN_FLAG);
+      location.reload();
+    }
+  }, [
+    el('div', {}, 'Lock app'),
+    el('div', { class: 'right' }, [el('span', {}, '›')])
+  ]));
+
+  v.appendChild(set);
+
+  // ===== CLOUD BACKUP =====
+  if (typeof buildCloudBackupCard === 'function') {
+    const cloud = buildCloudBackupCard();
+    if (cloud) {
+      // wrap with margin
+      const wrap = el('div', { style: 'margin-top:14px;' });
+      wrap.appendChild(cloud);
+      v.appendChild(wrap);
+    }
+  }
+
+  // ===== DANGER ZONE =====
+  const danger = el('div', { class: 'card', style: 'margin-top:14px;' });
+  danger.appendChild(el('div', { class: 'card-title' }, 'Danger zone'));
+  danger.appendChild(el('div', {
+    class: 'list-item',
+    onclick: () => {
+      if (!confirm('Clear all logged data? This cannot be undone.')) return;
+      state = structuredClone(defaultState);
+      seedPastSessions();
+      save(); render();
+      toast('Reset complete');
+    }
+  }, [
+    el('div', { style: 'color:var(--danger)' }, 'Reset all data'),
+    el('div', { class: 'right' }, [el('span', {}, '›')])
+  ]));
+  v.appendChild(danger);
+
+  // Footer version
+  v.appendChild(el('div', {
+    class: 'center small dim', style: 'margin-top:18px;padding:8px;'
+  }, `MastaLife · v3.22 · Started ${PROGRAM_START}`));
+}
 
 /* =========== HOME =========== */
 function getDailyQuote() {
@@ -5797,18 +6019,7 @@ function renderMore() {
 
   // Settings
   const set = el('div', { class: 'card' });
-  set.appendChild(el('div', { class: 'card-title' }, 'Settings'));
-  set.appendChild(el('div', {
-    class: 'list-item',
-    onclick: openAIKeyModal
-  }, [
-    el('div', {}, 'AI key (Anthropic)'),
-    el('div', { class: 'right' }, [
-      el('span', { style: state.settings.anthropicApiKey ? 'color:var(--success);' : 'color:var(--text-dim);' },
-        state.settings.anthropicApiKey ? '✓ set' : 'not set'),
-      el('span', {}, '›')
-    ])
-  ]));
+  set.appendChild(el('div', { class: 'card-title' }, 'Gym settings'));
   set.appendChild(el('div', {
     class: 'list-item',
     onclick: () => {
@@ -5824,20 +6035,6 @@ function renderMore() {
   set.appendChild(el('div', {
     class: 'list-item',
     onclick: () => {
-      const opts = [3, 4, 5, 6, 8];
-      const cur = state.settings.waterTarget;
-      const idx = opts.indexOf(cur);
-      const next = opts[(idx + 1) % opts.length];
-      state.settings.waterTarget = next; save(); render();
-      toast('Water target: ' + next + ' bottles (' + (next * 0.5).toFixed(1) + 'L)');
-    }
-  }, [
-    el('div', {}, 'Water target'),
-    el('div', { class: 'right' }, [el('span', {}, state.settings.waterTarget + ' bottles · ' + (state.settings.waterTarget * 0.5).toFixed(1) + 'L'), el('span', {}, '›')])
-  ]));
-  set.appendChild(el('div', {
-    class: 'list-item',
-    onclick: () => {
       const opts = [180, 240, 300, 360, 420, 480, 600];
       const cur = state.settings.warmupTargetSec || 300;
       const idx = opts.indexOf(cur);
@@ -5848,56 +6045,6 @@ function renderMore() {
   }, [
     el('div', {}, 'Warmup target'),
     el('div', { class: 'right' }, [el('span', {}, Math.round((state.settings.warmupTargetSec || 300) / 60) + ' min'), el('span', {}, '›')])
-  ]));
-  set.appendChild(el('div', {
-    class: 'list-item',
-    onclick: () => {
-      const opts = ['21:30', '22:00', '22:30', '23:00', '23:30', '00:00'];
-      const cur = state.settings.bedtime || '23:00';
-      const idx = opts.indexOf(cur);
-      const next = opts[(idx + 1) % opts.length];
-      state.settings.bedtime = next;
-      state.settings.lastBedtimeNotifDate = '';
-      save(); render();
-      toast('Bedtime: ' + next);
-    }
-  }, [
-    el('div', {}, 'Bedtime'),
-    el('div', { class: 'right' }, [el('span', {}, state.settings.bedtime || '23:00'), el('span', {}, '›')])
-  ]));
-  set.appendChild(el('div', {
-    class: 'list-item',
-    onclick: () => {
-      const opts = ['indigo', 'ocean', 'forest', 'sunset', 'oled'];
-      const cur = state.settings.theme || 'indigo';
-      const idx = opts.indexOf(cur);
-      const next = opts[(idx + 1) % opts.length];
-      applyTheme(next);
-      save(); render();
-      toast('Theme: ' + next);
-    }
-  }, [
-    el('div', {}, 'Theme'),
-    el('div', { class: 'right' }, [
-      el('span', {}, (state.settings.theme || 'indigo').replace(/^./, c => c.toUpperCase())),
-      el('span', {}, '›')
-    ])
-  ]));
-  set.appendChild(el('div', {
-    class: 'list-item',
-    onclick: async () => {
-      if (!('Notification' in window)) { toast('Not supported'); return; }
-      if (Notification.permission !== 'granted') {
-        const r = await Notification.requestPermission();
-        state.settings.notifications = (r === 'granted'); save(); render();
-        if (r === 'granted') toast('Notifications enabled');
-      } else {
-        state.settings.notifications = !state.settings.notifications; save(); render();
-      }
-    }
-  }, [
-    el('div', {}, 'Browser notifications'),
-    el('div', { class: 'right' }, [el('span', {}, state.settings.notifications ? 'On' : 'Off'), el('span', {}, '›')])
   ]));
   set.appendChild(el('div', {
     class: 'list-item',
@@ -5927,34 +6074,18 @@ function renderMore() {
     el('div', { class: 'right' }, [el('span', { class: 'small dim' }, (state.settings.dumbbellWeights || []).join(', ')), el('span', {}, '›')])
   ]));
   set.appendChild(el('div', {
-    class: 'list-item',
-    onclick: () => {
-      if (!confirm('Lock the app? You\'ll need to enter the password again on next visit.')) return;
-      localStorage.removeItem(PIN_FLAG);
-      location.reload();
-    }
+    class: 'list-item small dim',
+    style: 'cursor:pointer;',
+    onclick: () => { setGlobalTab('more'); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   }, [
-    el('div', {}, 'Lock app'),
-    el('div', { class: 'right' }, [el('span', {}, '›')])
-  ]));
-  set.appendChild(el('div', {
-    class: 'list-item',
-    onclick: () => {
-      if (!confirm('Clear all logged data? This cannot be undone.')) return;
-      state = structuredClone(defaultState);
-      seedPastSessions();
-      save(); render();
-      toast('Reset complete');
-    }
-  }, [
-    el('div', { style: 'color:var(--danger)' }, 'Reset all data'),
-    el('div', { class: 'right' }, [el('span', {}, '›')])
+    el('div', {}, 'App settings (theme, AI, lock, …)'),
+    el('div', { class: 'right' }, [el('span', {}, '› MastaLife More')])
   ]));
   v.appendChild(set);
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.19 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.22 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
@@ -6029,6 +6160,48 @@ function openSkipConfirmModal() {
 
 const AI_MODEL = 'claude-haiku-4-5-20251001';
 const AI_API_URL = 'https://api.anthropic.com/v1/messages';
+
+// Parse a single natural-language task input via Claude.
+// Returns { title, date | null, time | null, category | null } — or throws.
+async function parseQuickTaskWithAI(input) {
+  if (!state.settings.anthropicApiKey) throw new Error('No API key set');
+  const todayStr = today();
+  const now = new Date();
+  const dowName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()];
+  const system = `You are a task parser. The user types a single task in natural language. Extract:
+- title: the task title with all date/time/category words removed (keep verbs and the action)
+- date: YYYY-MM-DD format. "today" = ${todayStr}. "tomorrow" = next day. Day names → next occurrence. If no date mentioned, return null.
+- time: HH:MM in 24-hour format. "10 am" = "10:00", "10 pm" = "22:00", "16 pm" = "16:00", "noon" = "12:00", "midnight" = "00:00". If no time mentioned, return null.
+- category: one of "work" | "personal" | "family" | "gym" | "health" | null
+
+Today is ${dowName} ${todayStr}.
+
+Return ONLY a single JSON object with these four keys. No prose, no markdown, no code fences. Example:
+{"title":"call mom","date":"2026-05-05","time":"10:00","category":"family"}`;
+
+  const out = await callAnthropic({
+    system,
+    messages: [{ role: 'user', content: input }],
+    maxTokens: 200
+  });
+
+  let txt = (out || '').trim();
+  // Strip ```json fences if present
+  const fence = txt.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) txt = fence[1].trim();
+  // Strip leading/trailing prose if model added any
+  const first = txt.indexOf('{');
+  const last = txt.lastIndexOf('}');
+  if (first >= 0 && last >= 0) txt = txt.slice(first, last + 1);
+
+  const obj = JSON.parse(txt);
+  return {
+    title: (obj.title || '').trim() || input,
+    date: obj.date || null,
+    time: obj.time || null,
+    category: obj.category || null,
+  };
+}
 
 async function callAnthropic({ system, messages, maxTokens }) {
   const key = state.settings.anthropicApiKey;
