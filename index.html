@@ -1393,6 +1393,76 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Coach FAB — floating ✨ button on every screen */
+  .coach-fab {
+    position: fixed;
+    bottom: calc(var(--tab-h) + var(--safe-bottom) + 14px);
+    right: 14px;
+    width: 56px; height: 56px; border-radius: 50%;
+    z-index: 30;
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.45), 0 2px 8px rgba(129,140,248,0.4);
+    cursor: pointer;
+    border: none;
+    font-size: 24px;
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+  .coach-fab:active { transform: scale(0.92); }
+
+  /* Coach chat */
+  .coach-chat {
+    display: flex; flex-direction: column; gap: 10px;
+    max-height: 50vh; overflow-y: auto;
+    padding: 4px 2px 8px;
+    margin-bottom: 8px;
+  }
+  .coach-msg {
+    padding: 10px 14px; border-radius: 14px;
+    max-width: 88%;
+    font-size: 14px; line-height: 1.5;
+    white-space: pre-wrap; word-wrap: break-word;
+  }
+  .coach-msg.user {
+    background: var(--accent-soft); color: var(--text);
+    align-self: flex-end; border-bottom-right-radius: 4px;
+  }
+  .coach-msg.assistant {
+    background: var(--surface-2); color: var(--text);
+    align-self: flex-start; border-bottom-left-radius: 4px;
+    border: 1px solid var(--surface-3);
+  }
+  .coach-msg.thinking { font-style: italic; color: var(--text-muted); }
+  .coach-input-row { display: flex; gap: 8px; align-items: flex-end; }
+  .coach-input-row textarea {
+    flex: 1; background: var(--surface-2); border: 1px solid var(--surface-3);
+    color: var(--text); padding: 10px 12px; border-radius: 12px;
+    font-size: 14px; font-family: inherit; resize: none;
+    min-height: 44px; max-height: 120px; outline: none;
+    transition: border-color 0.15s;
+  }
+  .coach-input-row textarea:focus { border-color: var(--accent); }
+  .coach-input-row .send-btn {
+    background: var(--accent); color: white; border: none; border-radius: 10px;
+    padding: 0 18px; height: 44px; font-size: 14px; font-weight: 700; cursor: pointer;
+    flex-shrink: 0;
+  }
+  .coach-input-row .send-btn:disabled { opacity: 0.5; }
+  .coach-input-row .send-btn:active { transform: scale(0.95); }
+
+  /* Feel log card */
+  .feel-card { padding: 14px 16px; }
+  .feel-row { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+  .feel-row .label { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.04em; min-width: 56px; }
+  .feel-chip {
+    background: var(--surface-2); border: 1px solid var(--surface-3); color: var(--text-muted);
+    padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: all 0.12s;
+  }
+  .feel-chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .feel-chip:active { transform: scale(0.94); }
+
   /* MastaLife quote (small) */
   .ml-quote {
     font-size: 13px; font-style: italic; color: var(--text-muted);
@@ -1977,6 +2047,7 @@ const defaultState = {
   mastalifeTasks: [],
   customExerciseImages: {}, // exercise name → resized JPEG dataURL (device-only; not synced)
   customDayExercises: {},   // dayKey → [exercise...] appended to DAYS[k].exercises at runtime
+  coachLogs: [],            // [{ id, date, kind, energy?, soreness?, text, dayKey?, createdAt }]
   photos: [],
   notes: {},
   settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false, anthropicApiKey: '', theme: 'indigo' }
@@ -3991,14 +4062,24 @@ function renderToday() {
   // Exercises
   day.exercises.forEach(ex => v.appendChild(renderExercise(ex, date, dayKey)));
 
-  // Add custom exercise (AI-checked from a machine photo)
-  v.appendChild(el('button', {
-    class: 'btn secondary',
-    style: 'margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;',
-    onclick: () => openAddExerciseModal(dayKey)
-  }, [
-    el('span', { style: 'font-size:18px;line-height:1;' }, '+'),
-    el('span', {}, 'Add exercise (photo + AI check)')
+  // Action row: log how you feel + add custom exercise
+  v.appendChild(el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;' }, [
+    el('button', {
+      class: 'btn secondary',
+      style: 'display:flex;align-items:center;justify-content:center;gap:6px;',
+      onclick: openFeelLogModal
+    }, [
+      el('span', { style: 'font-size:14px;' }, '🫀'),
+      el('span', {}, 'How I feel')
+    ]),
+    el('button', {
+      class: 'btn secondary',
+      style: 'display:flex;align-items:center;justify-content:center;gap:6px;',
+      onclick: () => openAddExerciseModal(dayKey)
+    }, [
+      el('span', { style: 'font-size:18px;line-height:1;' }, '+'),
+      el('span', {}, 'Add exercise')
+    ])
   ]));
 
   // Finish button
@@ -5251,7 +5332,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.31 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.32 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
@@ -5552,6 +5633,284 @@ async function callAnthropicVision({ system, userText, imageDataUrl, maxTokens }
   }
   const data = await res.json();
   return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+}
+
+/* =========== COACH (AI assistant) =========== */
+// Persistent feel/note logs that the Coach uses as ground truth.
+function addCoachLog(entry) {
+  if (!Array.isArray(state.coachLogs)) state.coachLogs = [];
+  state.coachLogs.push({
+    id: 'cl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    date: today(),
+    createdAt: Date.now(),
+    ...entry
+  });
+  save();
+}
+function recentCoachLogs(n) {
+  const arr = Array.isArray(state.coachLogs) ? state.coachLogs : [];
+  return arr.slice(-(n || 8));
+}
+
+// Build a compact markdown context block summarising the user's recent state.
+function buildCoachContext() {
+  const td = today();
+  const ph = currentPhase();
+  const wk = currentWeek();
+  const todayKey = effectiveDayKey(td);
+  const todayDay = todayKey ? DAYS[todayKey] : null;
+  const lines = [];
+  lines.push(`# Mustapha's gym context (today: ${td})`);
+  lines.push(`Program: ${ph.name} · Phase ${ph.num} · Week ${wk}. 4-day split: Push (Mon) / Pull (Tue) / Legs (Thu) / Upper+Arms (Sat).`);
+  if (todayDay) {
+    lines.push(`Today's planned session: **${todayDay.name}** — ${todayDay.focus}.`);
+  } else {
+    lines.push(`Today is a rest day.`);
+  }
+
+  // Last 8 finished sessions
+  const finished = Object.entries(state.workouts || {})
+    .filter(([d, w]) => w && w.finished)
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .slice(0, 8);
+  if (finished.length) {
+    lines.push('\n## Recent finished sessions');
+    for (const [d, w] of finished) {
+      const mins = Math.round(((w.timers?.warmup || 0) + (w.timers?.workout || 0)) / 60000);
+      const sets = Object.values(w.logs || {}).reduce((s, arr) => s + arr.filter(x => x.d).length, 0);
+      const dn = (DAYS[w.dayKey] && DAYS[w.dayKey].name) || '?';
+      const note = w.sessionNote ? ` — note: "${w.sessionNote}"` : '';
+      lines.push(`- ${d} · ${dn} · ${sets} sets · ~${mins} min${note}`);
+    }
+  } else {
+    lines.push('\n## Recent finished sessions\n_(none)_');
+  }
+
+  // Per-exercise notes from recent workouts
+  const exNotes = [];
+  for (const [d, w] of Object.entries(state.workouts || {})) {
+    if (!w || !w.notes) continue;
+    for (const [exId, n] of Object.entries(w.notes)) {
+      if (n && String(n).trim()) exNotes.push({ d, exId, n });
+    }
+  }
+  exNotes.sort((a, b) => b.d.localeCompare(a.d));
+  if (exNotes.length) {
+    lines.push('\n## Recent exercise notes');
+    exNotes.slice(0, 6).forEach(e => lines.push(`- ${e.d} · ${e.exId}: "${e.n}"`));
+  }
+
+  // Body weight
+  const bw = state.bodyWeight || [];
+  if (bw.length) {
+    const last = bw[bw.length - 1];
+    const first = bw[0];
+    const delta = last.weight - first.weight;
+    lines.push(`\n## Weight\nLatest: ${last.weight} kg (${last.date}). Δ from start: ${delta >= 0 ? '+' : ''}${delta.toFixed(1)} kg.`);
+  }
+
+  // Sleep last 7
+  const sl = state.sleep || [];
+  if (sl.length) {
+    const last7 = sl.slice(-7);
+    const avg = last7.reduce((s, e) => s + e.hours, 0) / last7.length;
+    lines.push(`\n## Sleep\nAvg last ${last7.length} nights: ${avg.toFixed(1)}h · goal ${state.settings.sleepTarget || 8}h.`);
+  }
+
+  // Feel logs
+  const logs = recentCoachLogs(6);
+  if (logs.length) {
+    lines.push('\n## Recent feel logs (most recent last)');
+    for (const e of logs) {
+      const parts = [];
+      if (typeof e.energy === 'number') parts.push(`energy ${e.energy}/5`);
+      if (typeof e.soreness === 'number') parts.push(`soreness ${e.soreness}/5`);
+      if (e.text) parts.push(`"${e.text}"`);
+      const dk = e.dayKey != null && DAYS[e.dayKey] ? ` (${DAYS[e.dayKey].name})` : '';
+      lines.push(`- ${e.date}${dk} · ${parts.join(' · ') || '(no detail)'}`);
+    }
+  }
+
+  // Today's planned exercises (if workout day)
+  if (todayDay) {
+    lines.push(`\n## Today's exercises`);
+    todayDay.exercises.slice(0, 8).forEach(ex => {
+      const w = ex.bw ? 'BW' : (ex.weight + 'kg');
+      lines.push(`- ${ex.name} · ${ex.sets}×${ex.repsMin}-${ex.repsMax}${ex.timed ? 's' : ''} · ${w}`);
+    });
+  }
+
+  return lines.join('\n');
+}
+
+// Multi-turn chat history kept in memory for the lifetime of the modal.
+let coachChatHistory = [];
+
+async function callCoach(userText) {
+  if (!state.settings.anthropicApiKey) throw new Error('Set up your Anthropic API key first');
+  const sys = `You are MyGym Coach — Mustapha's friendly, concise personal trainer who has full visibility into his training data. Keep replies short (2-4 sentences typically), practical, and grounded in the data below. Don't invent numbers. If the user mentions soreness, fatigue, or recovery concerns, factor that in. If they're progressing well, keep them on track and gently push. Use simple English. No emoji-spam.
+
+${buildCoachContext()}`;
+  coachChatHistory.push({ role: 'user', content: userText });
+  const res = await fetch(AI_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': state.settings.anthropicApiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: AI_MODEL,
+      max_tokens: 700,
+      system: sys,
+      messages: coachChatHistory.slice(-12) // last 12 turns
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    coachChatHistory.pop();
+    throw new Error('Claude ' + res.status + ': ' + t.slice(0, 160));
+  }
+  const data = await res.json();
+  const reply = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+  coachChatHistory.push({ role: 'assistant', content: reply });
+  return reply;
+}
+
+function openCoachModal(prefilled) {
+  if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
+
+  const m = el('div');
+  m.appendChild(el('div', { class: 'row between', style: 'align-items:center;margin-bottom:10px;' }, [
+    el('h3', { style: 'margin:0;' }, '✨ Coach'),
+    el('button', {
+      class: 'btn small secondary',
+      style: 'padding:4px 10px;font-size:11px;',
+      onclick: () => {
+        coachChatHistory = [];
+        openCoachModal();
+      }
+    }, 'New chat')
+  ]));
+
+  const chatBox = el('div', { class: 'coach-chat' });
+  function renderHistory() {
+    chatBox.innerHTML = '';
+    if (!coachChatHistory.length) {
+      const intro = el('div', { class: 'coach-msg assistant' }, 'Hey Mustapha. Ask anything — about today\'s session, soreness, weight, whether to push or back off. I\'ve got your full history.');
+      chatBox.appendChild(intro);
+    } else {
+      coachChatHistory.forEach(msg => {
+        chatBox.appendChild(el('div', { class: 'coach-msg ' + msg.role }, msg.content));
+      });
+    }
+    setTimeout(() => { chatBox.scrollTop = chatBox.scrollHeight; }, 30);
+  }
+  renderHistory();
+  m.appendChild(chatBox);
+
+  const ta = el('textarea', { placeholder: 'Ask Coach… (e.g. "Should I push on Push day or back off?", "Is +1kg OK on bench?")' });
+  if (prefilled) ta.value = prefilled;
+  const sendBtn = el('button', { class: 'send-btn' }, 'Send');
+
+  async function send() {
+    const txt = ta.value.trim();
+    if (!txt || sendBtn.disabled) return;
+    ta.value = '';
+    sendBtn.disabled = true;
+    renderHistory();
+    chatBox.appendChild(el('div', { class: 'coach-msg assistant thinking' }, 'Thinking…'));
+    chatBox.scrollTop = chatBox.scrollHeight;
+    try {
+      await callCoach(txt);
+    } catch (err) {
+      coachChatHistory.push({ role: 'assistant', content: 'Error: ' + (err.message || 'failed').slice(0, 200) });
+    } finally {
+      sendBtn.disabled = false;
+      renderHistory();
+      ta.focus();
+    }
+  }
+  sendBtn.onclick = send;
+  ta.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
+
+  m.appendChild(el('div', { class: 'coach-input-row' }, [ta, sendBtn]));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Close'));
+
+  openModal(m);
+  setTimeout(() => ta.focus(), 80);
+}
+
+// Quick "How I feel" log — energy + soreness chips + optional note.
+function openFeelLogModal() {
+  let r = { energy: null, soreness: null, text: '' };
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'How are you feeling?'));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' }, 'Quick log — Coach will remember and use it.'));
+
+  function chipRow(label, key, max) {
+    const row = el('div', { class: 'feel-row' });
+    row.appendChild(el('span', { class: 'label' }, label));
+    for (let i = 1; i <= max; i++) {
+      const c = el('button', {
+        class: 'feel-chip',
+        type: 'button',
+        onclick: () => {
+          r[key] = i;
+          [...row.querySelectorAll('.feel-chip')].forEach((b, idx) => b.classList.toggle('active', idx + 1 === i));
+        }
+      }, String(i));
+      row.appendChild(c);
+    }
+    return row;
+  }
+  m.appendChild(chipRow('Energy', 'energy', 5));
+  m.appendChild(chipRow('Soreness', 'soreness', 5));
+
+  m.appendChild(el('label', { style: 'margin-top:12px;' }, 'Note (optional)'));
+  const ta = el('textarea', {
+    placeholder: 'What\'s hard, what\'s easy, anything tight or sore…',
+    style: 'width:100%;min-height:80px;resize:vertical;background:var(--surface-2);border:1px solid var(--surface-3);color:var(--text);padding:10px 12px;border-radius:10px;font-family:inherit;font-size:14px;outline:none;'
+  });
+  ta.oninput = () => { r.text = ta.value; };
+  m.appendChild(ta);
+
+  m.appendChild(el('button', {
+    class: 'btn',
+    style: 'margin-top:14px;',
+    onclick: () => {
+      if (r.energy == null && r.soreness == null && !r.text.trim()) {
+        toast('Pick a number or write something');
+        return;
+      }
+      addCoachLog({
+        kind: 'feel',
+        energy: r.energy,
+        soreness: r.soreness,
+        text: (r.text || '').trim(),
+        dayKey: effectiveDayKey(today())
+      });
+      closeModal();
+      render();
+      toast('Saved · Coach will use this');
+    }
+  }, 'Save'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Cancel'));
+
+  openModal(m);
+}
+
+// Inject the floating Coach button into the DOM once.
+function injectCoachFAB() {
+  if (document.getElementById('coachFAB')) return;
+  const btn = document.createElement('button');
+  btn.id = 'coachFAB';
+  btn.className = 'coach-fab';
+  btn.title = 'Coach';
+  btn.textContent = '✨';
+  btn.onclick = () => openCoachModal();
+  document.body.appendChild(btn);
 }
 
 // Add a custom exercise to a day, identified from a machine photo.
@@ -6220,6 +6579,7 @@ document.querySelectorAll('#gymNav button').forEach(b => {
 });
 
 applyTheme(state.settings.theme || 'indigo');
+injectCoachFAB();
 render();
 </script>
 </body>
