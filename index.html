@@ -2152,7 +2152,7 @@ async function cloudCreateOrUpdate() {
   const payload = {
     ...state,
     customExerciseImages: {},
-    settings: { ...state.settings, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, anthropicApiKey: '' }
+    settings: { ...state.settings, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0 }
   };
   const body = JSON.stringify({
     description: CLOUD_GIST_DESC,
@@ -2374,6 +2374,10 @@ function buildCloudBackupCard() {
     card.appendChild(el('div', { class: 'small dim', style: 'margin-top:8px;word-break:break-all;' },
       'Gist ID: ' + state.settings.cloudGistId.slice(0, 12) + '…'));
   }
+  card.appendChild(el('div', {
+    class: 'small dim',
+    style: 'margin-top:8px;line-height:1.5;'
+  }, 'Backup includes your Anthropic key so it auto-restores on a new device. GitHub token stays device-only.'));
   return card;
 }
 
@@ -3928,7 +3932,7 @@ function renderHome() {
     const aiBtn = el('button', {
       class: 'btn',
       style: 'background:linear-gradient(135deg, var(--accent), var(--accent-strong));margin-bottom:8px;',
-      onclick: () => hasKey ? openAIParseModal() : openAIKeyModal()
+      onclick: () => hasKey ? openAIParseModal() : openAIKeyModal(() => openAIParseModal())
     }, '✨ ' + (hasKey ? 'Paste with AI' : 'Set up AI key to paste'));
     tcard.appendChild(aiBtn);
 
@@ -4398,7 +4402,7 @@ function renderExercise(ex, date, dayKey) {
 }
 
 function askCoachAboutExercise(ex, date) {
-  if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
+  if (!state.settings.anthropicApiKey) { openAIKeyModal(() => askCoachAboutExercise(ex, date)); return; }
   const displayName = getDisplayName(ex, date);
   const alts = getAlternatives(ex);
   const altStr = alts.length ? `Listed alternatives: ${alts.join(', ')}.` : 'No alternatives are pre-listed.';
@@ -5246,7 +5250,7 @@ function openAddMealModal() {
     style: 'margin-top:10px;width:100%;',
     onclick: async () => {
       if (!dataUrl) { toast('Add a photo first'); return; }
-      if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
+      if (!state.settings.anthropicApiKey) { openAIKeyModal(() => analyzeBtn.onclick && analyzeBtn.onclick()); return; }
       analyzeBtn.disabled = true;
       analyzeStatus.textContent = 'Analyzing with Claude…';
       try {
@@ -5915,7 +5919,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.43 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.46 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
@@ -6102,11 +6106,20 @@ async function callAnthropic({ system, messages, maxTokens }) {
   return txt;
 }
 
-function openAIKeyModal() {
+// Helper: ensures the AI key is set, then runs the action.
+// If the key is missing, opens the key modal and runs the action automatically once saved.
+function withAIKey(action) {
+  if (state.settings.anthropicApiKey) { action(); return; }
+  openAIKeyModal(() => {
+    if (state.settings.anthropicApiKey) action();
+  });
+}
+
+function openAIKeyModal(onSaved) {
   const m = el('div');
   m.appendChild(el('h3', {}, 'Anthropic API key'));
   m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;' },
-    'Used to parse your task lists with Claude. Stored only in your browser. Get a key at console.anthropic.com.'));
+    'One key powers every AI feature in the app — Coach, meal analysis, task parsing, gratitude polish, etc. Stored only in your browser (and your private cloud backup). Get a key at console.anthropic.com.'));
 
   m.appendChild(el('label', {}, 'API key (sk-ant-...)'));
   const inp = el('input', {
@@ -6153,6 +6166,7 @@ function openAIKeyModal() {
       state.settings.anthropicApiKey = key;
       save(); closeModal(); render();
       toast(key ? 'API key saved' : 'API key cleared');
+      if (key && typeof onSaved === 'function') onSaved();
     }
   }, 'Save'));
 
@@ -6399,7 +6413,7 @@ ${buildCoachContext()}`;
 }
 
 function openCoachModal(prefilled) {
-  if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
+  if (!state.settings.anthropicApiKey) { openAIKeyModal(() => openCoachModal(prefilled)); return; }
 
   const m = el('div');
   m.appendChild(el('div', { class: 'row between', style: 'align-items:center;margin-bottom:10px;' }, [
@@ -6536,7 +6550,7 @@ function injectCoachFAB() {
 // Add a custom exercise to a day, identified from a machine photo.
 // The photo also becomes the exercise's saved image.
 function openAddExerciseModal(dayKey) {
-  if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
+  if (!state.settings.anthropicApiKey) { openAIKeyModal(() => openAddExerciseModal(dayKey)); return; }
   const day = DAYS[dayKey];
   if (!day) { toast('Unknown day'); return; }
 
@@ -6738,7 +6752,7 @@ function openAddExerciseConfirmModal(dayKey, suggestion, imageDataUrl) {
 }
 
 function openAIParseModal() {
-  if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
+  if (!state.settings.anthropicApiKey) { openAIKeyModal(() => openAIParseModal()); return; }
 
   const m = el('div');
   m.appendChild(el('h3', {}, '✨ Paste today\'s tasks'));
@@ -7208,7 +7222,6 @@ document.querySelectorAll('#gymNav button').forEach(b => {
 });
 
 applyTheme(state.settings.theme || 'indigo');
-injectCoachFAB();
 render();
 </script>
 </body>
