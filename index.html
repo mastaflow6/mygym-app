@@ -1650,40 +1650,13 @@
 </div>
 <div class="app">
   <header class="topbar">
-    <span id="gymBackLink" class="gym-back-link" style="display:none">← MastaLife</span>
-    <h1 id="topTitle">Home</h1>
-    <span class="pill" id="topPhase" style="display:none">Phase 1</span>
-    <span class="pill mode-pill" id="topMode" style="display:none">ALL</span>
+    <h1 id="topTitle">Dashboard</h1>
+    <span class="pill" id="topPhase">Phase 1</span>
   </header>
   <main id="view"></main>
 </div>
 
-<nav class="tabs global-tabs" id="globalNav">
-  <div class="inner">
-    <button data-gtab="home" class="active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2V9z"/></svg>
-      <span>Home</span>
-    </button>
-    <button data-gtab="tasks">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      <span>Tasks</span>
-    </button>
-    <button data-gtab="calendar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-      <span>Calendar</span>
-    </button>
-    <button data-gtab="gym">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6v12M18 6v12M2 10v4M22 10v4M6 12h12"/></svg>
-      <span>Gym</span>
-    </button>
-    <button data-gtab="more">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
-      <span>More</span>
-    </button>
-  </div>
-</nav>
-
-<nav class="tabs gym-tabs" id="gymNav" style="display:none">
+<nav class="tabs" id="gymNav">
   <div class="inner">
     <button data-tab="home" class="active">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="10" rx="1"/><rect x="13" y="3" width="8" height="6" rx="1"/><rect x="13" y="11" width="8" height="10" rx="1"/><rect x="3" y="15" width="8" height="6" rx="1"/></svg>
@@ -1883,55 +1856,6 @@ const ROUTINE = [
   { time: '23:00', what: 'Sleep — no phone' }
 ];
 
-const LIFE_QUOTES = [
-  // Family / relationships
-  { text: "Family is not an important thing. It's everything.", author: "Michael J. Fox" },
-  { text: "At the end of the day, the most important thing is who you came home to.", author: "Naval" },
-  { text: "Other things may change us, but we start and end with the family.", author: "Anthony Brandt" },
-  { text: "Be the kind of person you'd want your children to grow up to be.", author: "Naval" },
-  { text: "The greatest happiness is family happiness.", author: "Joyce Brothers" },
-  // Work / focus / craft
-  { text: "Your work fills a large part of your life. The only way to be satisfied is to do what you believe is great work.", author: "Steve Jobs" },
-  { text: "Quality is not an act. It is a habit.", author: "Aristotle" },
-  { text: "Don't be busy. Be productive.", author: "Naval" },
-  { text: "The expert in anything was once a beginner.", author: "Helen Hayes" },
-  { text: "Focus is a matter of deciding what things you're not going to do.", author: "John Carmack" },
-  // Personal growth / identity
-  { text: "Knowing yourself is the beginning of all wisdom.", author: "Aristotle" },
-  { text: "The only person you are destined to become is the person you decide to be.", author: "Ralph Waldo Emerson" },
-  { text: "Be yourself — everyone else is already taken.", author: "Oscar Wilde" },
-  { text: "What we fear doing most is usually what we most need to do.", author: "Tim Ferriss" },
-  { text: "Comparison is the thief of joy.", author: "Theodore Roosevelt" },
-  { text: "The unexamined life is not worth living.", author: "Socrates" },
-  // Balance / time / presence
-  { text: "How we spend our days is, of course, how we spend our lives.", author: "Annie Dillard" },
-  { text: "We do not remember days. We remember moments.", author: "Cesare Pavese" },
-  { text: "Time you enjoy wasting is not wasted time.", author: "Marthe Troly-Curtin" },
-  { text: "Balance is not better time management — it's better boundary management.", author: "Betsy Jacobson" },
-  { text: "Life is what happens while you're busy making other plans.", author: "John Lennon" },
-  // Gratitude / mindset
-  { text: "Gratitude turns what we have into enough.", author: "Aesop" },
-  { text: "When you arise in the morning, think of what a precious privilege it is to be alive.", author: "Marcus Aurelius" },
-  { text: "Happiness is not ready made. It comes from your own actions.", author: "Dalai Lama" },
-  { text: "Joy is not in things; it is in us.", author: "Richard Wagner" },
-  // Wisdom / patience
-  { text: "It's not what happens to you, but how you react to it that matters.", author: "Epictetus" },
-  { text: "Patience is keeping a good attitude while waiting.", author: "Joyce Meyer" },
-  { text: "Don't let yesterday take up too much of today.", author: "Will Rogers" },
-  { text: "Small disciplines repeated daily lead to great achievements.", author: "John Maxwell" },
-  { text: "He who has a why to live can bear almost any how.", author: "Friedrich Nietzsche" },
-  // Self / character
-  { text: "What you do every day matters more than what you do once in a while.", author: "Gretchen Rubin" },
-  { text: "You become what you give your attention to.", author: "Epictetus" },
-  { text: "First, say to yourself what you would be; and then do what you have to do.", author: "Epictetus" }
-];
-
-function getLifeQuote() {
-  const d = new Date();
-  const dayNum = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
-  return LIFE_QUOTES[((dayNum % LIFE_QUOTES.length) + LIFE_QUOTES.length) % LIFE_QUOTES.length];
-}
-
 const QUOTES = [
   { text: "Discipline equals freedom.", author: "Jocko Willink" },
   { text: "The pain you feel today will be the strength you feel tomorrow.", author: "Arnold Schwarzenegger" },
@@ -2052,8 +1976,8 @@ const defaultState = {
   bag: {},
   plan: { skippedDates: [], overrides: {} },
   mastalifeTasks: [],
-  dailyFocus: { date: '', text: '' },
-  dailyGratitude: { date: '', text: '' },
+  customExerciseImages: {}, // exercise name → resized JPEG dataURL (device-only; not synced)
+  customDayExercises: {},   // dayKey → [exercise...] appended to DAYS[k].exercises at runtime
   photos: [],
   notes: {},
   settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false, anthropicApiKey: '', theme: 'indigo' }
@@ -2106,7 +2030,12 @@ async function cloudCreateOrUpdate() {
 
   // Don't sync the token itself — strip from payload to avoid an attacker reading the gist
   // ever finding it (and to keep the gist content portable across accounts).
-  const payload = { ...state, settings: { ...state.settings, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, anthropicApiKey: '' } };
+  // Strip device-only / sensitive fields from the cloud payload.
+  const payload = {
+    ...state,
+    customExerciseImages: {},
+    settings: { ...state.settings, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, anthropicApiKey: '' }
+  };
   const body = JSON.stringify({
     description: CLOUD_GIST_DESC,
     public: false,
@@ -2486,6 +2415,19 @@ function migrateRepsToPyramid() {
 }
 migrateRepsToPyramid();
 
+// Splice user-added custom exercises into each DAYS[k].exercises so that all the
+// existing iteration code automatically picks them up (workoutProgress, renderToday,
+// renderHomeFocus, swap-finder, plan tab, etc.). Call this after state loads and
+// after any change to state.customDayExercises.
+function refreshDayExercises() {
+  Object.keys(DAYS).forEach(k => {
+    if (!DAYS[k]._baseExercises) DAYS[k]._baseExercises = DAYS[k].exercises.slice();
+    const customs = (state.customDayExercises && state.customDayExercises[k]) ? state.customDayExercises[k] : [];
+    DAYS[k].exercises = [...DAYS[k]._baseExercises, ...customs];
+  });
+}
+refreshDayExercises();
+
 /* =========== HELPERS =========== */
 function $(id) { return document.getElementById(id); }
 function el(tag, attrs = {}, children = []) {
@@ -2855,12 +2797,145 @@ function resetPlanOverrides() {
   save();
 }
 
-/* =========== MASTALIFE TASKS =========== */
-function _ensureTaskArr() {
+/* =========== TODAY TASKS (daily reminder, AI paste-able) =========== */
+// Two kinds of task:
+//   • One-off: shown until tapped, then deleted forever.
+//   • Recurring: defined once, auto-appears each matching day. Tapping marks
+//     today's instance as "dismissed" — it disappears from today's list but
+//     comes back on the next matching day.
+// Stored under state.mastalifeTasks (key kept for backwards compatibility).
+function ensureTasksArr() {
   if (!Array.isArray(state.mastalifeTasks)) state.mastalifeTasks = [];
 }
-function _newTaskId() {
+function newTaskId() {
   return 't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+// Recurrence DSL evaluator. Supported rules:
+//   'daily'         every day
+//   'weekdays'      Mon–Fri
+//   'weekly:1,3'    listed dow numbers (0=Sun ... 6=Sat)
+//   'monthly:15'    every month on the Nth day
+function matchesRepeat(rule, dateStr) {
+  if (!rule) return false;
+  const d = new Date(dateStr + 'T00:00:00');
+  if (rule === 'daily') return true;
+  if (rule === 'weekdays') { const dow = d.getDay(); return dow >= 1 && dow <= 5; }
+  if (rule.startsWith('weekly:')) {
+    const days = rule.slice(7).split(',').map(s => parseInt(s, 10)).filter(n => !isNaN(n));
+    return days.includes(d.getDay());
+  }
+  if (rule.startsWith('monthly:')) {
+    const dom = parseInt(rule.slice(8), 10);
+    return !isNaN(dom) && d.getDate() === dom;
+  }
+  return false;
+}
+
+function describeRepeat(rule) {
+  if (!rule) return '';
+  if (rule === 'daily') return 'every day';
+  if (rule === 'weekdays') return 'weekdays';
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  if (rule.startsWith('weekly:')) {
+    const days = rule.slice(7).split(',').map(s => parseInt(s, 10)).filter(n => !isNaN(n)).sort();
+    return 'every ' + days.map(d => DOW[d]).join('/');
+  }
+  if (rule.startsWith('monthly:')) return 'monthly on ' + rule.slice(8);
+  return rule;
+}
+
+function addTask({ title, time, category, repeat }) {
+  ensureTasksArr();
+  const t = (title || '').trim();
+  if (!t) return null;
+  const okRepeat = (typeof repeat === 'string' && /^(daily|weekdays|weekly:[\d,]+|monthly:\d+)$/.test(repeat)) ? repeat : null;
+  const task = {
+    id: newTaskId(),
+    title: t,
+    time: (time && /^\d{1,2}:\d{2}$/.test(time)) ? time.padStart(5, '0') : null,
+    category: ['work','personal','family','gym','health'].includes(category) ? category : null,
+    repeat: okRepeat,
+    dismissedDates: [],
+    createdAt: Date.now()
+  };
+  state.mastalifeTasks.push(task);
+  save();
+  return task;
+}
+
+// Tap-to-clear: one-off → delete; recurring → dismiss for today only.
+function dismissTask(id) {
+  ensureTasksArr();
+  const t = state.mastalifeTasks.find(x => x.id === id);
+  if (!t) return;
+  if (t.repeat) {
+    if (!Array.isArray(t.dismissedDates)) t.dismissedDates = [];
+    const td = today();
+    if (!t.dismissedDates.includes(td)) t.dismissedDates.push(td);
+  } else {
+    state.mastalifeTasks = state.mastalifeTasks.filter(x => x.id !== id);
+  }
+  save();
+}
+
+// Hard delete (used by the rare "remove this recurring task entirely" case if needed later).
+function deleteTask(id) {
+  ensureTasksArr();
+  state.mastalifeTasks = state.mastalifeTasks.filter(t => t.id !== id);
+  save();
+}
+
+// Dedupe tasks by (title, time, repeat). Returns the number of duplicates removed.
+function dedupeTasks() {
+  ensureTasksArr();
+  const seen = new Set();
+  const out = [];
+  for (const t of state.mastalifeTasks) {
+    const key = (t.title || '').toLowerCase().trim() + '|' + (t.time || '') + '|' + (t.repeat || '');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+  }
+  const removed = state.mastalifeTasks.length - out.length;
+  state.mastalifeTasks = out;
+  save();
+  return removed;
+}
+
+// Count duplicate tasks (same key as dedupeTasks). Used to gate the Dedupe button.
+function countDuplicateTasks() {
+  ensureTasksArr();
+  const seen = new Set();
+  let dup = 0;
+  for (const t of state.mastalifeTasks) {
+    const key = (t.title || '').toLowerCase().trim() + '|' + (t.time || '') + '|' + (t.repeat || '');
+    if (seen.has(key)) dup++;
+    else seen.add(key);
+  }
+  return dup;
+}
+
+function getTasks() {
+  ensureTasksArr();
+  const td = today();
+  const out = [];
+  for (const t of state.mastalifeTasks) {
+    if (t.repeat) {
+      if (!matchesRepeat(t.repeat, td)) continue;
+      if (Array.isArray(t.dismissedDates) && t.dismissedDates.includes(td)) continue;
+      out.push(t);
+    } else {
+      out.push(t);
+    }
+  }
+  out.sort((a, b) => {
+    const ta = a.time || '99:99';
+    const tb = b.time || '99:99';
+    if (ta !== tb) return ta < tb ? -1 : 1;
+    return (a.createdAt || 0) - (b.createdAt || 0);
+  });
+  return out;
 }
 
 // Keyword-based auto-categorization. Returns one of: 'family' | 'work' | 'gym' | 'health' | 'personal' | null.
@@ -2883,157 +2958,9 @@ function inferCategory(title) {
 function taskCategory(t) {
   return t.category || inferCategory(t.title);
 }
-function addMastaTask(input) {
-  // Accepts either a plain title string (legacy) or an object { title, time, date, repeat, category }
-  _ensureTaskArr();
-  const fields = (typeof input === 'string') ? { title: input } : (input || {});
-  const title = (fields.title || '').trim();
-  if (!title) return null;
-  const t = {
-    id: _newTaskId(),
-    title,
-    category: fields.category || null,
-    date: fields.date || null,
-    time: fields.time || null,
-    repeat: fields.repeat || null,
-    completions: [],
-    done: false,                 // legacy field — kept for back-compat
-    createdAt: Date.now()
-  };
-  state.mastalifeTasks.push(t);
-  save();
-  return t;
-}
-function updateMastaTask(id, patch) {
-  _ensureTaskArr();
-  const t = state.mastalifeTasks.find(x => x.id === id);
-  if (!t) return;
-  Object.assign(t, patch);
-  save();
-}
-function toggleMastaTask(id, dateStr) {
-  _ensureTaskArr();
-  const t = state.mastalifeTasks.find(x => x.id === id);
-  if (!t) return;
-  const useCompletions = !!(t.date || t.repeat) || Array.isArray(t.completions);
-  if (useCompletions) {
-    if (!Array.isArray(t.completions)) t.completions = [];
-    const d = dateStr || today();
-    const idx = t.completions.indexOf(d);
-    if (idx >= 0) t.completions.splice(idx, 1);
-    else t.completions.push(d);
-  } else {
-    t.done = !t.done;
-    t.doneAt = t.done ? Date.now() : null;
-  }
-  save();
-}
-function deleteMastaTask(id) {
-  _ensureTaskArr();
-  state.mastalifeTasks = state.mastalifeTasks.filter(x => x.id !== id);
-  save();
-}
-function pendingMastaTasks() {
-  _ensureTaskArr();
-  // Legacy-compatible: a task is "pending" if it has neither legacy done nor any completion today.
-  const td = today();
-  return state.mastalifeTasks.filter(t => !isTaskDoneOn(t, td) && !t.done);
-}
-
-// Recurrence rule evaluator. rule is one of:
-//   null            never recurs
-//   'daily'         every day
-//   'weekdays'      Mon–Fri
-//   'weekly:1,3'    specified day-of-week numbers (0=Sun)
-//   'monthly:15'    every month on the Nth day
-function matchesRepeat(rule, dateStr) {
-  if (!rule) return false;
-  const d = new Date(dateStr + 'T00:00:00');
-  if (rule === 'daily') return true;
-  if (rule === 'weekdays') { const dow = d.getDay(); return dow >= 1 && dow <= 5; }
-  if (rule.startsWith('weekly:')) {
-    const days = rule.slice(7).split(',').map(s => parseInt(s, 10)).filter(n => !isNaN(n));
-    return days.includes(d.getDay());
-  }
-  if (rule.startsWith('monthly:')) {
-    const dom = parseInt(rule.slice(8), 10);
-    return !isNaN(dom) && d.getDate() === dom;
-  }
-  return false;
-}
-
-// Is the task due on dateStr (i.e. should it appear on that day's schedule)?
-function isTaskDueOn(task, dateStr) {
-  // Recurring: must not start before the recurrence start (task.date), and must match the rule.
-  if (task.repeat) {
-    if (task.date && dateStr < task.date) return false;
-    return matchesRepeat(task.repeat, dateStr);
-  }
-  // One-off with a specific date.
-  if (task.date) return task.date === dateStr;
-  // No date and no repeat: legacy "always pending" task. Only show on today's view if not done.
-  return false;
-}
-
-// Has the task been done on dateStr?
-function isTaskDoneOn(task, dateStr) {
-  if (Array.isArray(task.completions) && task.completions.includes(dateStr)) return true;
-  // Legacy: a one-off task with .done=true counts as done on its task.date (if any) or today.
-  if (task.done && !task.repeat && (!task.date || task.date === dateStr)) return true;
-  return false;
-}
-
-// Tasks due on dateStr, ordered by time (untimed last). Each entry adds a `_done` flag.
-function tasksFor(dateStr) {
-  _ensureTaskArr();
-  const out = [];
-  for (const t of state.mastalifeTasks) {
-    if (!isTaskDueOn(t, dateStr)) continue;
-    out.push({ ...t, _done: isTaskDoneOn(t, dateStr) });
-  }
-  out.sort((a, b) => {
-    const ta = a.time || '99:99';
-    const tb = b.time || '99:99';
-    if (ta !== tb) return ta < tb ? -1 : 1;
-    return a.createdAt - b.createdAt;
-  });
-  return out;
-}
-
-// Human-readable repeat label for UI. Returns empty string if no repeat.
-function describeRepeat(rule) {
-  if (!rule) return '';
-  if (rule === 'daily') return 'every day';
-  if (rule === 'weekdays') return 'weekdays';
-  if (rule.startsWith('weekly:')) {
-    const days = rule.slice(7).split(',').map(s => parseInt(s, 10)).filter(n => !isNaN(n)).sort();
-    const labels = days.map(d => DAY_LABELS[d]);
-    return 'every ' + labels.join('/');
-  }
-  if (rule.startsWith('monthly:')) {
-    const dom = parseInt(rule.slice(8), 10);
-    return `monthly on ${dom}`;
-  }
-  return rule;
-}
-
-// Friendly date label for grouping ("Today", "Tomorrow", "Mon May 5").
-function friendlyDateLabel(dateStr) {
-  if (!dateStr) return 'No date';
-  const td = today();
-  if (dateStr === td) return 'Today';
-  if (dateStr === nextDateStr(td)) return 'Tomorrow';
-  const d = new Date(dateStr + 'T00:00:00');
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${DAY_LABELS[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()}`;
-}
 
 /* =========== TIMERS =========== */
 let activeTab = 'home';
-let tasksFilterCategory = null; // when set, Tasks tab shows only this category (cleared by direct nav)
-const GTAB_KEY = 'mastalife-gtab-v1';
-let globalTab = localStorage.getItem(GTAB_KEY) || 'home';
-function setGlobalTab(t) { globalTab = t; localStorage.setItem(GTAB_KEY, t); }
 
 function applyTheme(name) {
   const valid = ['indigo', 'ocean', 'forest', 'sunset', 'oled'];
@@ -3042,17 +2969,6 @@ function applyTheme(name) {
   state.settings.theme = t;
 }
 
-const MODE_KEY = 'mastalife-mode-v1';
-const MODES = ['all', 'work', 'personal'];
-let mastaMode = localStorage.getItem(MODE_KEY) || 'all';
-if (!MODES.includes(mastaMode)) mastaMode = 'all';
-function cycleMastaMode() {
-  const i = MODES.indexOf(mastaMode);
-  mastaMode = MODES[(i + 1) % MODES.length];
-  localStorage.setItem(MODE_KEY, mastaMode);
-  render();
-}
-function getMastaUserName() { return localStorage.getItem('mastalife-username-v1') || 'Mustapha'; }
 let activeDayKey = null;
 let expandedExId = null;     // null = auto-expand first incomplete; 'none' = all collapsed; ex.id = manual
 let editingSetKey = null;    // `${exId}-${setIdx}` while inline-editing a set
@@ -3301,29 +3217,6 @@ function render() {
   $('view').innerHTML = '';
   hideFloatingPauseBtn(); // each tab/focus path opts back in if it wants the FAB
 
-  const inGym = globalTab === 'gym';
-  // Gym module is locked to indigo theme; other modules use the user's chosen theme
-  document.body.dataset.theme = inGym ? 'indigo' : (state.settings.theme || 'indigo');
-  $('gymNav').style.display = inGym ? '' : 'none';
-  $('globalNav').style.display = inGym ? 'none' : '';
-  $('gymBackLink').style.display = inGym ? '' : 'none';
-  $('topPhase').style.display = inGym ? '' : 'none';
-  $('topMode').style.display = (!inGym && globalTab === 'home') ? '' : 'none';
-  if (!inGym && globalTab === 'home') $('topMode').textContent = mastaMode.toUpperCase();
-
-  if (!inGym) {
-    if (globalTab === 'home') renderMastaHome();
-    else if (globalTab === 'tasks') renderMastaTasks();
-    else if (globalTab === 'calendar') renderMastaCalendar();
-    else if (globalTab === 'more') renderMastaMore();
-    else renderMastaHome();
-    document.querySelectorAll('#globalNav button').forEach(b => {
-      b.classList.toggle('active', b.dataset.gtab === globalTab);
-    });
-    $('topTitle').textContent = ({ home: 'Dashboard', tasks: 'Tasks', calendar: 'Calendar', more: 'More' })[globalTab] || 'Home';
-    return;
-  }
-
   if (activeTab === 'home') renderHome();
   if (activeTab === 'today') renderToday();
   if (activeTab === 'plan') renderPlan();
@@ -3335,15 +3228,6 @@ function render() {
   });
   $('topPhase').textContent = `Phase ${currentPhase().num}`;
   $('topTitle').textContent = ({ home: 'Dashboard', today: 'Workout', plan: 'Plan', progress: 'Progress', more: 'More' })[activeTab];
-}
-
-/* =========== MASTALIFE SCREENS =========== */
-function _mastaPlaceholder(title, msg) {
-  const v = $('view');
-  v.appendChild(el('div', { class: 'card', style: 'padding:24px;text-align:center;margin-top:8px;' }, [
-    el('h2', { style: 'margin:0 0 8px;color:var(--text);' }, title),
-    el('div', { class: 'small muted' }, msg)
-  ]));
 }
 
 // Inline SVG icon helpers — match the rest of the app's stroke style.
@@ -3369,926 +3253,6 @@ const ML_ICONS = {
   users:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
 };
 
-function getDailyFocus() {
-  const f = state.dailyFocus;
-  if (!f || f.date !== today()) return '';
-  return f.text || '';
-}
-function setDailyFocus(text) {
-  state.dailyFocus = { date: today(), text: (text || '').trim() };
-  save();
-}
-function getDailyGratitude() {
-  const g = state.dailyGratitude;
-  if (!g || g.date !== today()) return '';
-  return g.text || '';
-}
-function setDailyGratitude(text) {
-  state.dailyGratitude = { date: today(), text: (text || '').trim() };
-  save();
-}
-async function polishGratitudeWithAI(raw) {
-  if (!state.settings.anthropicApiKey) throw new Error('AI key not set');
-  const out = await callAnthropic({
-    system: 'You polish a casual gratitude note into one short, clear, natural English sentence (under 100 characters). Output ONLY the polished sentence — no quotes, no prose, no markdown, no preamble. Keep the meaning faithful.',
-    messages: [{ role: 'user', content: raw }],
-    maxTokens: 100
-  });
-  // Strip surrounding quotes / fences if any.
-  return String(out || '').trim().replace(/^["'`""'']+|["'`""'']+$/g, '').trim();
-}
-
-// Has any supplement been ticked in the last 7 days? Used to auto-show the reminder.
-function hasUsedSupplementsRecently() {
-  const t = new Date();
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(t); d.setDate(t.getDate() - i);
-    const k = dateToLocal(d);
-    const day = state.supplements?.[k];
-    if (day && Object.values(day).some(v => v)) return true;
-  }
-  return false;
-}
-
-// Build week-strip cells (Mon→Sun) for the current week.
-function buildAIParseBanner(wrapperStyle) {
-  const hasKey = !!state.settings.anthropicApiKey;
-  const title = hasKey ? 'Paste with AI' : 'Set up AI key';
-  const sub = hasKey ? 'Drop a casual day plan, get tasks back' : 'Add your Anthropic key to paste lists';
-  const btn = el('button', {
-    class: 'ai-parse-cta' + (hasKey ? '' : ' disabled'),
-    onclick: () => hasKey ? openAIParseModal() : openAIKeyModal()
-  }, [
-    el('span', { class: 'ai-spark' }, '✨'),
-    el('span', { class: 'ai-text' }, [
-      el('span', { class: 'ai-title' }, title),
-      el('span', { class: 'ai-sub' }, sub)
-    ]),
-    el('span', { class: 'ai-arrow', html: ML_ICONS.arrow })
-  ]);
-  // Wrapper holds the margin so the button itself stays width:100% without overflowing the parent.
-  return el('div', { style: wrapperStyle || '' }, [btn]);
-}
-
-function buildWeekStripCells() {
-  const t = new Date();
-  const dow = t.getDay() || 7; // 1..7 with Mon=1
-  const monday = new Date(t); monday.setDate(t.getDate() - (dow - 1));
-  const td = today();
-  const cells = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday); d.setDate(monday.getDate() + i);
-    const dateStr = dateToLocal(d);
-    const isToday = dateStr === td;
-    const isPast = dateStr < td;
-    const dowI = d.getDay();
-    const naturalKey = effectiveDayKey(dateStr);
-    const isWorkoutSlot = naturalKey != null;
-    const w = state.workouts[dateStr];
-    const finished = !!(w && w.finished);
-    let status;
-    if (finished) status = 'done';
-    else if (!isWorkoutSlot) status = 'rest';
-    else if (isPast) status = 'missed';
-    else if (isToday) status = 'today';
-    else status = 'upcoming';
-    cells.push({
-      dow: dowI,
-      dateStr,
-      label: ['S','M','T','W','T','F','S'][dowI],
-      dateNum: d.getDate(),
-      status,
-      isToday
-    });
-  }
-  return cells;
-}
-
-// Build a TO DO TODAY row.
-function _todoRow({ icon, title, meta, status, done, onclick }) {
-  const li = el('li', { class: done ? 'done' : '', onclick });
-  const iconBox = el('span', { class: 't-icon', html: done ? ML_ICONS.check : ML_ICONS[icon] || '' });
-  const body = el('div', { class: 't-body' }, [
-    el('div', { class: 't-title' }, title),
-    meta ? el('div', { class: 't-meta' }, meta) : null
-  ].filter(Boolean));
-  li.appendChild(iconBox);
-  li.appendChild(body);
-  if (status) li.appendChild(el('span', { class: 't-status' }, status));
-  li.appendChild(el('span', { class: 't-chev', html: ML_ICONS.arrow }));
-  return li;
-}
-
-function renderMastaHome() {
-  const v = $('view');
-  const date = today();
-  const dow = todayDow();
-  const todayKey = effectiveDayKey(date);
-  const day = todayKey != null ? DAYS[todayKey] : null;
-  const wToday = state.workouts[date];
-  const userName = getMastaUserName();
-  const hour = new Date().getHours();
-  const tod = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
-  const bedtime = state.settings.bedtime || '23:00';
-
-  // 1+2. DAY CARD — greeting, date, chips, day progress
-  const allTodayTasks = tasksFor(date);
-  const dayLabel = day ? `${day.name} day` : 'Rest day';
-
-  // Calc overall day progress: gym day = 2 trackables (session + bag) + each task = 1 trackable
-  let dDone = 0, dTotal = 0;
-  if (day) {
-    // Gym session — 1 trackable, done when workout finished
-    dTotal += 1;
-    if (wToday && wToday.finished) dDone += 1;
-    // Gym bag — 1 trackable, done when fully packed
-    if (typeof BAG_ITEMS !== 'undefined' && BAG_ITEMS.length) {
-      dTotal += 1;
-      if (todaysBag().length >= BAG_ITEMS.length) dDone += 1;
-    }
-  }
-  allTodayTasks.forEach(t => {
-    dTotal += 1;
-    if (t._done) dDone += 1;
-  });
-  const dPct = dTotal ? Math.round(dDone / dTotal * 100) : 0;
-
-  // Friendly date
-  const _dObj = new Date(date + 'T00:00:00');
-  const _DAYS_LONG = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const _MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const dateLine = `${_DAYS_LONG[_dObj.getDay()]} · ${_MONTHS[_dObj.getMonth()]} ${_dObj.getDate()}`;
-
-  const dayCard = el('div', { class: 'day-card' });
-  dayCard.appendChild(el('div', { class: 'd-greet' }, `Good ${tod}, ${userName}`));
-  dayCard.appendChild(el('div', { class: 'd-date' }, dateLine));
-
-  const _mkChip = (iconKey, label) => {
-    const chip = el('span', { class: 'd-chip' });
-    chip.appendChild(el('span', { class: 'd-chip-ico', html: ML_ICONS[iconKey] }));
-    chip.appendChild(el('span', {}, label));
-    return chip;
-  };
-  const chipsRow = el('div', { class: 'd-chips' });
-  chipsRow.appendChild(_mkChip('briefcase', `${allTodayTasks.length} task${allTodayTasks.length === 1 ? '' : 's'}`));
-  chipsRow.appendChild(_mkChip('dumbbell', dayLabel));
-  chipsRow.appendChild(_mkChip('moon', `Bedtime ${bedtime}`));
-  dayCard.appendChild(chipsRow);
-
-  dayCard.appendChild(el('div', { class: 'd-bar' }, [el('span', { style: `width:${dPct}%` })]));
-  const meta = el('div', { class: 'd-bar-meta' });
-  meta.appendChild(el('span', { html: `<b>${dDone}</b> of ${dTotal} done` }));
-  meta.appendChild(el('span', {}, `${dPct}%`));
-  dayCard.appendChild(meta);
-
-  v.appendChild(dayCard);
-
-  // 3. TODAY FOCUS — only shows rows that have items today
-  const _focusRow = (icon, title, meta, onclick) => {
-    const li = el('li', { onclick });
-    li.appendChild(el('span', { class: 'r-icon', html: ML_ICONS[icon] }));
-    const body = el('div', { class: 'r-body' });
-    body.appendChild(el('div', { class: 'r-title' }, title));
-    body.appendChild(el('div', { class: 'r-meta' }, meta));
-    li.appendChild(body);
-    li.appendChild(el('span', { class: 'r-status', html: ML_ICONS.arrow || '›' }));
-    return li;
-  };
-
-  const focusRows = [];
-
-  // Gym — only show if something is still pending (session, bag, or gym task)
-  const gymTasks = allTodayTasks.filter(t => taskCategory(t) === 'gym');
-  const gymTasksPending = gymTasks.filter(t => !t._done).length;
-  if (day || gymTasks.length) {
-    const finished = day && !!(wToday && wToday.finished);
-    const bagTotal = (typeof BAG_ITEMS !== 'undefined') ? BAG_ITEMS.length : 0;
-    const bagDone = bagTotal ? todaysBag().length : 0;
-    const bagFull = bagTotal && bagDone >= bagTotal;
-    const sessionPending = day && !finished;
-    const bagPending = day && bagTotal && !bagFull;
-    const anythingPending = sessionPending || bagPending || gymTasksPending > 0;
-    if (anythingPending) {
-      let gymMeta;
-      if (day) {
-        const parts = [];
-        if (sessionPending) parts.push('session pending');
-        else parts.push('session ✓');
-        if (bagTotal) parts.push(bagPending ? `bag ${bagDone}/${bagTotal}` : 'bag ✓');
-        gymMeta = `${day.name} day · ${parts.join(' · ')}`;
-        if (gymTasksPending) gymMeta += ` · +${gymTasksPending} task${gymTasksPending === 1 ? '' : 's'}`;
-      } else {
-        gymMeta = `${gymTasksPending} pending · ${gymTasks.length} total`;
-      }
-      focusRows.push(_focusRow('dumbbell', 'Gym', gymMeta,
-        () => { setGlobalTab('gym'); activeTab = 'home'; render(); }));
-    }
-  }
-
-  // Work — only show if there are pending work tasks
-  const workTasks = allTodayTasks.filter(t => taskCategory(t) === 'work');
-  const workPending = workTasks.filter(t => !t._done).length;
-  if (workPending > 0) {
-    focusRows.push(_focusRow('briefcase', 'Work',
-      `${workPending} pending · ${workTasks.length} total`,
-      () => { tasksFilterCategory = 'work'; setGlobalTab('tasks'); render(); }));
-  }
-
-  // Personal — only show if there are pending personal tasks
-  const personalTasks = allTodayTasks.filter(t => taskCategory(t) === 'personal');
-  const personalPending = personalTasks.filter(t => !t._done).length;
-  if (personalPending > 0) {
-    focusRows.push(_focusRow('star', 'Personal',
-      `${personalPending} pending · ${personalTasks.length} total`,
-      () => { tasksFilterCategory = 'personal'; setGlobalTab('tasks'); render(); }));
-  }
-
-  // Family — only show if there are pending family tasks
-  const famTasks = allTodayTasks.filter(t => taskCategory(t) === 'family');
-  const famPending = famTasks.filter(t => !t._done).length;
-  if (famPending > 0) {
-    focusRows.push(_focusRow('users', 'Family',
-      `${famPending} pending · ${famTasks.length} total`,
-      () => { tasksFilterCategory = 'family'; setGlobalTab('tasks'); render(); }));
-  }
-
-  // Health — only show if there are pending health tasks
-  const healthTasks = allTodayTasks.filter(t => taskCategory(t) === 'health');
-  const healthPending = healthTasks.filter(t => !t._done).length;
-  if (healthPending > 0) {
-    focusRows.push(_focusRow('pill', 'Health',
-      `${healthPending} pending · ${healthTasks.length} total`,
-      () => { tasksFilterCategory = 'health'; setGlobalTab('tasks'); render(); }));
-  }
-
-  if (focusRows.length) {
-    const focusSection = el('div', { class: 'ml-section' });
-    focusSection.appendChild(el('div', { class: 'ml-section-head' }, [el('span', {}, 'Today focus')]));
-    const focusCard = el('div', { class: 'ml-card', style: 'padding:0;' });
-    const focusUl = el('ul', { class: 'reminders-list' });
-    focusRows.forEach(r => focusUl.appendChild(r));
-    focusCard.appendChild(focusUl);
-    focusSection.appendChild(focusCard);
-    v.appendChild(focusSection);
-  }
-
-  // 5. REMINDERS — compact: water + sleep only
-  const reminders = [];
-  const waterTarget = state.settings.waterTarget || 4;
-  const waterDone = todaysWater();
-  reminders.push({
-    icon: 'drop',
-    title: 'Drink water',
-    meta: `${(waterDone * 0.5).toFixed(1)}L of ${(waterTarget * 0.5).toFixed(1)}L`,
-    status: `${waterDone}/${waterTarget}`,
-    met: waterDone >= waterTarget,
-    waterControls: true
-  });
-  const ls = state.sleep[state.sleep.length - 1];
-  const yDate = (() => { const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() - 1); return dateToLocal(d); })();
-  const haveLastNight = ls && (ls.date === date || ls.date === yDate);
-  if (!haveLastNight) {
-    reminders.push({
-      icon: 'moon',
-      title: 'Log last night\'s sleep',
-      meta: 'Tap to log hours',
-      status: '',
-      met: false,
-      onclick: () => openSleepModal()
-    });
-  }
-  const remSection = el('div', { class: 'ml-section' });
-  remSection.appendChild(el('div', { class: 'ml-section-head' }, [
-    el('span', {}, 'Reminders'),
-    el('span', { class: 'ml-section-meta' }, `${reminders.filter(r => r.met).length} / ${reminders.length}`)
-  ]));
-  const remCard = el('div', { class: 'ml-card', style: 'padding:0;' });
-  const remUl = el('ul', { class: 'reminders-list' });
-  reminders.forEach(r => {
-    const li = el('li', { class: r.met ? 'met' : '', onclick: r.waterControls ? null : r.onclick });
-    li.appendChild(el('span', { class: 'r-icon', html: ML_ICONS[r.icon] }));
-    const body = el('div', { class: 'r-body' });
-    body.appendChild(el('div', { class: 'r-title' }, r.title));
-    body.appendChild(el('div', { class: 'r-meta' }, r.meta));
-    li.appendChild(body);
-    if (r.waterControls) {
-      const controls = el('div', { class: 'r-water-ctrls' });
-      const minus = el('button', {
-        class: 'water-btn',
-        onclick: (e) => {
-          e.stopPropagation();
-          const cur = todaysWater();
-          if (cur <= 0) return;
-          state.water[today()] = cur - 1;
-          save(); render();
-        }
-      }, '−');
-      const status = el('span', { class: 'r-status', style: 'min-width:42px;text-align:center;' }, r.status);
-      const plus = el('button', {
-        class: 'water-btn primary',
-        onclick: (e) => {
-          e.stopPropagation();
-          const cur = todaysWater();
-          const max = (state.settings.waterTarget || 4) * 2;
-          if (cur >= max) return;
-          state.water[today()] = cur + 1;
-          save(); render();
-        }
-      }, '+');
-      controls.appendChild(minus);
-      controls.appendChild(status);
-      controls.appendChild(plus);
-      li.appendChild(controls);
-    } else if (r.status) {
-      li.appendChild(el('span', { class: 'r-status' }, r.status));
-    }
-    remUl.appendChild(li);
-  });
-  remCard.appendChild(remUl);
-  remSection.appendChild(remCard);
-  v.appendChild(remSection);
-
-  // 6. EVENING — gratitude moved here
-  const eveSection = el('div', { class: 'ml-section' });
-  eveSection.appendChild(el('div', { class: 'ml-section-head' }, [el('span', {}, 'Evening')]));
-  const gratInp = el('input', {
-    type: 'text',
-    placeholder: 'What are you grateful for today?',
-    maxlength: '200',
-    value: getDailyGratitude()
-  });
-  let gratTimer = null;
-  gratInp.oninput = () => {
-    clearTimeout(gratTimer);
-    gratTimer = setTimeout(() => setDailyGratitude(gratInp.value), 400);
-  };
-  gratInp.onblur = () => setDailyGratitude(gratInp.value);
-  const polishBtn = el('button', { class: 'polish-btn', type: 'button' }, '✨');
-  polishBtn.onclick = async () => {
-    const raw = gratInp.value.trim();
-    if (!raw) { toast('Type something first'); return; }
-    if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
-    polishBtn.disabled = true;
-    polishBtn.textContent = '…';
-    try {
-      const polished = await polishGratitudeWithAI(raw);
-      gratInp.value = polished;
-      setDailyGratitude(polished);
-      toast('✓ Polished');
-    } catch (e) {
-      toast(String(e.message || 'Failed').slice(0, 80));
-    } finally {
-      polishBtn.disabled = false;
-      polishBtn.textContent = '✨';
-    }
-  };
-  const gratCard = el('div', { class: 'focus-card' }, [
-    el('span', { class: 'focus-ico', html: ML_ICONS.heart }),
-    gratInp,
-    polishBtn
-  ]);
-  eveSection.appendChild(gratCard);
-  v.appendChild(eveSection);
-}
-
-function _scheduleRow(t, dateForToggle) {
-  const isDone = t._done != null ? t._done : isTaskDoneOn(t, dateForToggle || today());
-  const li = el('li', { class: isDone ? 'done' : '' });
-
-  // Time column
-  const timeEl = el('div', { class: 't-time' });
-  // We use plain spans inside, so mark .s-time class on a span to use CSS
-  const timeSpan = el('span', { class: 's-time' + (t.time ? '' : ' notime') }, t.time || '—');
-  li.appendChild(timeSpan);
-
-  // Check
-  const check = el('span', {
-    class: 's-check', html: ML_ICONS.check,
-    onclick: (e) => { e.stopPropagation(); toggleMastaTask(t.id, dateForToggle || today()); render(); }
-  });
-  li.appendChild(check);
-
-  // Body (title + meta)
-  const body = el('div', { class: 's-body' });
-  const titleEl = el('div', { class: 's-title' });
-  titleEl.appendChild(el('span', {}, t.title));
-  if (t.repeat) titleEl.appendChild(el('span', { class: 'repeat-ico', html: '↻' }));
-  { const _c = taskCategory(t); if (_c) titleEl.appendChild(el('span', { class: 'cat-chip cat-' + _c }, _c)); }
-  body.appendChild(titleEl);
-  const metaParts = [];
-  if (t.repeat) metaParts.push(describeRepeat(t.repeat));
-  if (metaParts.length) body.appendChild(el('div', { class: 's-meta' }, metaParts.join(' · ')));
-  body.onclick = () => { toggleMastaTask(t.id, dateForToggle || today()); render(); };
-  li.appendChild(body);
-
-  // Delete
-  const del = el('span', {
-    class: 's-del', html: ML_ICONS.trash,
-    onclick: (e) => { e.stopPropagation(); deleteMastaTask(t.id); render(); }
-  });
-  li.appendChild(del);
-
-  return li;
-}
-
-function renderMastaTasks() {
-  const v = $('view');
-  _ensureTaskArr();
-  let all = state.mastalifeTasks;
-  const hasKey = !!state.settings.anthropicApiKey;
-
-  // Category filter banner (set by Today focus row clicks)
-  if (tasksFilterCategory) {
-    const banner = el('div', {
-      class: 'filter-banner',
-      style: 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--border);margin-bottom:14px;'
-    });
-    banner.appendChild(el('span', {
-      style: 'display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;'
-    }, [
-      el('span', {}, 'Showing'),
-      el('span', { class: 'cat-chip cat-' + tasksFilterCategory }, tasksFilterCategory),
-      el('span', { style: 'color:var(--text-muted);font-weight:500;' }, 'only')
-    ]));
-    const clearBtn = el('button', {
-      style: 'background:transparent;border:none;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;padding:4px 8px;',
-      onclick: () => { tasksFilterCategory = null; render(); }
-    }, '× Clear');
-    banner.appendChild(clearBtn);
-    v.appendChild(banner);
-    all = all.filter(t => taskCategory(t) === tasksFilterCategory);
-  }
-
-  // Hero — Paste & parse with AI
-  v.appendChild(buildAIParseBanner('margin-bottom:14px;'));
-
-  // Manual add row — Claude parses date/time/category from natural language
-  const addCard = el('div', { class: 'ml-card', style: 'padding:0;margin-bottom:14px;' });
-  const addInp = el('input', {
-    type: 'text',
-    placeholder: hasKey ? 'e.g. "Call mom tomorrow at 10am"' : 'Add a task…',
-    maxlength: '160'
-  });
-  const addBtn = el('button', {}, 'Add');
-  const submit = async () => {
-    const v2 = addInp.value.trim();
-    if (!v2) return;
-    if (state.settings.anthropicApiKey) {
-      addBtn.disabled = true;
-      addBtn.textContent = '…';
-      try {
-        const parsed = await parseQuickTaskWithAI(v2);
-        addMastaTask({
-          title: parsed.title || v2,
-          date: parsed.date || today(),
-          time: parsed.time || null,
-          category: parsed.category || inferCategory(v2)
-        });
-        addInp.value = '';
-        render();
-      } catch (e) {
-        // Fallback to local-only inference on any AI error
-        addMastaTask({ title: v2, date: today(), category: inferCategory(v2) });
-        addInp.value = '';
-        toast('AI parse failed — added as plain task');
-        render();
-      } finally {
-        addBtn.disabled = false;
-        addBtn.textContent = 'Add';
-      }
-    } else {
-      addMastaTask({ title: v2, date: today(), category: inferCategory(v2) });
-      addInp.value = '';
-      render();
-    }
-  };
-  addBtn.onclick = submit;
-  addInp.onkeydown = (e) => { if (e.key === 'Enter') submit(); };
-  addCard.appendChild(el('div', { class: 'tasks-add-row' }, [addInp, addBtn]));
-  v.appendChild(addCard);
-
-  // Build groups: by date for tasks with a date or recurrence; "No date" otherwise.
-  // Recurring tasks live under their next-due-from-today bucket.
-  const td = today();
-  const groups = new Map(); // dateStr → { label, tasks: [], sortKey }
-  let noDate = [];
-  let allDone = [];
-  function nextDueFrom(task, fromStr) {
-    if (!task.repeat) return task.date || null;
-    let d = fromStr;
-    for (let i = 0; i < 90; i++) {
-      if (matchesRepeat(task.repeat, d) && d >= (task.date || fromStr)) return d;
-      d = nextDateStr(d);
-    }
-    return null;
-  }
-  for (const t of all) {
-    // Legacy task (no date, no repeat, but has done flag): treat as one-off "no date"
-    if (!t.date && !t.repeat) {
-      if (t.done) allDone.push(t);
-      else noDate.push(t);
-      continue;
-    }
-    let bucketDate;
-    if (t.repeat) bucketDate = nextDueFrom(t, td);
-    else bucketDate = t.date;
-    if (!bucketDate) { noDate.push(t); continue; }
-    // Hide bucket if all instances on/before today are completed (only for one-off tasks)
-    if (!t.repeat && t.date < td && isTaskDoneOn(t, t.date)) { allDone.push(t); continue; }
-    const key = bucketDate;
-    if (!groups.has(key)) groups.set(key, { label: friendlyDateLabel(key), tasks: [], sortKey: key });
-    groups.get(key).tasks.push(t);
-  }
-
-  // Render groups in date order
-  const sorted = [...groups.values()].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-  if (sorted.length === 0 && noDate.length === 0) {
-    v.appendChild(el('div', { class: 'ml-card' }, [
-      el('div', { class: 'ml-empty' }, hasKey ? 'No tasks yet. Paste a list above or add one.' : 'No tasks yet. Add one above.')
-    ]));
-  }
-  for (const g of sorted) {
-    const head = el('div', { class: 'group-head' }, [
-      el('span', {}, g.label),
-      el('span', { class: 'group-meta' }, `${g.tasks.length}`)
-    ]);
-    v.appendChild(head);
-    const card = el('div', { class: 'ml-card', style: 'padding:0;margin-bottom:14px;' });
-    const ul = el('ul', { class: 'schedule-list' });
-    // Sort by time within group (untimed last)
-    g.tasks.sort((a, b) => {
-      const ta = a.time || '99:99', tb = b.time || '99:99';
-      if (ta !== tb) return ta < tb ? -1 : 1;
-      return (a.createdAt || 0) - (b.createdAt || 0);
-    });
-    g.tasks.forEach(t => ul.appendChild(_scheduleRow(t, g.sortKey)));
-    card.appendChild(ul);
-    v.appendChild(card);
-  }
-
-  if (noDate.length) {
-    v.appendChild(el('div', { class: 'group-head' }, [
-      el('span', {}, 'No date'),
-      el('span', { class: 'group-meta' }, `${noDate.length}`)
-    ]));
-    const card = el('div', { class: 'ml-card', style: 'padding:0;margin-bottom:14px;' });
-    const ul = el('ul', { class: 'schedule-list' });
-    noDate.forEach(t => ul.appendChild(_scheduleRow(t)));
-    card.appendChild(ul);
-    v.appendChild(card);
-  }
-
-  // Done section — legacy + recently completed
-  const doneSorted = allDone.sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 30);
-  if (doneSorted.length) {
-    v.appendChild(el('div', { class: 'group-head' }, [
-      el('span', {}, 'Done'),
-      el('span', { class: 'group-meta' }, `${doneSorted.length}`)
-    ]));
-    const card = el('div', { class: 'ml-card', style: 'padding:0;' });
-    const ul = el('ul', { class: 'schedule-list' });
-    doneSorted.forEach(t => ul.appendChild(_scheduleRow(t)));
-    card.appendChild(ul);
-    v.appendChild(card);
-  }
-}
-
-function renderMastaCalendar() {
-  const v = $('view');
-  const td = today();
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const dowFull = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-
-  // Build 14 days from today
-  const days = [];
-  let d = td;
-  for (let i = 0; i < 14; i++) {
-    days.push(d);
-    d = nextDateStr(d);
-  }
-  const startD = new Date(days[0] + 'T00:00:00');
-  const endD = new Date(days[13] + 'T00:00:00');
-
-  // Range subtitle
-  const rangeStr = `${months[startD.getMonth()]} ${startD.getDate()} – ${months[endD.getMonth()]} ${endD.getDate()}`;
-  v.appendChild(el('div', { class: 'calendar-range' }, rangeStr));
-
-  // AI parse hero — quick way to populate days
-  v.appendChild(buildAIParseBanner('margin-bottom:14px;'));
-
-  // Determine grouping: today, rest of this week (Mon-start), next week
-  // We use a "this week ends Sunday" boundary based on today.
-  const todayDate = new Date(td + 'T00:00:00');
-  const todayDow0 = todayDate.getDay(); // 0=Sun..6=Sat
-  // Days remaining including today through Sunday (this week)
-  const thisWeekRemaining = (todayDow0 === 0) ? 1 : (7 - todayDow0 + 1); // includes today
-
-  function buildDayCard(dStr) {
-    const dKey = effectiveDayKey(dStr);
-    const dDay = dKey != null ? DAYS[dKey] : null;
-    const w = state.workouts[dStr];
-    const finished = !!(w && w.finished);
-    const dayTasks = tasksFor(dStr);
-    const isToday = dStr === td;
-    const isPast = dStr < td;
-    const hasDone = finished || dayTasks.some(t => t._done);
-    const dDate = new Date(dStr + 'T00:00:00');
-    const itemCount = (dDay ? 1 : 0) + dayTasks.length;
-
-    const card = el('div', {
-      class: 'cal-day-big' + (isToday ? ' is-today' : '') + (isPast && !isToday ? ' is-past' : '') + (hasDone ? ' has-done' : '')
-    });
-
-    // Header
-    const head = el('div', { class: 'cdb-head' });
-    const left = el('div', { class: 'cdb-head-left' });
-    left.appendChild(el('span', { class: 'cdb-dow' }, dowFull[dDate.getDay()]));
-    left.appendChild(el('span', { class: 'cdb-sub' }, `${months[dDate.getMonth()]} ${dDate.getDate()}`));
-    head.appendChild(left);
-    if (isToday) head.appendChild(el('span', { class: 'cdb-today-badge' }, 'Today'));
-    else if (itemCount) head.appendChild(el('span', { class: 'cdb-count' }, `${itemCount} item${itemCount === 1 ? '' : 's'}`));
-    card.appendChild(head);
-
-    // Body
-    const body = el('div', { class: 'cdb-body' });
-
-    // Gym session block
-    if (dDay) {
-      const gym = el('div', {
-        class: 'cdb-gym' + (finished ? ' done' : ''),
-        onclick: (e) => { e.stopPropagation(); setGlobalTab('gym'); activeTab = isToday ? 'today' : 'plan'; render(); }
-      });
-      gym.appendChild(el('span', { class: 'cdb-gym-icon', html: ML_ICONS.dumbbell }));
-      const gBody = el('div', { class: 'cdb-gym-body' });
-      gBody.appendChild(el('div', { class: 'cdb-gym-title' }, dDay.name + ' day' + (finished ? ' ✓' : '')));
-      gBody.appendChild(el('div', { class: 'cdb-gym-focus' }, `${dDay.focus} · ${dDay.exercises.length} exercises`));
-      gym.appendChild(gBody);
-      body.appendChild(gym);
-    }
-
-    // Split tasks: recurring tasks render as prominent blocks (like gym), one-offs as small rows.
-    const recurringTasks = dayTasks.filter(t => t.repeat);
-    const oneOffTasks = dayTasks.filter(t => !t.repeat);
-
-    // Recurring task blocks — same UI as the gym block, category-mapped icon.
-    recurringTasks.forEach(t => {
-      const catIcon = t.category === 'work' ? 'briefcase'
-        : t.category === 'gym' ? 'dumbbell'
-        : t.category === 'health' ? 'pill'
-        : t.category === 'family' ? 'users'
-        : 'briefcase';
-      const block = el('div', {
-        class: 'cdb-gym' + (t._done ? ' done' : ''),
-        onclick: (e) => { e.stopPropagation(); toggleMastaTask(t.id, dStr); render(); }
-      });
-      block.appendChild(el('span', { class: 'cdb-gym-icon', html: ML_ICONS[catIcon] }));
-      const tBody = el('div', { class: 'cdb-gym-body' });
-      const titlePrefix = t.time ? t.time + ' · ' : '';
-      tBody.appendChild(el('div', { class: 'cdb-gym-title' }, titlePrefix + t.title + (t._done ? ' ✓' : '')));
-      const subParts = [describeRepeat(t.repeat)];
-      if (t.category) subParts.push(t.category);
-      tBody.appendChild(el('div', { class: 'cdb-gym-focus' }, subParts.join(' · ')));
-      block.appendChild(tBody);
-      body.appendChild(block);
-    });
-
-    // One-off task rows
-    oneOffTasks.forEach(t => {
-      const row = el('div', { class: 'cdb-task' + (t._done ? ' done' : '') });
-      row.appendChild(el('span', { class: 'cdb-task-time' }, t.time || '—'));
-      const txt = el('span', { class: 'cdb-task-text' });
-      txt.appendChild(el('span', {}, t.title));
-      { const _c = taskCategory(t); if (_c) txt.appendChild(el('span', { class: 'cat-chip cat-' + _c }, _c)); }
-      row.appendChild(txt);
-      const check = el('span', {
-        class: 'cdb-task-check', html: ML_ICONS.check,
-        onclick: (e) => { e.stopPropagation(); toggleMastaTask(t.id, dStr); render(); }
-      });
-      row.appendChild(check);
-      body.appendChild(row);
-    });
-
-    // Empty state
-    if (!dDay && dayTasks.length === 0) {
-      body.appendChild(el('div', { class: 'cdb-empty' }, 'Rest day · nothing scheduled'));
-    }
-
-    card.appendChild(body);
-    return card;
-  }
-
-  // Group: TODAY
-  v.appendChild(el('div', { class: 'cdb-group-head' }, [el('span', {}, 'Today')]));
-  v.appendChild(buildDayCard(td));
-
-  // Group: REST OF THIS WEEK (tomorrow → Sunday)
-  if (thisWeekRemaining > 1) {
-    v.appendChild(el('div', { class: 'cdb-group-head' }, [
-      el('span', {}, 'This week'),
-      el('span', { class: 'group-meta' }, `${thisWeekRemaining - 1} days left`)
-    ]));
-    for (let i = 1; i < thisWeekRemaining && i < days.length; i++) {
-      v.appendChild(buildDayCard(days[i]));
-    }
-  }
-
-  // Group: NEXT WEEK
-  if (days.length > thisWeekRemaining) {
-    v.appendChild(el('div', { class: 'cdb-group-head' }, [
-      el('span', {}, 'Next week'),
-      el('span', { class: 'group-meta' }, '7 days')
-    ]));
-    for (let i = thisWeekRemaining; i < days.length; i++) {
-      v.appendChild(buildDayCard(days[i]));
-    }
-  }
-}
-function renderMastaMore() {
-  const v = $('view');
-
-  // ===== HEALTH =====
-  const health = el('div', { class: 'card' });
-  health.appendChild(el('div', { class: 'card-title' }, 'Health'));
-  health.appendChild(el('div', {
-    class: 'list-item', onclick: openSleepModal
-  }, [
-    el('div', {}, 'Sleep'),
-    el('div', { class: 'right' }, [
-      el('span', {}, (() => {
-        const ls = state.sleep[state.sleep.length - 1];
-        return ls ? `${ls.hours.toFixed(1)} h` : '—';
-      })()),
-      el('span', {}, '›')
-    ])
-  ]));
-  health.appendChild(el('div', {
-    class: 'list-item', onclick: () => {
-      const cur = todaysWater();
-      const target = state.settings.waterTarget || 4;
-      toast(`Water: ${cur}/${target} bottles · ${(cur*0.5).toFixed(1)}L`);
-    }
-  }, [
-    el('div', {}, 'Water today'),
-    el('div', { class: 'right' }, [
-      el('span', {}, `${todaysWater()} / ${state.settings.waterTarget || 4}`),
-      el('span', {}, '›')
-    ])
-  ]));
-  if (typeof openSupplementsModal === 'function') {
-    health.appendChild(el('div', {
-      class: 'list-item', onclick: openSupplementsModal
-    }, [
-      el('div', {}, 'Supplements'),
-      el('div', { class: 'right' }, [el('span', {}, '›')])
-    ]));
-  }
-  if (typeof openMacrosModal === 'function') {
-    health.appendChild(el('div', {
-      class: 'list-item', onclick: openMacrosModal
-    }, [
-      el('div', {}, 'Macros'),
-      el('div', { class: 'right' }, [el('span', {}, '›')])
-    ]));
-  }
-  v.appendChild(health);
-
-  // ===== SETTINGS =====
-  const set = el('div', { class: 'card', style: 'margin-top:14px;' });
-  set.appendChild(el('div', { class: 'card-title' }, 'Settings'));
-
-  // AI key
-  set.appendChild(el('div', {
-    class: 'list-item', onclick: openAIKeyModal
-  }, [
-    el('div', {}, 'AI key (Anthropic)'),
-    el('div', { class: 'right' }, [
-      el('span', { style: state.settings.anthropicApiKey ? 'color:var(--success);' : 'color:var(--text-dim);' },
-        state.settings.anthropicApiKey ? '✓ set' : 'not set'),
-      el('span', {}, '›')
-    ])
-  ]));
-
-  // Theme
-  set.appendChild(el('div', {
-    class: 'list-item',
-    onclick: () => {
-      const opts = ['indigo', 'ocean', 'forest', 'sunset', 'oled'];
-      const cur = state.settings.theme || 'indigo';
-      const idx = opts.indexOf(cur);
-      const next = opts[(idx + 1) % opts.length];
-      applyTheme(next);
-      save(); render();
-      toast('Theme: ' + next);
-    }
-  }, [
-    el('div', {}, 'Theme'),
-    el('div', { class: 'right' }, [
-      el('span', {}, (state.settings.theme || 'indigo').replace(/^./, c => c.toUpperCase())),
-      el('span', {}, '›')
-    ])
-  ]));
-
-  // Bedtime
-  set.appendChild(el('div', {
-    class: 'list-item',
-    onclick: () => {
-      const opts = ['21:30', '22:00', '22:30', '23:00', '23:30', '00:00'];
-      const cur = state.settings.bedtime || '23:00';
-      const idx = opts.indexOf(cur);
-      const next = opts[(idx + 1) % opts.length];
-      state.settings.bedtime = next;
-      state.settings.lastBedtimeNotifDate = '';
-      save(); render();
-      toast('Bedtime: ' + next);
-    }
-  }, [
-    el('div', {}, 'Bedtime'),
-    el('div', { class: 'right' }, [el('span', {}, state.settings.bedtime || '23:00'), el('span', {}, '›')])
-  ]));
-
-  // Browser notifications
-  set.appendChild(el('div', {
-    class: 'list-item',
-    onclick: async () => {
-      if (!('Notification' in window)) { toast('Not supported'); return; }
-      if (Notification.permission !== 'granted') {
-        const r = await Notification.requestPermission();
-        state.settings.notifications = (r === 'granted'); save(); render();
-        if (r === 'granted') toast('Notifications enabled');
-      } else {
-        state.settings.notifications = !state.settings.notifications; save(); render();
-      }
-    }
-  }, [
-    el('div', {}, 'Browser notifications'),
-    el('div', { class: 'right' }, [el('span', {}, state.settings.notifications ? 'On' : 'Off'), el('span', {}, '›')])
-  ]));
-
-  // Water target
-  set.appendChild(el('div', {
-    class: 'list-item',
-    onclick: () => {
-      const opts = [3, 4, 5, 6, 8];
-      const cur = state.settings.waterTarget;
-      const idx = opts.indexOf(cur);
-      const next = opts[(idx + 1) % opts.length];
-      state.settings.waterTarget = next; save(); render();
-      toast('Water target: ' + next + ' bottles (' + (next * 0.5).toFixed(1) + 'L)');
-    }
-  }, [
-    el('div', {}, 'Water target'),
-    el('div', { class: 'right' }, [el('span', {}, state.settings.waterTarget + ' bottles · ' + (state.settings.waterTarget * 0.5).toFixed(1) + 'L'), el('span', {}, '›')])
-  ]));
-
-  // Lock app
-  set.appendChild(el('div', {
-    class: 'list-item',
-    onclick: () => {
-      if (!confirm('Lock the app? You\'ll need to enter the password again on next visit.')) return;
-      localStorage.removeItem(PIN_FLAG);
-      location.reload();
-    }
-  }, [
-    el('div', {}, 'Lock app'),
-    el('div', { class: 'right' }, [el('span', {}, '›')])
-  ]));
-
-  v.appendChild(set);
-
-  // ===== CLOUD BACKUP =====
-  if (typeof buildCloudBackupCard === 'function') {
-    const cloud = buildCloudBackupCard();
-    if (cloud) {
-      // wrap with margin
-      const wrap = el('div', { style: 'margin-top:14px;' });
-      wrap.appendChild(cloud);
-      v.appendChild(wrap);
-    }
-  }
-
-  // ===== DANGER ZONE =====
-  const danger = el('div', { class: 'card', style: 'margin-top:14px;' });
-  danger.appendChild(el('div', { class: 'card-title' }, 'Danger zone'));
-  danger.appendChild(el('div', {
-    class: 'list-item',
-    onclick: () => {
-      if (!confirm('Clear all logged data? This cannot be undone.')) return;
-      state = structuredClone(defaultState);
-      seedPastSessions();
-      save(); render();
-      toast('Reset complete');
-    }
-  }, [
-    el('div', { style: 'color:var(--danger)' }, 'Reset all data'),
-    el('div', { class: 'right' }, [el('span', {}, '›')])
-  ]));
-  v.appendChild(danger);
-
-  // Footer version
-  v.appendChild(el('div', {
-    class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MastaLife · v3.23 · Started ${PROGRAM_START}`));
-}
 
 /* =========== HOME =========== */
 function getDailyQuote() {
@@ -4783,14 +3747,110 @@ function renderHome() {
     v.appendChild(bagCard);
   }
 
-  // Recent wins (moved from MastaLife dashboard)
+  // Today's tasks — slim daily reminder, AI paste-able. Tap to clear (recurring tasks come back next matching day).
+  {
+    const tlist = getTasks();
+    const dupCount = countDuplicateTasks();
+    const tcard = el('div', { class: 'card' });
+    const headerRight = el('div', { class: 'row', style: 'align-items:center;gap:8px;' });
+    if (dupCount > 0) {
+      headerRight.appendChild(el('button', {
+        class: 'chip warn',
+        style: 'cursor:pointer;border:none;font-weight:700;',
+        onclick: () => {
+          const removed = dedupeTasks();
+          render();
+          toast(`Removed ${removed} duplicate${removed === 1 ? '' : 's'}`);
+        }
+      }, `Dedupe ${dupCount}`));
+    }
+    headerRight.appendChild(el('span', { class: 'chip' }, String(tlist.length)));
+    tcard.appendChild(el('div', { class: 'row between', style: 'margin-bottom:8px;align-items:center;' }, [
+      el('div', { class: 'card-title', style: 'margin:0;' }, 'Today\'s tasks'),
+      headerRight
+    ]));
+
+    const hasKey = !!state.settings.anthropicApiKey;
+    const aiBtn = el('button', {
+      class: 'btn',
+      style: 'background:linear-gradient(135deg, var(--accent), var(--accent-strong));margin-bottom:8px;',
+      onclick: () => hasKey ? openAIParseModal() : openAIKeyModal()
+    }, '✨ ' + (hasKey ? 'Paste with AI' : 'Set up AI key to paste'));
+    tcard.appendChild(aiBtn);
+
+    if (tlist.length === 0) {
+      tcard.appendChild(el('div', { class: 'small muted', style: 'padding:8px 0 4px;text-align:center;' },
+        'No tasks. Paste a list above.'));
+    } else {
+      const ul = el('ul', { class: 'task-list', style: 'list-style:none;padding:0;margin:0;' });
+      tlist.forEach(t => {
+        const cat = taskCategory(t);
+        const isRecurring = !!t.repeat;
+        const toastMsg = isRecurring ? `Done · returns ${describeRepeat(t.repeat)}` : 'Removed';
+        const li = el('li', {
+          class: 'task-row',
+          style: 'display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--surface-2);cursor:pointer;',
+          onclick: () => { dismissTask(t.id); render(); toast(toastMsg); }
+        });
+        // Empty checkbox (tap → clears for today)
+        li.appendChild(el('span', {
+          style: 'width:20px;height:20px;border-radius:6px;border:1.5px solid var(--text-dim);flex-shrink:0;'
+        }));
+        // Time
+        li.appendChild(el('span', {
+          style: 'font-size:12px;font-weight:700;color:var(--text-muted);font-variant-numeric:tabular-nums;min-width:42px;'
+        }, t.time || '—'));
+        // Title block (with optional recurrence subtitle)
+        const titleBlk = el('div', { style: 'flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;' });
+        const titleLine = el('div', { style: 'display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text);' });
+        titleLine.appendChild(el('span', {}, t.title));
+        if (isRecurring) titleLine.appendChild(el('span', { style: 'color:var(--accent);font-size:12px;line-height:1;' }, '↻'));
+        titleBlk.appendChild(titleLine);
+        if (isRecurring) titleBlk.appendChild(el('div', { style: 'font-size:11px;color:var(--text-muted);' }, describeRepeat(t.repeat)));
+        li.appendChild(titleBlk);
+        // Category chip (optional)
+        if (cat) {
+          li.appendChild(el('span', {
+            class: 'cat-chip cat-' + cat,
+            style: 'flex-shrink:0;'
+          }, cat));
+        }
+        ul.appendChild(li);
+      });
+      // Drop top border on first row
+      const firstRow = ul.firstChild;
+      if (firstRow) firstRow.style.borderTop = 'none';
+      tcard.appendChild(ul);
+    }
+    v.appendChild(tcard);
+  }
+
+  // Recent wins
   {
     const ph = currentPhase();
     const sw = sessionsThisWeek();
     const streak = getStreak();
-    const bw = lastBodyWeight();
-    const startBw = state.bodyWeight[0];
-    const wkd = bw && startBw ? (bw.weight - startBw.weight) : null;
+
+    // Last finished session — find most recent completed workout, sum warmup+workout time.
+    const finishedDates = Object.entries(state.workouts)
+      .filter(([d, w]) => w && w.finished)
+      .sort((a, b) => b[0].localeCompare(a[0]));
+    const last = finishedDates[0];
+    const lastDate = last ? last[0] : null;
+    const lastW = last ? last[1] : null;
+    const lastTotalMs = lastW ? ((lastW.timers?.warmup || 0) + (lastW.timers?.workout || 0)) : 0;
+    const lastDayName = lastW && DAYS[lastW.dayKey] ? DAYS[lastW.dayKey].name : null;
+    const lastSubLabel = (() => {
+      if (!lastDate) return 'no sessions yet';
+      const today_s = today();
+      if (lastDate === today_s) return lastDayName ? `${lastDayName} · today` : 'today';
+      const td = new Date(today_s + 'T00:00:00');
+      const ld = new Date(lastDate + 'T00:00:00');
+      const days = Math.round((td - ld) / 86400000);
+      const ago = days === 1 ? 'yesterday' : `${days}d ago`;
+      return lastDayName ? `${lastDayName} · ${ago}` : ago;
+    })();
+
     const winsSection = el('div', { class: 'ml-section' });
     winsSection.appendChild(el('div', { class: 'ml-section-head' }, [el('span', {}, 'Recent wins')]));
     const winsRow = el('div', { class: 'wins-row' });
@@ -4804,10 +3864,10 @@ function renderHome() {
       el('div', { class: 'w-val' }, `${streak}w`),
       el('div', { class: 'w-sub' }, streak > 0 ? 'consecutive weeks' : 'start one')
     ]));
-    winsRow.appendChild(el('div', { class: 'win-card' + ((wkd != null && wkd <= 0) ? ' positive' : '') }, [
-      el('div', { class: 'w-lbl', html: ML_ICONS.trend + ' <span>Weight</span>' }),
-      el('div', { class: 'w-val' }, bw ? `${bw.weight}kg` : '—'),
-      el('div', { class: 'w-sub' }, wkd != null ? `${wkd >= 0 ? '+' : ''}${wkd.toFixed(1)} from start` : 'log to start')
+    winsRow.appendChild(el('div', { class: 'win-card' + (lastTotalMs > 0 ? ' positive' : '') }, [
+      el('div', { class: 'w-lbl', html: ML_ICONS.clock + ' <span>Last session</span>' }),
+      el('div', { class: 'w-val' }, lastTotalMs ? fmtTime(lastTotalMs) : '—'),
+      el('div', { class: 'w-sub' }, lastSubLabel)
     ]));
     winsRow.appendChild(el('div', { class: 'win-card' }, [
       el('div', { class: 'w-lbl', html: ML_ICONS.target + ' <span>Phase</span>' }),
@@ -4931,6 +3991,16 @@ function renderToday() {
 
   // Exercises
   day.exercises.forEach(ex => v.appendChild(renderExercise(ex, date, dayKey)));
+
+  // Add custom exercise (AI-checked from a machine photo)
+  v.appendChild(el('button', {
+    class: 'btn secondary',
+    style: 'margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;',
+    onclick: () => openAddExerciseModal(dayKey)
+  }, [
+    el('span', { style: 'font-size:18px;line-height:1;' }, '+'),
+    el('span', {}, 'Add exercise (photo + AI check)')
+  ]));
 
   // Finish button
   if (!w.finished) {
@@ -5552,10 +4622,41 @@ function openWorkoutDetail(date) {
   openModal(m);
 }
 
+// Resize an uploaded image down to <= maxDim on its longest side, return a JPEG data URL.
+function resizeImageToDataUrl(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read file'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Not a valid image'));
+      img.onload = () => {
+        try {
+          const ratio = Math.min(1, (maxDim || 1000) / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * ratio));
+          const h = Math.max(1, Math.round(img.height * ratio));
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality || 0.78));
+        } catch (e) { reject(e); }
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function openImageModal(displayName) {
-  const url = getImageForName(displayName);
+  const customMap = state.customExerciseImages || {};
+  const customUrl = customMap[displayName] || null;
+  const fallbackUrl = getImageForName(displayName);
+  const url = customUrl || fallbackUrl;
+
   const m = el('div');
   m.appendChild(el('h3', {}, displayName));
+
   if (url) {
     const img = el('img', {
       class: 'modal-image',
@@ -5566,10 +4667,52 @@ function openImageModal(displayName) {
     m.appendChild(img);
     m.appendChild(el('div', { class: 'empty', style: 'display:none;' }, 'Image not available'));
   } else {
-    m.appendChild(el('div', { class: 'empty' }, 'No image found for this exercise.'));
+    m.appendChild(el('div', { class: 'empty' }, 'No image yet. Upload one below.'));
   }
-  m.appendChild(el('div', { class: 'small dim center', style: 'margin:8px 0 14px;' }, 'Source: free-exercise-db (open source)'));
-  m.appendChild(el('button', { class: 'btn secondary', onclick: closeModal }, 'Close'));
+
+  m.appendChild(el('div', { class: 'small dim center', style: 'margin:8px 0 14px;' },
+    customUrl ? 'Your custom image · saved for this exercise'
+    : (fallbackUrl ? 'Source: free-exercise-db (open source)' : 'No image source')));
+
+  // Hidden file input + Upload button
+  const fileInp = el('input', { type: 'file', accept: 'image/*', style: 'display:none' });
+  fileInp.onchange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const dataUrl = await resizeImageToDataUrl(file, 1000, 0.78);
+      if (!state.customExerciseImages) state.customExerciseImages = {};
+      state.customExerciseImages[displayName] = dataUrl;
+      save();
+      closeModal();
+      openImageModal(displayName); // reopen with the new image
+      toast('Image saved for ' + displayName);
+    } catch (err) {
+      toast(String(err.message || 'Upload failed').slice(0, 80));
+    }
+  };
+  m.appendChild(fileInp);
+
+  m.appendChild(el('button', {
+    class: customUrl ? 'btn secondary' : 'btn',
+    onclick: () => fileInp.click()
+  }, customUrl ? 'Replace with another photo' : 'Upload your own photo'));
+
+  if (customUrl) {
+    m.appendChild(el('button', {
+      class: 'btn danger',
+      style: 'margin-top:8px;',
+      onclick: () => {
+        if (state.customExerciseImages) delete state.customExerciseImages[displayName];
+        save();
+        closeModal();
+        openImageModal(displayName);
+        toast('Custom image removed');
+      }
+    }, 'Remove my photo'));
+  }
+
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Close'));
   openModal(m);
 }
 
@@ -6019,7 +5162,18 @@ function renderMore() {
 
   // Settings
   const set = el('div', { class: 'card' });
-  set.appendChild(el('div', { class: 'card-title' }, 'Gym settings'));
+  set.appendChild(el('div', { class: 'card-title' }, 'Settings'));
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: openAIKeyModal
+  }, [
+    el('div', {}, 'AI key (Anthropic)'),
+    el('div', { class: 'right' }, [
+      el('span', { style: state.settings.anthropicApiKey ? 'color:var(--success);' : 'color:var(--text-dim);' },
+        state.settings.anthropicApiKey ? '✓ set' : 'not set'),
+      el('span', {}, '›')
+    ])
+  ]));
   set.appendChild(el('div', {
     class: 'list-item',
     onclick: () => {
@@ -6073,19 +5227,11 @@ function renderMore() {
     el('div', {}, 'My dumbbell weights (kg)'),
     el('div', { class: 'right' }, [el('span', { class: 'small dim' }, (state.settings.dumbbellWeights || []).join(', ')), el('span', {}, '›')])
   ]));
-  set.appendChild(el('div', {
-    class: 'list-item small dim',
-    style: 'cursor:pointer;',
-    onclick: () => { setGlobalTab('more'); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-  }, [
-    el('div', {}, 'App settings (theme, AI, lock, …)'),
-    el('div', { class: 'right' }, [el('span', {}, '› MastaLife More')])
-  ]));
   v.appendChild(set);
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.23 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.29 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
@@ -6306,29 +5452,25 @@ function openAIKeyModal() {
   setTimeout(() => inp.focus(), 100);
 }
 
-function _aiSystemPrompt(referenceDate) {
-  const d = new Date(referenceDate + 'T00:00:00');
-  const dowName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()];
-  return `You convert a user's casual day plan into a JSON array of tasks. Output ONLY a valid JSON array, no prose, no markdown fences.
+function _aiSystemPrompt() {
+  return `You convert a user's casual to-do list into a JSON array of tasks. Output ONLY a valid JSON array, no prose, no markdown fences.
 
 Schema for each task:
 {
-  "title": string (clean it up, fix obvious typos),
+  "title": string (clean it up, fix obvious typos, keep concise),
   "time": "HH:MM" (24h) or null,
-  "date": "YYYY-MM-DD" or null,
-  "repeat": "daily" | "weekdays" | "weekly:1,3" (dow numbers 0-6) | "monthly:15" | null,
-  "category": "work" | "personal" | "family" | "gym" | "health" | null
+  "category": "work" | "personal" | "family" | "gym" | "health" | null,
+  "repeat": "daily" | "weekdays" | "weekly:1,3" (dow numbers 0=Sun..6=Sat) | "monthly:15" | null
 }
 
 Rules:
-- Reference date is ${referenceDate} (${dowName}).
-- "today" => reference date. "tomorrow" => reference date + 1 day. "next monday" => upcoming Monday on/after reference.
-- If a recurrence is mentioned ("every monday", "daily"), set repeat AND set date to the next occurrence on/after reference date.
+- Default scope is today. If the line says "every monday" / "weekly" / "every weekday" / "daily" / "monthly on the 15th", set repeat accordingly. Otherwise repeat is null.
+- "every monday" => "weekly:1". "every Tuesday and Thursday" => "weekly:2,4". "weekdays" or "every weekday" => "weekdays". "daily" or "every day" => "daily". "every 15th" or "monthly on the 15th" => "monthly:15".
 - Times: assume the list flows chronologically. Bare numbers like "02" or "03" appearing AFTER morning entries (8, 9, 10, 11) mean afternoon (14:00, 15:00).
 - "08" or "8" first thing in the morning => 08:00. "9 breakfast" => 09:00.
-- Category guesses: "gym session" / "workout" => gym; "preworkout meal" / "post workout" / "breakfast" / "meal" => health; "meeting" / "work" / "call" with colleagues => work; "family time" / "kids" / "wife" / "parents" / "dinner with family" / "with family" => family; "passport photo" / "papers" / "errand" / "shopping" => personal.
+- Category guesses: "gym" / "workout" => gym; "meal" / "supplement" / "doctor" / "vitamin" / "breakfast" / "lunch" / "dinner" => health; "meeting" / "call" / "client" / "deadline" => work; "family time" / "kids" / "wife" / "husband" / "parents" / "dinner with family" => family; otherwise "shopping" / "errand" / "passport" / "papers" / "personal" => personal. Use null only if truly unclear.
 - If a line has no time, set time to null. Don't invent times.
-- Skip header/preamble lines like "Tasks i have tomorrow".
+- Skip header/preamble lines like "Tasks i have today".
 - Output ONLY the JSON array, nothing before or after.`;
 }
 
@@ -6343,15 +5485,268 @@ function _stripJsonFence(s) {
   return t.trim();
 }
 
+// Same idea as _stripJsonFence but for a single JSON object {...}.
+function _stripJsonObjectFence(s) {
+  let t = String(s || '').trim();
+  t = t.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '');
+  const start = t.indexOf('{');
+  const end = t.lastIndexOf('}');
+  if (start >= 0 && end > start) t = t.slice(start, end + 1);
+  return t.trim();
+}
+
+// Send a JPEG/PNG dataURL image + a system prompt to Claude and parse a JSON object reply.
+async function callAnthropicVision({ system, userText, imageDataUrl, maxTokens }) {
+  const key = state.settings.anthropicApiKey;
+  if (!key) throw new Error('No API key set');
+  const dataPart = (imageDataUrl || '').split(',')[1];
+  if (!dataPart) throw new Error('Bad image data');
+  const mediaType = ((imageDataUrl || '').match(/^data:([^;]+);/) || [, 'image/jpeg'])[1];
+  const res = await fetch(AI_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: AI_MODEL,
+      max_tokens: maxTokens || 800,
+      system,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: dataPart } },
+          { type: 'text', text: userText || 'Analyze this image.' }
+        ]
+      }]
+    }),
+  });
+  if (res.status === 401 || res.status === 403) {
+    throw new Error('Auth failed (' + res.status + '). Check your API key.');
+  }
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error('Claude API ' + res.status + ': ' + txt.slice(0, 180));
+  }
+  const data = await res.json();
+  return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+}
+
+// Add a custom exercise to a day, identified from a machine photo.
+// The photo also becomes the exercise's saved image.
+function openAddExerciseModal(dayKey) {
+  if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
+  const day = DAYS[dayKey];
+  if (!day) { toast('Unknown day'); return; }
+
+  const m = el('div');
+  m.appendChild(el('h3', {}, '+ Add exercise to ' + day.name));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' },
+    'Snap a photo of the machine. Claude will check if it fits ' + day.name + ' day, then suggest sets/reps.'));
+
+  const fileInp = el('input', { type: 'file', accept: 'image/*', capture: 'environment', style: 'display:none' });
+  m.appendChild(fileInp);
+
+  const status = el('div', { style: 'min-height:24px;margin:8px 0;' });
+  m.appendChild(status);
+
+  m.appendChild(el('button', {
+    class: 'btn',
+    onclick: () => fileInp.click()
+  }, '📷 Take or pick a photo'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Cancel'));
+
+  fileInp.onchange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    let dataUrl;
+    try {
+      dataUrl = await resizeImageToDataUrl(file, 1100, 0.8);
+    } catch (err) {
+      status.innerHTML = '<div class="small" style="color:var(--danger);">Bad image: ' + escapeHtml(err.message || '') + '</div>';
+      return;
+    }
+    status.innerHTML = '<div class="ai-loading"><span class="spinner"></span><span>Asking Claude…</span></div>';
+
+    const baseExercises = (day._baseExercises || day.exercises);
+    const existingNames = baseExercises.map(e => e.name).join(', ');
+    const customNames = (state.customDayExercises?.[dayKey] || []).map(e => e.name).join(', ');
+    const allNames = [existingNames, customNames].filter(Boolean).join(', ') || '(none)';
+
+    const sys = `You're helping the user expand a structured gym workout plan. They send a photo of a gym machine or equipment. Decide whether it fits today's day-split and propose sensible sets/reps for hypertrophy.
+
+Today's split:
+- Day name: ${day.name}
+- Focus: ${day.focus || '(no focus listed)'}
+- Already in this day's plan: ${allNames}
+
+Output ONLY a single JSON object — no prose, no markdown fences:
+{
+  "machineDetected": "short identification of the machine",
+  "exerciseName": "Concise display name, capitalized, e.g. 'Cable rope triceps pushdown'",
+  "muscles": ["triceps"],   // 1-3 from: chest, back, shoulders, biceps, triceps, legs, glutes, core
+  "fits": true,             // false only if it clearly doesn't belong (e.g. leg curl on Push day)
+  "reason": "One short sentence — why it fits or doesn't.",
+  "suggestedSets": 3,
+  "suggestedRepsMin": 8,
+  "suggestedRepsMax": 12,
+  "suggestedWeight": 0,     // suggested starting weight in kg, 0 if bodyweight
+  "isBodyweight": false
+}
+
+Rules:
+- Compounds: 3 sets × 8-10 reps. Isolation: 3 sets × 10-15 reps.
+- Avoid duplicating an exercise already in this day's plan — if it's a clear duplicate, set fits=false with reason "Already in your plan".
+- If the image isn't clearly gym equipment or an exercise, set fits=false with reason "Not a recognizable gym machine".
+- Be friendly but accurate. Keep "reason" under 100 chars.`;
+
+    let raw;
+    try {
+      raw = await callAnthropicVision({
+        system: sys,
+        userText: 'Identify this machine and propose how to add it to my ' + day.name + ' day.',
+        imageDataUrl: dataUrl,
+        maxTokens: 600
+      });
+    } catch (err) {
+      status.innerHTML = '<div class="small" style="color:var(--danger);">' + escapeHtml(String(err.message || 'Failed').slice(0, 200)) + '</div>';
+      return;
+    }
+    let json;
+    try {
+      json = JSON.parse(_stripJsonObjectFence(raw));
+    } catch (_) {
+      status.innerHTML = '<div class="small" style="color:var(--danger);">Claude returned non-JSON: ' + escapeHtml(raw.slice(0, 150)) + '</div>';
+      return;
+    }
+    closeModal();
+    openAddExerciseConfirmModal(dayKey, json, dataUrl);
+  };
+
+  openModal(m);
+}
+
+function openAddExerciseConfirmModal(dayKey, suggestion, imageDataUrl) {
+  const day = DAYS[dayKey];
+  const fits = suggestion && suggestion.fits === true;
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Add exercise to ' + (day ? day.name : '') + ' day'));
+
+  // Image preview
+  m.appendChild(el('img', { class: 'modal-image', src: imageDataUrl, alt: '' }));
+
+  // Editable fields — always shown. AI fit-check is advisory only.
+  const validMuscles = ['chest','back','shoulders','biceps','triceps','legs','glutes','core'];
+  let r = {
+    name: String(suggestion && (suggestion.exerciseName || suggestion.machineDetected) || 'New exercise').trim(),
+    sets: Math.max(1, Math.min(8, parseInt(suggestion && suggestion.suggestedSets, 10) || 3)),
+    repsMin: Math.max(1, parseInt(suggestion && suggestion.suggestedRepsMin, 10) || 8),
+    repsMax: Math.max(1, parseInt(suggestion && suggestion.suggestedRepsMax, 10) || 12),
+    weight: Math.max(0, parseFloat(suggestion && suggestion.suggestedWeight) || 0),
+    bw: !!(suggestion && suggestion.isBodyweight),
+    muscles: Array.isArray(suggestion && suggestion.muscles) ? suggestion.muscles.filter(x => validMuscles.includes(x)) : []
+  };
+  if (r.repsMax < r.repsMin) r.repsMax = r.repsMin;
+
+  // Advisory banner — green if fits, yellow heads-up otherwise. Either way the form is editable and the Add button is shown.
+  if (fits) {
+    m.appendChild(el('div', {
+      style: 'margin:10px 0 12px;padding:10px 12px;background:var(--success-soft);border:1px solid rgba(34,197,94,0.30);border-radius:10px;color:#86efac;font-size:13px;'
+    }, '✓ ' + (suggestion.reason || 'Fits this day.')));
+  } else if (suggestion) {
+    m.appendChild(el('div', {
+      style: 'margin:10px 0 12px;padding:10px 12px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.35);border-radius:10px;color:#fcd34d;font-size:13px;'
+    }, '⚠ Heads up: ' + (suggestion.reason || 'May not match this day\'s split — adding anyway is fine.')));
+  }
+
+  m.appendChild(el('label', {}, 'Name'));
+  const nameInp = el('input', { type: 'text', value: r.name });
+  nameInp.oninput = () => { r.name = nameInp.value; };
+  m.appendChild(nameInp);
+
+  const grid = el('div', { style: 'display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;margin-top:8px;' });
+
+  const mkBlk = (label, inp) => {
+    const blk = el('div', { style: 'display:flex;flex-direction:column;gap:4px;' });
+    blk.appendChild(el('label', { style: 'margin:0;' }, label));
+    blk.appendChild(inp);
+    return blk;
+  };
+  const setsInp = el('input', { type: 'number', min: 1, max: 8, value: String(r.sets) });
+  setsInp.oninput = () => { r.sets = Math.max(1, Math.min(8, parseInt(setsInp.value, 10) || 3)); };
+  grid.appendChild(mkBlk('Sets', setsInp));
+
+  const minInp = el('input', { type: 'number', min: 1, value: String(r.repsMin) });
+  minInp.oninput = () => { r.repsMin = Math.max(1, parseInt(minInp.value, 10) || 1); };
+  grid.appendChild(mkBlk('Reps min', minInp));
+
+  const maxInp = el('input', { type: 'number', min: 1, value: String(r.repsMax) });
+  maxInp.oninput = () => { r.repsMax = Math.max(1, parseInt(maxInp.value, 10) || 1); };
+  grid.appendChild(mkBlk('Reps max', maxInp));
+
+  m.appendChild(grid);
+
+  const grid2 = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;' });
+  const wInp = el('input', { type: 'number', step: '0.5', min: 0, value: String(r.weight) });
+  wInp.oninput = () => { r.weight = Math.max(0, parseFloat(wInp.value) || 0); };
+  grid2.appendChild(mkBlk('Weight (kg)', wInp));
+
+  const bwLabel = el('label', { style: 'display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text);text-transform:none;letter-spacing:0;margin-top:18px;' });
+  const bwChk = el('input', { type: 'checkbox' });
+  bwChk.checked = r.bw;
+  bwChk.onchange = () => { r.bw = bwChk.checked; };
+  bwLabel.appendChild(bwChk);
+  bwLabel.appendChild(document.createTextNode('Bodyweight'));
+  grid2.appendChild(bwLabel);
+
+  m.appendChild(grid2);
+
+  m.appendChild(el('button', {
+    class: 'btn',
+    style: 'margin-top:14px;',
+    onclick: () => {
+      const newId = 'cust-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+      const newEx = {
+        id: newId,
+        name: (r.name || 'Custom exercise').trim(),
+        sets: r.sets,
+        repsMin: r.repsMin,
+        repsMax: Math.max(r.repsMax, r.repsMin),
+        weight: r.bw ? 0 : r.weight,
+        bw: r.bw,
+        muscles: r.muscles.length ? r.muscles : undefined,
+        target: suggestion.machineDetected || '',
+        custom: true
+      };
+      if (!state.customDayExercises) state.customDayExercises = {};
+      if (!Array.isArray(state.customDayExercises[dayKey])) state.customDayExercises[dayKey] = [];
+      state.customDayExercises[dayKey].push(newEx);
+      // Save the photo as this exercise's image too.
+      if (!state.customExerciseImages) state.customExerciseImages = {};
+      state.customExerciseImages[newEx.name] = imageDataUrl;
+      save();
+      refreshDayExercises();
+      closeModal();
+      render();
+      toast('Added: ' + newEx.name);
+    }
+  }, 'Add to ' + (day ? day.name : '') + ' day'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Cancel'));
+
+  openModal(m);
+}
+
 function openAIParseModal() {
   if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
 
   const m = el('div');
-  m.appendChild(el('h3', {}, '✨ Paste your day'));
+  m.appendChild(el('h3', {}, '✨ Paste today\'s tasks'));
   m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' },
-    'Paste a casual list. Claude will parse times, dates, and repeats.'));
+    'Paste a casual list for today. Claude will pull out times and categories.'));
 
-  const ta = el('textarea', { class: 'ai-textarea', placeholder: 'today: wakeup 8\n9 breakfast\nmeeting at 11 tomorrow\nfriday gym session\n…' });
+  const ta = el('textarea', { class: 'ai-textarea', placeholder: 'wakeup 8\n9 breakfast\nmeeting at 11\n02 preworkout meal\n03 gym session\n…' });
   m.appendChild(ta);
 
   const status = el('div', { style: 'min-height:24px;margin:6px 0;' });
@@ -6362,13 +5757,12 @@ function openAIParseModal() {
     onclick: async () => {
       const text = ta.value.trim();
       if (!text) { toast('Paste something first'); return; }
-      const referenceDate = today();
       status.innerHTML = '<div class="ai-loading"><span class="spinner"></span><span>Parsing with Claude…</span></div>';
       parseBtn.disabled = true;
       parseBtn.style.opacity = '0.5';
       try {
         const raw = await callAnthropic({
-          system: _aiSystemPrompt(referenceDate),
+          system: _aiSystemPrompt(),
           messages: [{ role: 'user', content: text }],
           maxTokens: 2048
         });
@@ -6379,7 +5773,7 @@ function openAIParseModal() {
         if (!Array.isArray(parsed)) throw new Error('Expected an array, got ' + typeof parsed);
         if (!parsed.length) { toast('Nothing parsed'); status.innerHTML = ''; parseBtn.disabled = false; parseBtn.style.opacity = '1'; return; }
         closeModal();
-        openAIPreviewModal(parsed, referenceDate);
+        openAIPreviewModal(parsed);
       } catch (e) {
         status.innerHTML = '<div class="small" style="color:var(--danger);">' + escapeHtml(e.message || 'Failed') + '</div>';
         parseBtn.disabled = false;
@@ -6394,21 +5788,21 @@ function openAIParseModal() {
   setTimeout(() => ta.focus(), 100);
 }
 
-function openAIPreviewModal(parsedTasks, referenceDate) {
+function openAIPreviewModal(parsedTasks) {
   // Each row has its own state: skipped + an editable copy.
+  const validRepeat = (r) => (typeof r === 'string' && /^(daily|weekdays|weekly:[\d,]+|monthly:\d+)$/.test(r)) ? r : null;
   const rows = parsedTasks.map(t => ({
     title: String(t.title || '').trim() || 'Untitled',
     time: t.time && /^\d{1,2}:\d{2}$/.test(t.time) ? t.time.padStart(5, '0') : null,
-    date: t.date || referenceDate,
-    repeat: t.repeat || null,
     category: ['work', 'personal', 'family', 'gym', 'health'].includes(t.category) ? t.category : null,
+    repeat: validRepeat(t.repeat),
     skipped: false,
     expanded: false
   }));
 
   const m = el('div');
   const head = el('div', { class: 'row between', style: 'align-items:center;margin-bottom:12px;' }, [
-    el('h3', { style: 'margin:0;' }, 'Review parsed tasks'),
+    el('h3', { style: 'margin:0;' }, 'Review tasks'),
     el('span', { class: 'chip' }, `${rows.length} found`)
   ]);
   m.appendChild(head);
@@ -6418,19 +5812,15 @@ function openAIPreviewModal(parsedTasks, referenceDate) {
 
   function rebuild() {
     listWrap.innerHTML = '';
-    rows.forEach((r, idx) => {
+    rows.forEach((r) => {
       const row = el('div', { class: 'preview-row' + (r.skipped ? ' skipped' : '') + (r.expanded ? ' expanded' : '') });
       row.appendChild(el('div', { class: 'pr-title' }, r.title));
       const metaParts = [];
       if (r.time) metaParts.push(r.time);
-      if (r.repeat) metaParts.push(describeRepeat(r.repeat));
-      else if (r.date) metaParts.push(friendlyDateLabel(r.date));
-      if (r.category) {
-        const chip = `<span class="cat-chip cat-${r.category}">${r.category}</span>`;
-        metaParts.push(chip);
-      }
+      if (r.repeat) metaParts.push('<span style="color:var(--accent);">↻ ' + describeRepeat(r.repeat) + '</span>');
+      if (r.category) metaParts.push(`<span class="cat-chip cat-${r.category}">${r.category}</span>`);
       const meta = el('div', { class: 'pr-meta' });
-      meta.innerHTML = metaParts.join(' · ');
+      meta.innerHTML = metaParts.join(' · ') || '<span style="color:var(--text-dim);">no time</span>';
       row.appendChild(meta);
 
       const actions = el('div', { class: 'pr-actions' });
@@ -6456,10 +5846,15 @@ function openAIPreviewModal(parsedTasks, referenceDate) {
         timeInp.oninput = () => { r.time = timeInp.value || null; };
         edit.appendChild(timeInp);
 
-        edit.appendChild(el('label', {}, 'Date'));
-        const dateInp = el('input', { type: 'date', value: r.date || '' });
-        dateInp.oninput = () => { r.date = dateInp.value || null; };
-        edit.appendChild(dateInp);
+        edit.appendChild(el('label', {}, 'Category'));
+        const catSel = el('select');
+        [['', 'None'], ['work', 'Work'], ['personal', 'Personal'], ['family', 'Family'], ['gym', 'Gym'], ['health', 'Health']].forEach(([v, lbl]) => {
+          const o = el('option', { value: v }, lbl);
+          if ((r.category || '') === v) o.selected = true;
+          catSel.appendChild(o);
+        });
+        catSel.onchange = () => { r.category = catSel.value || null; };
+        edit.appendChild(catSel);
 
         edit.appendChild(el('label', {}, 'Repeat'));
         const repSel = el('select');
@@ -6475,7 +5870,6 @@ function openAIPreviewModal(parsedTasks, referenceDate) {
           ['weekly:6', 'Every Sat'],
           ['weekly:0', 'Every Sun']
         ];
-        // If current repeat doesn't match a preset, add it as a custom option so it stays selectable.
         const presetVals = repOpts.map(o => o[0]);
         if (r.repeat && !presetVals.includes(r.repeat)) repOpts.push([r.repeat, r.repeat]);
         repOpts.forEach(([v, lbl]) => {
@@ -6485,16 +5879,6 @@ function openAIPreviewModal(parsedTasks, referenceDate) {
         });
         repSel.onchange = () => { r.repeat = repSel.value || null; };
         edit.appendChild(repSel);
-
-        edit.appendChild(el('label', {}, 'Category'));
-        const catSel = el('select');
-        [['', 'None'], ['work', 'Work'], ['personal', 'Personal'], ['family', 'Family'], ['gym', 'Gym'], ['health', 'Health']].forEach(([v, lbl]) => {
-          const o = el('option', { value: v }, lbl);
-          if ((r.category || '') === v) o.selected = true;
-          catSel.appendChild(o);
-        });
-        catSel.onchange = () => { r.category = catSel.value || null; };
-        edit.appendChild(catSel);
 
         row.appendChild(edit);
       }
@@ -6513,13 +5897,7 @@ function openAIPreviewModal(parsedTasks, referenceDate) {
     style: 'margin-top:14px;',
     onclick: () => {
       const keep = rows.filter(r => !r.skipped);
-      keep.forEach(r => addMastaTask({
-        title: r.title,
-        time: r.time,
-        date: r.repeat ? r.date : (r.date || null),
-        repeat: r.repeat,
-        category: r.category
-      }));
+      keep.forEach(r => addTask({ title: r.title, time: r.time, category: r.category, repeat: r.repeat }));
       closeModal();
       render();
       toast(`Saved ${keep.length} task${keep.length === 1 ? '' : 's'}`);
@@ -6816,24 +6194,9 @@ document.querySelectorAll('#gymNav button').forEach(b => {
   });
 });
 
-document.querySelectorAll('#globalNav button').forEach(b => {
-  b.addEventListener('click', () => {
-    tasksFilterCategory = null; // direct nav clears any active category filter
-    setGlobalTab(b.dataset.gtab);
-    render();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-});
-
-document.getElementById('gymBackLink').addEventListener('click', () => {
-  setGlobalTab('home');
-  render();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-});
-
-document.getElementById('topMode').addEventListener('click', e => {
-  e.stopPropagation();
-  cycleMastaMode();
+// One-time cleanup of orphan MastaLife localStorage keys.
+['mastalife-gtab-v1', 'mastalife-mode-v1', 'mastalife-username-v1'].forEach(k => {
+  try { localStorage.removeItem(k); } catch (_e) {}
 });
 
 applyTheme(state.settings.theme || 'indigo');
