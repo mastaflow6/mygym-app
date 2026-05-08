@@ -395,6 +395,52 @@
   .macro .v { font-size: 18px; font-weight: 700; }
   .macro .l { font-size: 11px; color: var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
   .macro.kcal .v { color: var(--accent); }
+
+  .food-totals { padding: 14px; }
+  .food-totals .totals-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom: 10px; }
+  .food-totals .totals-head .big { font-size: 22px; font-weight: 800; color: var(--text); }
+  .food-totals .totals-head .sub { font-size: 12px; color: var(--text-muted); }
+  .macro-bar { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; }
+  .macro-bar .lbl { width: 64px; color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .macro-bar .vals { width: 88px; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .macro-bar .track { flex: 1; height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+  .macro-bar .fill { display: block; height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+  .macro-bar.kcal .fill { background: linear-gradient(90deg, var(--progress-from, #818cf8), var(--progress-to, #a78bfa)); }
+  .macro-bar.p .fill { background: #f87171; }
+  .macro-bar.c .fill { background: #fbbf24; }
+  .macro-bar.f .fill { background: #60a5fa; }
+
+  .add-meal-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 14px; margin: 14px 0;
+    background: var(--accent); color: #fff; border: none; border-radius: 12px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  .add-meal-btn:active { opacity: 0.85; transform: scale(0.99); }
+  .add-meal-btn svg { width: 18px; height: 18px; }
+
+  .meal-row { display: flex; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .meal-row:last-child { border-bottom: none; }
+  .meal-row:active { background: var(--surface-2); }
+  .meal-row .thumb { width: 56px; height: 56px; border-radius: 10px; background: var(--surface-2); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .meal-row .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .meal-row .thumb .ph { color: var(--text-dim); font-size: 22px; }
+  .meal-row .body { flex: 1; min-width: 0; }
+  .meal-row .name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meal-row .meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 8px; flex-wrap: wrap; }
+  .meal-row .meta b { color: var(--text); font-weight: 700; }
+  .meal-row .time { font-size: 11px; color: var(--text-dim); margin-left: 8px; flex-shrink: 0; }
+  .meal-empty { padding: 24px 14px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+  .meal-modal-form label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .meal-modal-form input[type=text], .meal-modal-form input[type=number], .meal-modal-form textarea {
+    width: 100%; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 14px; font-family: inherit; outline: none;
+  }
+  .meal-modal-form .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+  .meal-modal-form .grid4 input { padding: 8px 10px; font-size: 13px; text-align: center; }
+  .meal-photo-preview { width: 100%; max-height: 220px; object-fit: cover; border-radius: 12px; background: var(--surface-2); display: block; }
+  .meal-photo-empty { width: 100%; height: 140px; border: 1px dashed var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 13px; }
   .macro.p .v { color: #f87171; }
   .macro.c .v { color: #60a5fa; }
   .macro.f .v { color: #fbbf24; }
@@ -1736,13 +1782,13 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5l11 11M3 9l3 3-3 3M21 9l-3 3 3 3M9 3l3 3 3-3M9 21l3-3 3 3"/></svg>
       <span>Workout</span>
     </button>
-    <button data-tab="plan">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-      <span>Plan</span>
+    <button data-tab="food">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1 12H5L4 8z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><path d="M9 13v3M15 13v3"/></svg>
+      <span>Food</span>
     </button>
-    <button data-tab="progress">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
-      <span>Progress</span>
+    <button data-tab="coach">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M19 16l.7 1.8L21.5 18l-1.8.7L19 20l-.7-1.3L17 18l1.7-.5z"/></svg>
+      <span>Coach</span>
     </button>
     <button data-tab="more">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
@@ -2047,6 +2093,8 @@ const defaultState = {
   mastalifeTasks: [],
   customExerciseImages: {}, // exercise name → resized JPEG dataURL (device-only; not synced)
   customDayExercises: {},   // dayKey → [exercise...] appended to DAYS[k].exercises at runtime
+  exerciseSwaps: {},        // { [exId]: swapIdx } — last-confirmed swap, default for future days
+  meals: [],                // [{ id, date, time, dataUrl?, weightG?, name, calories, protein, carbs, fat, source, notes? }]
   coachLogs: [],            // [{ id, date, kind, energy?, soreness?, text, dayKey?, createdAt }]
   photos: [],
   notes: {},
@@ -2660,7 +2708,7 @@ function sessionsInWeek(monday) {
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday); d.setDate(monday.getDate() + i);
     const k = d.toISOString().slice(0, 10);
-    if (state.workouts[k]?.finished) count++;
+    if (isRealSession(state.workouts[k])) count++;
   }
   return count;
 }
@@ -2684,6 +2732,19 @@ function getStreak() {
   return streak;
 }
 
+// A "real" session = explicitly finished OR has at least one logged set.
+// This makes counts include sessions where the user logged sets but
+// never tapped "Finish workout".
+function isRealSession(w) {
+  if (!w) return false;
+  if (w.finished) return true;
+  if (!w.logs) return false;
+  for (const arr of Object.values(w.logs)) {
+    if (arr && arr.some(s => s && s.d)) return true;
+  }
+  return false;
+}
+
 function sessionsThisWeek() {
   const t = new Date(); const dow = t.getDay() || 7;
   const monday = new Date(t); monday.setDate(t.getDate() - (dow - 1));
@@ -2691,12 +2752,12 @@ function sessionsThisWeek() {
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday); d.setDate(monday.getDate() + i);
     const k = d.toISOString().slice(0, 10);
-    if (state.workouts[k]?.finished) count++;
+    if (isRealSession(state.workouts[k])) count++;
   }
   return count;
 }
 function totalSessions() {
-  return Object.values(state.workouts).filter(w => w.finished).length;
+  return Object.values(state.workouts).filter(isRealSession).length;
 }
 
 function getWeeklyVolume() {
@@ -2706,7 +2767,7 @@ function getWeeklyVolume() {
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday); d.setDate(monday.getDate() + i);
     const k = d.toISOString().slice(0, 10);
-    const w = state.workouts[k]; if (!w || !w.finished) continue;
+    const w = state.workouts[k]; if (!isRealSession(w)) continue;
     const day = DAYS[w.dayKey]; if (!day) continue;
     for (const ex of day.exercises) {
       const done = (w.logs[ex.id] || []).filter(s => s.d).length;
@@ -2719,7 +2780,7 @@ function getWeeklyVolume() {
 function getMonthlyStats() {
   const months = {};
   for (const [date, w] of Object.entries(state.workouts)) {
-    if (!w.finished) continue;
+    if (!isRealSession(w)) continue;
     const m = date.slice(0, 7);
     if (!months[m]) months[m] = { sessions: 0, sets: 0, volume: 0 };
     months[m].sessions++;
@@ -3085,7 +3146,9 @@ function getAlternatives(ex) {
   return (ex.alt || '').split('/').map(s => s.trim()).filter(Boolean);
 }
 function getDisplaySwap(ex, date) {
-  return state.workouts[date]?.swaps?.[ex.id] || 0;
+  const dayLvl = state.workouts[date]?.swaps?.[ex.id];
+  if (dayLvl != null) return dayLvl;
+  return (state.exerciseSwaps && state.exerciseSwaps[ex.id]) || 0;
 }
 function getDisplayName(ex, date) {
   const swap = getDisplaySwap(ex, date);
@@ -3291,13 +3354,17 @@ function render() {
   if (activeTab === 'today') renderToday();
   if (activeTab === 'plan') renderPlan();
   if (activeTab === 'progress') renderProgress();
+  if (activeTab === 'food') renderFood();
+  if (activeTab === 'coach') renderCoach();
   if (activeTab === 'more') renderMore();
 
+  // plan/progress are sub-views of workout — keep the Workout tab visually active there
+  const navTab = (activeTab === 'plan' || activeTab === 'progress') ? 'today' : activeTab;
   document.querySelectorAll('#gymNav button').forEach(b => {
-    b.classList.toggle('active', b.dataset.tab === activeTab);
+    b.classList.toggle('active', b.dataset.tab === navTab);
   });
   $('topPhase').textContent = `Phase ${currentPhase().num}`;
-  $('topTitle').textContent = ({ home: 'Dashboard', today: 'Workout', plan: 'Plan', progress: 'Progress', more: 'More' })[activeTab];
+  $('topTitle').textContent = ({ home: 'Dashboard', today: 'Workout', plan: 'Plan', progress: 'Progress', food: 'Food', coach: 'Coach', more: 'More' })[activeTab];
 }
 
 // Inline SVG icon helpers — match the rest of the app's stroke style.
@@ -3723,28 +3790,45 @@ function renderHome() {
     ]));
   }
 
-  // Stat grid
+  // Stat grid — Today's sets · Calories · Last session · Last sleep
   const grid = el('div', { class: 'stat-grid' });
-  const sessW = sessionsThisWeek();
-  grid.appendChild(el('div', { class: 'stat' }, [
-    el('div', { class: 'label' }, 'This week'),
-    el('div', { class: 'value' }, `${sessW} / 4`),
-    el('div', { class: 'sub' }, sessW === 4 ? '✓ Complete' : `${4 - sessW} to go`)
+  // Slot 1: Today's sets
+  const _todayProg = day ? workoutProgress(date, todayKey) : { done: 0, total: 0 };
+  grid.appendChild(el('div', {
+    class: 'stat',
+    style: day ? 'cursor:pointer;' : '',
+    onclick: day ? (() => { activeTab = 'today'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }) : undefined
+  }, [
+    el('div', { class: 'label' }, 'Today sets'),
+    el('div', { class: 'value' }, day ? `${_todayProg.done} / ${_todayProg.total}` : '—'),
+    el('div', { class: 'sub' }, day ? (_todayProg.done >= _todayProg.total ? '✓ All done' : `${_todayProg.total - _todayProg.done} to go`) : 'Rest day')
   ]));
-  const ph = currentPhase();
-  const dl = daysToNextPhase();
-  grid.appendChild(el('div', { class: 'stat' }, [
-    el('div', { class: 'label' }, 'Phase'),
-    el('div', { class: 'value', style: 'font-size:18px;' }, `P${ph.num} · ${ph.name.split(' ')[0]}`),
-    el('div', { class: 'sub' }, dl !== null && dl >= 0 ? `${dl}d to next` : `Week ${currentWeek()}`)
+  // Slot 2: Calories (links to Food)
+  const _kcalDone = mealTotalsForDate(today()).calories;
+  const _kcalTarget = NUTRITION.calories;
+  const _kcalPct = Math.min(100, _kcalTarget ? Math.round(_kcalDone / _kcalTarget * 100) : 0);
+  grid.appendChild(el('div', {
+    class: 'stat',
+    style: 'cursor:pointer;',
+    onclick: () => { activeTab = 'food'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  }, [
+    el('div', { class: 'label' }, 'Calories'),
+    el('div', { class: 'value' }, _kcalDone > 0 ? `${Math.round(_kcalDone)}` : '—'),
+    el('div', { class: 'sub' }, _kcalDone > 0 ? `${_kcalPct}% of ${_kcalTarget}` : `target ${_kcalTarget} · tap to log`)
   ]));
-  const bw = lastBodyWeight();
-  const startBw = state.bodyWeight[0];
-  grid.appendChild(el('div', { class: 'stat', onclick: openWeightModal, style: 'cursor:pointer;' }, [
-    el('div', { class: 'label' }, 'Weight'),
-    el('div', { class: 'value' }, bw ? `${bw.weight} kg` : '—'),
-    el('div', { class: 'sub' }, bw && startBw ? `${(bw.weight - startBw.weight) >= 0 ? '+' : ''}${(bw.weight - startBw.weight).toFixed(1)} from start` : 'Tap to log')
+  // Slot 3: Water today (action — links to More for water UI)
+  const _wDone = todaysWater();
+  const _wTarget = state.settings.waterTarget || 4;
+  grid.appendChild(el('div', {
+    class: 'stat',
+    style: 'cursor:pointer;',
+    onclick: () => { activeTab = 'more'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  }, [
+    el('div', { class: 'label' }, 'Water'),
+    el('div', { class: 'value' }, `${_wDone} / ${_wTarget}`),
+    el('div', { class: 'sub' }, _wDone >= _wTarget ? '✓ Hit target' : `${(_wDone * 0.5).toFixed(1)}L of ${(_wTarget * 0.5).toFixed(1)}L`)
   ]));
+  // Slot 4: Last sleep
   const ls = lastSleep();
   grid.appendChild(el('div', { class: 'stat', onclick: openSleepModal, style: 'cursor:pointer;' }, [
     el('div', { class: 'label' }, 'Last sleep'),
@@ -3757,7 +3841,7 @@ function renderHome() {
   const ql = el('div', { class: 'quick-log' });
   ql.appendChild(makeQuickBtn('Weight', '⚖️', openWeightModal));
   ql.appendChild(makeQuickBtn('Sleep', '😴', openSleepModal));
-  ql.appendChild(makeQuickBtn('Measure', '📏', openMeasurementsModal));
+  ql.appendChild(makeQuickBtn('Meal', '🍽', openAddMealModal));
   v.appendChild(ql);
 
   // Gym bag (workout days only) — inline checklist
@@ -3921,14 +4005,51 @@ function renderHome() {
       return lastDayName ? `${lastDayName} · ${ago}` : ago;
     })();
 
+    // Latest PR — most recent set whose Epley score exceeds all earlier sets in that exercise
+    const _allSets = [];
+    for (const [dd, ww] of Object.entries(state.workouts || {})) {
+      if (!ww || !ww.logs) continue;
+      for (const [exId, arr] of Object.entries(ww.logs)) {
+        for (const s of (arr || [])) {
+          if (s && s.d) {
+            const e = epley(s.w, s.r);
+            if (e > 0) _allSets.push({ date: dd, exId, e, w: parseFloat(s.w), r: parseFloat(s.r) });
+          }
+        }
+      }
+    }
+    _allSets.sort((a, b) => a.date.localeCompare(b.date));
+    const _exBest = {};
+    let _topPR = null;
+    for (const s of _allSets) {
+      if (!_exBest[s.exId] || s.e > _exBest[s.exId].e) {
+        _exBest[s.exId] = s;
+        _topPR = s;
+      }
+    }
+    let _prVal = '—', _prSub = 'log a set to start';
+    if (_topPR) {
+      let exName = _topPR.exId;
+      for (const dk of Object.keys(DAYS)) {
+        const found = (DAYS[dk].exercises || []).find(x => x.id === _topPR.exId);
+        if (found) { exName = found.name; break; }
+      }
+      _prVal = `${_topPR.w}kg`;
+      _prSub = `× ${_topPR.r} · ${exName.length > 18 ? exName.slice(0, 16) + '…' : exName}`;
+    }
+
+    // Weight Δ — current vs starting body weight
+    const _bw = lastBodyWeight();
+    const _startBw = state.bodyWeight && state.bodyWeight[0];
+    const _delta = (_bw && _startBw) ? (_bw.weight - _startBw.weight) : null;
+    const _wValStr = _bw ? `${_bw.weight}kg` : '—';
+    const _wSubStr = _delta != null
+      ? `${_delta >= 0 ? '+' : ''}${_delta.toFixed(1)} kg from start`
+      : 'log to track';
+
     const winsSection = el('div', { class: 'ml-section' });
     winsSection.appendChild(el('div', { class: 'ml-section-head' }, [el('span', {}, 'Recent wins')]));
     const winsRow = el('div', { class: 'wins-row' });
-    winsRow.appendChild(el('div', { class: 'win-card' + (sw >= 4 ? ' positive' : '') }, [
-      el('div', { class: 'w-lbl', html: ML_ICONS.flame + ' <span>This week</span>' }),
-      el('div', { class: 'w-val' }, `${sw} / 4`),
-      el('div', { class: 'w-sub' }, sw >= 4 ? '✓ on target' : `${4 - sw} to go`)
-    ]));
     winsRow.appendChild(el('div', { class: 'win-card' + (streak > 0 ? ' positive' : '') }, [
       el('div', { class: 'w-lbl', html: ML_ICONS.star + ' <span>Streak</span>' }),
       el('div', { class: 'w-val' }, `${streak}w`),
@@ -3939,10 +4060,19 @@ function renderHome() {
       el('div', { class: 'w-val' }, lastTotalMs ? fmtTime(lastTotalMs) : '—'),
       el('div', { class: 'w-sub' }, lastSubLabel)
     ]));
-    winsRow.appendChild(el('div', { class: 'win-card' }, [
-      el('div', { class: 'w-lbl', html: ML_ICONS.target + ' <span>Phase</span>' }),
-      el('div', { class: 'w-val' }, `P${ph.num}`),
-      el('div', { class: 'w-sub' }, `Wk ${currentWeek()}`)
+    winsRow.appendChild(el('div', { class: 'win-card' + (_topPR ? ' positive' : '') }, [
+      el('div', { class: 'w-lbl', html: (ML_ICONS.trend || ML_ICONS.star) + ' <span>Latest PR</span>' }),
+      el('div', { class: 'w-val' }, _prVal),
+      el('div', { class: 'w-sub' }, _prSub)
+    ]));
+    winsRow.appendChild(el('div', {
+      class: 'win-card' + ((_delta != null) ? ' positive' : ''),
+      style: 'cursor:pointer;',
+      onclick: openWeightModal
+    }, [
+      el('div', { class: 'w-lbl', html: (ML_ICONS.scale || ML_ICONS.flame) + ' <span>Weight</span>' }),
+      el('div', { class: 'w-val' }, _wValStr),
+      el('div', { class: 'w-sub' }, _wSubStr)
     ]));
     winsSection.appendChild(winsRow);
     v.appendChild(winsSection);
@@ -3974,6 +4104,31 @@ function renderToday() {
   const date = today();
   const dayKey = activeDayKey ?? effectiveDayKey(date);
   const day = dayKey ? DAYS[dayKey] : null;
+
+  // Sub-nav for Plan + Progress (moved out of bottom tabs)
+  v.appendChild(el('div', {
+    class: 'row',
+    style: 'gap:8px;margin-bottom:14px;'
+  }, [
+    el('button', {
+      class: 'btn secondary',
+      style: 'flex:1;padding:10px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;',
+      onclick: () => { activeTab = 'plan'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    }, [
+      el('span', { html: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>' }),
+      el('span', {}, 'Plan'),
+      el('span', { style: 'opacity:0.5;' }, '›')
+    ]),
+    el('button', {
+      class: 'btn secondary',
+      style: 'flex:1;padding:10px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;',
+      onclick: () => { activeTab = 'progress'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    }, [
+      el('span', { html: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>' }),
+      el('span', {}, 'Progress'),
+      el('span', { style: 'opacity:0.5;' }, '›')
+    ])
+  ]));
 
   if (!day) {
     v.appendChild(el('div', { class: 'hero' }, [
@@ -4210,6 +4365,9 @@ function renderExercise(ex, date, dayKey) {
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4v16M17 20V4M3 8l4-4 4 4M21 16l-4 4-4-4"/></svg>',
     () => openSwapModal(ex, date),
     swapIdx > 0));
+  icons.appendChild(makeActionBtn('Ask',
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M19 16l.7 1.8L21.5 18l-1.8.7L19 20l-.7-1.3L17 18l1.7-.5z"/></svg>',
+    () => askCoachAboutExercise(ex, date)));
   icons.appendChild(makeActionBtn('Image',
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>',
     () => openImageModal(displayName)));
@@ -4237,6 +4395,18 @@ function renderExercise(ex, date, dayKey) {
 
   card.appendChild(body);
   return card;
+}
+
+function askCoachAboutExercise(ex, date) {
+  if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
+  const displayName = getDisplayName(ex, date);
+  const alts = getAlternatives(ex);
+  const altStr = alts.length ? `Listed alternatives: ${alts.join(', ')}.` : 'No alternatives are pre-listed.';
+  const muscles = (ex.muscles || []).join(', ');
+  const prefilled = `About "${displayName}"${muscles ? ` (targets ${muscles})` : ''}. Which variant should I do today, or what's a good substitute I could use at my gym? ${altStr}`;
+  // reset chat history so the question lands clean
+  coachChatHistory = [];
+  openCoachModal(prefilled);
 }
 
 function makeActionBtn(label, svgHtml, onclick, hasData) {
@@ -4285,6 +4455,10 @@ function renderSetRow(ex, date, dayKey, logs, i, lastSession) {
         logs[i].d = true;
         editingSetKey = null;
         if (!w.started) w.started = Date.now();
+        // Promote the active swap to the global default once the user logs a set with it.
+        if (!state.exerciseSwaps) state.exerciseSwaps = {};
+        const swapNow = w.swaps?.[ex.id];
+        if (swapNow) state.exerciseSwaps[ex.id] = swapNow;
         save(); render();
         startRest();
         if (navigator.vibrate) navigator.vibrate(20);
@@ -4443,8 +4617,14 @@ function openSwapModal(ex, date) {
       onclick: () => {
         const w = ensureWorkout(date, activeDayKey ?? effectiveDayKey(date) ?? todayDow());
         if (!w.swaps) w.swaps = {};
-        if (i === 0) delete w.swaps[ex.id];
-        else w.swaps[ex.id] = i;
+        if (!state.exerciseSwaps) state.exerciseSwaps = {};
+        if (i === 0) {
+          delete w.swaps[ex.id];
+          delete state.exerciseSwaps[ex.id]; // also clear the global default
+        } else {
+          w.swaps[ex.id] = i;
+          // global promotion happens after the user logs a set — see "Log set" handler
+        }
         save(); closeModal(); render();
         toast(i === 0 ? 'Reset to main' : 'Swapped');
       }
@@ -4808,6 +4988,12 @@ function renderPlan() {
   const skips = state.plan?.skippedDates?.length || 0;
   const isShifted = skips > 0;
 
+  v.appendChild(el('button', {
+    class: 'gym-back-link',
+    style: 'margin-bottom:10px;background:var(--surface-2);border:1px solid var(--border);padding:6px 10px;border-radius:8px;font-size:12px;color:var(--text-muted);cursor:pointer;',
+    onclick: () => { activeTab = 'today'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  }, '← Workout'));
+
   v.appendChild(el('div', { class: 'card', style: 'padding:14px 16px;' }, [
     el('div', { class: 'card-title', style: 'margin-bottom:6px;' }, 'Next 7 days'),
     el('div', { class: 'small muted' },
@@ -4866,9 +5052,396 @@ function renderPlan() {
   }
 }
 
+/* =========== FOOD =========== */
+function _ensureMeals() {
+  if (!Array.isArray(state.meals)) state.meals = [];
+}
+function mealsForDate(d) {
+  _ensureMeals();
+  return state.meals.filter(m => m.date === d).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+}
+function mealTotalsForDate(d) {
+  const meals = mealsForDate(d);
+  return meals.reduce((acc, m) => ({
+    calories: acc.calories + (m.calories || 0),
+    protein:  acc.protein  + (m.protein  || 0),
+    carbs:    acc.carbs    + (m.carbs    || 0),
+    fat:      acc.fat      + (m.fat      || 0),
+  }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+}
+function pruneMealPhotos() {
+  _ensureMeals();
+  if (state.settings.mealPrunedAt === today()) return;
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+  const cutKey = cutoff.toISOString().slice(0, 10);
+  let pruned = 0;
+  for (const m of state.meals) {
+    if (m.dataUrl && m.date < cutKey) { delete m.dataUrl; pruned++; }
+  }
+  state.settings.mealPrunedAt = today();
+  if (pruned > 0) save({ skipCloud: true });
+}
+
+async function analyzeMealPhoto(dataUrl, weightG) {
+  if (!state.settings.anthropicApiKey) throw new Error('Set up Claude API key first');
+  // dataUrl is "data:image/jpeg;base64,/9j/..." — split media type and base64
+  const m = dataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/i);
+  if (!m) throw new Error('Bad image data');
+  const mediaType = m[1];
+  const data = m[2];
+  const weightLine = weightG
+    ? `The user has weighed the meal: ${weightG} grams. Estimate macros for that exact weight.`
+    : `The user has not weighed the meal. Estimate macros for a typical single serving you can see in the photo.`;
+  const sys = `You are a precise nutrition estimator. Given a meal photo, return calories and macros.
+${weightLine}
+Be conservative — if unsure, lean realistic, not optimistic.
+Return ONLY a single JSON object with keys: name (short, 2-5 words), calories (int), protein (int grams), carbs (int grams), fat (int grams), confidence ("low"|"medium"|"high"), note (short string explaining assumptions, max 100 chars).
+No prose, no markdown, no code fences.
+Example: {"name":"chicken rice broccoli","calories":520,"protein":45,"carbs":58,"fat":12,"confidence":"medium","note":"~150g chicken, ~200g rice"}`;
+  const res = await fetch(AI_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': state.settings.anthropicApiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: AI_MODEL,
+      max_tokens: 300,
+      system: sys,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data } },
+          { type: 'text', text: weightG ? `Weight: ${weightG} g.` : 'Estimate a typical serving from the photo.' }
+        ]
+      }]
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new Error('Claude ' + res.status + ': ' + t.slice(0, 160));
+  }
+  const data2 = await res.json();
+  let txt = (data2.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+  const fence = txt.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) txt = fence[1].trim();
+  const first = txt.indexOf('{'); const last = txt.lastIndexOf('}');
+  if (first >= 0 && last >= 0) txt = txt.slice(first, last + 1);
+  return JSON.parse(txt);
+}
+
+function renderFood() {
+  _ensureMeals();
+  const v = $('view');
+  const date = today();
+  const t = mealTotalsForDate(date);
+  const target = NUTRITION;
+
+  // Totals card
+  const card = el('div', { class: 'card food-totals' });
+  card.appendChild(el('div', { class: 'totals-head' }, [
+    el('div', {}, [
+      el('div', { class: 'big' }, `${Math.round(t.calories)} kcal`),
+      el('div', { class: 'sub' }, `target ${target.calories} · ${Math.max(0, target.calories - Math.round(t.calories))} kcal left`)
+    ]),
+    el('div', { class: 'sub', style: 'text-align:right;' }, `${mealsForDate(date).length} meal${mealsForDate(date).length === 1 ? '' : 's'} today`)
+  ]));
+  const _bar = (cls, lbl, done, tgt, unit) => {
+    const pct = Math.min(100, tgt ? Math.round(done / tgt * 100) : 0);
+    return el('div', { class: 'macro-bar ' + cls }, [
+      el('span', { class: 'lbl' }, lbl),
+      el('span', { class: 'vals' }, `${Math.round(done)}${unit} / ${tgt}${unit}`),
+      el('div', { class: 'track' }, [el('span', { class: 'fill', style: `width:${pct}%;` })])
+    ]);
+  };
+  card.appendChild(_bar('kcal', 'Cal',     t.calories, target.calories, ''));
+  card.appendChild(_bar('p',    'Protein', t.protein,  target.protein,  'g'));
+  card.appendChild(_bar('c',    'Carbs',   t.carbs,    target.carbs,    'g'));
+  card.appendChild(_bar('f',    'Fat',     t.fat,      target.fat,      'g'));
+  v.appendChild(card);
+
+  // Add button
+  const addBtn = el('button', {
+    class: 'add-meal-btn',
+    onclick: () => openAddMealModal()
+  }, [
+    el('span', { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' }),
+    el('span', {}, 'Add meal')
+  ]);
+  v.appendChild(addBtn);
+
+  // Today's meals list
+  const meals = mealsForDate(date);
+  const listCard = el('div', { class: 'card', style: 'padding:0;' });
+  listCard.appendChild(el('div', { class: 'card-title', style: 'padding:14px 14px 8px;margin:0;' }, 'Today\'s meals'));
+  if (!meals.length) {
+    listCard.appendChild(el('div', { class: 'meal-empty' }, 'No meals yet — tap Add meal to log your first.'));
+  } else {
+    meals.forEach(meal => {
+      const row = el('div', { class: 'meal-row', onclick: () => openEditMealModal(meal.id) });
+      const thumb = el('div', { class: 'thumb' });
+      if (meal.dataUrl) thumb.appendChild(el('img', { src: meal.dataUrl }));
+      else thumb.appendChild(el('span', { class: 'ph' }, '🍽'));
+      row.appendChild(thumb);
+      const body = el('div', { class: 'body' });
+      body.appendChild(el('div', { class: 'name' }, meal.name || 'Meal'));
+      body.appendChild(el('div', { class: 'meta' }, [
+        el('span', { html: `<b>${Math.round(meal.calories || 0)}</b> kcal` }),
+        el('span', { html: `P <b>${Math.round(meal.protein || 0)}</b>g` }),
+        el('span', { html: `C <b>${Math.round(meal.carbs || 0)}</b>g` }),
+        el('span', { html: `F <b>${Math.round(meal.fat || 0)}</b>g` }),
+      ]));
+      row.appendChild(body);
+      if (meal.time) row.appendChild(el('span', { class: 'time' }, meal.time));
+      listCard.appendChild(row);
+    });
+  }
+  v.appendChild(listCard);
+}
+
+function openAddMealModal() {
+  let dataUrl = null;
+  let weightG = null;
+  let parsed = null; // result from Claude
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Add meal'));
+  const form = el('div', { class: 'meal-modal-form' });
+
+  const photoBox = el('div', { class: 'meal-photo-empty' }, 'Tap to add a photo (optional)');
+  photoBox.style.cursor = 'pointer';
+  const fileInp = el('input', { type: 'file', accept: 'image/*', style: 'display:none;' });
+  photoBox.onclick = () => fileInp.click();
+  fileInp.onchange = e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const W = 320, H = Math.round(W * img.height / img.width);
+        const c = document.createElement('canvas');
+        c.width = W; c.height = H;
+        c.getContext('2d').drawImage(img, 0, 0, W, H);
+        dataUrl = c.toDataURL('image/jpeg', 0.65);
+        photoBox.outerHTML = '';
+        const preview = el('img', { class: 'meal-photo-preview', src: dataUrl, style: 'cursor:pointer;', onclick: () => fileInp.click() });
+        form.insertBefore(preview, form.firstChild);
+      };
+      img.src = ev.target.result;
+    };
+    r.readAsDataURL(f);
+  };
+  form.appendChild(photoBox);
+  form.appendChild(fileInp);
+
+  form.appendChild(el('label', {}, 'Weight (grams, optional)'));
+  const weightInp = el('input', { type: 'number', placeholder: 'e.g. 350', min: '0' });
+  weightInp.oninput = () => { weightG = parseInt(weightInp.value, 10) || null; };
+  form.appendChild(weightInp);
+
+  const analyzeStatus = el('div', { class: 'small dim', style: 'min-height:18px;margin-top:8px;' });
+  const analyzeBtn = el('button', {
+    class: 'btn',
+    style: 'margin-top:10px;width:100%;',
+    onclick: async () => {
+      if (!dataUrl) { toast('Add a photo first'); return; }
+      if (!state.settings.anthropicApiKey) { openAIKeyModal(); return; }
+      analyzeBtn.disabled = true;
+      analyzeStatus.textContent = 'Analyzing with Claude…';
+      try {
+        parsed = await analyzeMealPhoto(dataUrl, weightG);
+        nameInp.value = parsed.name || '';
+        kcalInp.value = parsed.calories || '';
+        pInp.value = parsed.protein || '';
+        cInp.value = parsed.carbs || '';
+        fInp.value = parsed.fat || '';
+        analyzeStatus.textContent = `${parsed.confidence || 'medium'} confidence · ${parsed.note || ''}`;
+      } catch (err) {
+        analyzeStatus.textContent = 'Failed: ' + (err.message || 'unknown').slice(0, 100);
+      } finally {
+        analyzeBtn.disabled = false;
+      }
+    }
+  }, '✨ Analyze with Claude');
+  form.appendChild(analyzeBtn);
+  form.appendChild(analyzeStatus);
+
+  form.appendChild(el('label', {}, 'Meal name'));
+  const nameInp = el('input', { type: 'text', placeholder: 'e.g. Chicken rice broccoli' });
+  form.appendChild(nameInp);
+
+  form.appendChild(el('label', {}, 'Calories · Protein · Carbs · Fat'));
+  const kcalInp = el('input', { type: 'number', placeholder: 'kcal', min: '0' });
+  const pInp = el('input', { type: 'number', placeholder: 'P g', min: '0' });
+  const cInp = el('input', { type: 'number', placeholder: 'C g', min: '0' });
+  const fInp = el('input', { type: 'number', placeholder: 'F g', min: '0' });
+  form.appendChild(el('div', { class: 'grid4' }, [kcalInp, pInp, cInp, fInp]));
+
+  m.appendChild(form);
+
+  m.appendChild(el('button', {
+    class: 'btn',
+    style: 'margin-top:14px;width:100%;',
+    onclick: () => {
+      const name = (nameInp.value || '').trim() || (parsed?.name || 'Meal');
+      const calories = parseInt(kcalInp.value, 10) || 0;
+      const protein  = parseInt(pInp.value, 10) || 0;
+      const carbs    = parseInt(cInp.value, 10) || 0;
+      const fat      = parseInt(fInp.value, 10) || 0;
+      if (!calories && !protein && !carbs && !fat) { toast('Add macros or analyze the photo'); return; }
+      const now = new Date();
+      const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      const meal = {
+        id: 'meal_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        date: today(), time, dataUrl: dataUrl || undefined, weightG: weightG || undefined,
+        name, calories, protein, carbs, fat,
+        source: parsed ? 'ai' : 'manual',
+      };
+      _ensureMeals();
+      try {
+        state.meals.push(meal);
+        save();
+        closeModal();
+        render();
+        toast('Meal added');
+      } catch (err) {
+        const i = state.meals.indexOf(meal);
+        if (i >= 0) state.meals.splice(i, 1);
+        toast('Storage full — delete old meals or photos');
+      }
+    }
+  }, 'Save meal'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;width:100%;', onclick: closeModal }, 'Cancel'));
+  openModal(m);
+}
+
+function openEditMealModal(id) {
+  const meal = (state.meals || []).find(x => x.id === id);
+  if (!meal) return;
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Meal'));
+  if (meal.dataUrl) m.appendChild(el('img', { class: 'meal-photo-preview', src: meal.dataUrl, style: 'margin-bottom:10px;' }));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' }, [
+    el('div', {}, meal.name || 'Meal'),
+    el('div', {}, `${meal.date} ${meal.time || ''}${meal.weightG ? ' · ' + meal.weightG + 'g' : ''}`)
+  ]));
+  m.appendChild(el('div', {
+    style: 'display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;'
+  }, [
+    el('div', { style: 'background:var(--surface-2);padding:10px;border-radius:10px;' }, [
+      el('div', { class: 'small dim' }, 'Calories'), el('div', { style: 'font-weight:700;' }, `${meal.calories} kcal`)
+    ]),
+    el('div', { style: 'background:var(--surface-2);padding:10px;border-radius:10px;' }, [
+      el('div', { class: 'small dim' }, 'Protein'), el('div', { style: 'font-weight:700;' }, `${meal.protein} g`)
+    ]),
+    el('div', { style: 'background:var(--surface-2);padding:10px;border-radius:10px;' }, [
+      el('div', { class: 'small dim' }, 'Carbs'), el('div', { style: 'font-weight:700;' }, `${meal.carbs} g`)
+    ]),
+    el('div', { style: 'background:var(--surface-2);padding:10px;border-radius:10px;' }, [
+      el('div', { class: 'small dim' }, 'Fat'), el('div', { style: 'font-weight:700;' }, `${meal.fat} g`)
+    ]),
+  ]));
+  m.appendChild(el('button', {
+    class: 'btn danger', style: 'margin-top:14px;width:100%;',
+    onclick: () => {
+      if (!confirm('Delete this meal?')) return;
+      state.meals = state.meals.filter(x => x.id !== id);
+      save(); closeModal(); render();
+      toast('Meal deleted');
+    }
+  }, 'Delete meal'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;width:100%;', onclick: closeModal }, 'Close'));
+  openModal(m);
+}
+pruneMealPhotos();
+
+/* =========== COACH TAB =========== */
+function renderCoach() {
+  const v = $('view');
+
+  // Hero — Open Coach button
+  v.appendChild(el('button', {
+    class: 'add-meal-btn',
+    style: 'background:linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);',
+    onclick: () => { coachChatHistory = []; openCoachModal(); }
+  }, [
+    el('span', { html: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M19 16l.7 1.8L21.5 18l-1.8.7L19 20l-.7-1.3L17 18l1.7-.5z"/></svg>' }),
+    el('span', {}, 'Open Coach chat')
+  ]));
+
+  // Quick prompts
+  const quick = el('div', { class: 'card' });
+  quick.appendChild(el('div', { class: 'card-title', style: 'margin-bottom:10px;' }, 'Quick ask'));
+  const prompts = [
+    'Should I push today or back off?',
+    'How am I doing this week?',
+    'Plan tomorrow\'s session',
+    'Am I eating enough protein?',
+    'Any soreness concerns from my logs?',
+  ];
+  const pwrap = el('div', { style: 'display:flex;flex-direction:column;gap:6px;' });
+  prompts.forEach(p => {
+    pwrap.appendChild(el('button', {
+      class: 'btn secondary',
+      style: 'text-align:left;padding:10px 12px;font-size:13px;justify-content:flex-start;display:flex;align-items:center;gap:8px;',
+      onclick: () => { coachChatHistory = []; openCoachModal(p); }
+    }, [
+      el('span', { style: 'opacity:0.6;font-size:14px;' }, '›'),
+      el('span', {}, p)
+    ]));
+  });
+  quick.appendChild(pwrap);
+  v.appendChild(quick);
+
+  // How I feel — quick log + recent
+  const feel = el('div', { class: 'card', style: 'margin-top:14px;' });
+  feel.appendChild(el('div', { class: 'card-title' }, 'How I feel'));
+  feel.appendChild(el('button', {
+    class: 'btn',
+    style: 'width:100%;margin-top:6px;',
+    onclick: openFeelLogModal
+  }, 'Log how I feel today'));
+
+  const logs = (Array.isArray(state.coachLogs) ? state.coachLogs : [])
+    .filter(l => l.kind === 'feel')
+    .slice(-7).reverse();
+  if (logs.length) {
+    const list = el('div', { style: 'margin-top:14px;' });
+    logs.forEach(l => {
+      const dateLine = (l.date || '') + (l.dayKey != null && DAYS[l.dayKey] ? ' · ' + DAYS[l.dayKey].name : '');
+      const parts = [];
+      if (l.energy != null) parts.push(`Energy ${l.energy}/5`);
+      if (l.soreness != null) parts.push(`Soreness ${l.soreness}/5`);
+      list.appendChild(el('div', {
+        style: 'padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;'
+      }, [
+        el('div', { style: 'display:flex;justify-content:space-between;margin-bottom:2px;' }, [
+          el('span', { class: 'small dim' }, dateLine),
+          el('span', { style: 'font-weight:600;color:var(--text);' }, parts.join(' · ') || '—')
+        ]),
+        l.text ? el('div', { style: 'color:var(--text-muted);' }, l.text) : null
+      ].filter(Boolean)));
+    });
+    feel.appendChild(list);
+  } else {
+    feel.appendChild(el('div', {
+      class: 'small dim', style: 'margin-top:12px;text-align:center;'
+    }, 'No logs yet — tap above to start.'));
+  }
+  v.appendChild(feel);
+}
+
 /* =========== PROGRESS =========== */
 function renderProgress() {
   const v = $('view');
+
+  v.appendChild(el('button', {
+    class: 'gym-back-link',
+    style: 'margin-bottom:10px;background:var(--surface-2);border:1px solid var(--border);padding:6px 10px;border-radius:8px;font-size:12px;color:var(--text-muted);cursor:pointer;',
+    onclick: () => { activeTab = 'today'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  }, '← Workout'));
+
   const sessionsThis = sessionsThisWeek();
   const total = totalSessions();
   const bw = lastBodyWeight();
@@ -4972,7 +5545,7 @@ function renderProgress() {
   const recentCard = el('div', { class: 'card' });
   recentCard.appendChild(el('div', { class: 'card-title' }, 'Recent sessions'));
   const finished = Object.entries(state.workouts)
-    .filter(([_, w]) => w.finished)
+    .filter(([_, w]) => isRealSession(w))
     .sort((a, b) => b[0].localeCompare(a[0])).slice(0, 8);
   if (!finished.length) {
     recentCard.appendChild(el('div', { class: 'empty' }, 'Finish a workout to see it here.'));
@@ -5328,11 +5901,58 @@ function renderMore() {
     el('div', {}, 'My dumbbell weights (kg)'),
     el('div', { class: 'right' }, [el('span', { class: 'small dim' }, (state.settings.dumbbellWeights || []).join(', ')), el('span', {}, '›')])
   ]));
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: () => openSessionsDiagnostic()
+  }, [
+    el('div', {}, 'Sessions data (debug)'),
+    el('div', { class: 'right' }, [
+      el('span', { class: 'small dim' }, `${Object.keys(state.workouts).length} entries`),
+      el('span', {}, '›')
+    ])
+  ]));
   v.appendChild(set);
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.32 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.43 · Started ${PROGRAM_START}`));
+}
+
+function openSessionsDiagnostic() {
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Sessions data'));
+  const entries = Object.entries(state.workouts).sort(([a], [b]) => a < b ? 1 : -1);
+  let totalCount = 0, finishedCount = 0, hasSetsCount = 0;
+  for (const [date, w] of entries) {
+    totalCount++;
+    if (w.finished) finishedCount++;
+    let setsLogged = 0;
+    for (const arr of Object.values(w.logs || {})) {
+      for (const s of arr) if (s && s.d) setsLogged++;
+    }
+    if (setsLogged > 0) hasSetsCount++;
+    const day = w.dayKey != null ? DAYS[w.dayKey] : null;
+    const status = w.finished
+      ? '✓ finished'
+      : (setsLogged > 0 ? `${setsLogged} sets, no finish` : 'empty');
+    const color = w.finished
+      ? 'var(--success)'
+      : (setsLogged > 0 ? 'var(--warn)' : 'var(--text-dim)');
+    const row = el('div', { style: 'padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;' });
+    row.appendChild(el('div', { style: 'display:flex;justify-content:space-between;gap:10px;' }, [
+      el('span', {}, `${date} · ${day ? day.name : '?'}`),
+      el('span', { style: `color:${color};font-weight:600;text-align:right;` }, status)
+    ]));
+    m.appendChild(row);
+  }
+  m.appendChild(el('div', {
+    style: 'padding:14px 0 6px;font-size:13px;font-weight:700;color:var(--text);'
+  }, `${totalCount} entries · ${finishedCount} finished · ${hasSetsCount} with logged sets`));
+  m.appendChild(el('div', {
+    class: 'small dim', style: 'margin-top:4px;'
+  }, 'Counted by Progress: any entry with finished OR logged sets.'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:14px;', onclick: closeModal }, 'Close'));
+  openModal(m);
 }
 
 /* =========== MODALS =========== */
@@ -5668,9 +6288,9 @@ function buildCoachContext() {
     lines.push(`Today is a rest day.`);
   }
 
-  // Last 8 finished sessions
+  // Last 8 sessions (finished or with logged sets)
   const finished = Object.entries(state.workouts || {})
-    .filter(([d, w]) => w && w.finished)
+    .filter(([d, w]) => isRealSession(w))
     .sort((a, b) => b[0].localeCompare(a[0]))
     .slice(0, 8);
   if (finished.length) {
@@ -6502,9 +7122,18 @@ function addPhoto(file) {
       c.width = W; c.height = H;
       c.getContext('2d').drawImage(img, 0, 0, W, H);
       const dataUrl = c.toDataURL('image/jpeg', 0.7);
-      state.photos.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 7), date: today(), dataUrl });
-      try { save(); toast('Photo added'); render(); }
-      catch (err) { toast('Storage full — delete old photos'); }
+      const photo = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 7), date: today(), dataUrl };
+      try {
+        state.photos.push(photo);
+        save();
+        toast('Photo added');
+        render();
+      } catch (err) {
+        // Roll back the in-memory push so state stays clean if save() threw (quota exceeded)
+        const i = state.photos.indexOf(photo);
+        if (i >= 0) state.photos.splice(i, 1);
+        toast('Storage full — delete old photos');
+      }
     };
     img.src = e.target.result;
   };
