@@ -1786,13 +1786,12 @@ const DAYS = {
   4: {
     name: 'Legs',
     focus: 'Quads · Hamstrings · Glutes · Calves · Core',
-    note: 'HAMSTRING CAUTION — drop weight on leg curl until pain is gone. Stop on sharp pain.',
-    warn: true,
+    note: 'Brace through every rep. Drive through the heel on presses, control the negative on leg curls.',
     exercises: [
       { id: 'thu-1', name: 'Leg press', sets: 3, repsMin: 8, repsMax: 10, weight: 60, target: 'Quads, glutes', alt: 'Hack squat machine / Goblet squat', alternatives: ['Hack squat machine', 'Goblet squat'], muscles: ['legs','glutes'] },
       { id: 'thu-2', name: 'Romanian deadlift', sets: 3, repsMin: 8, repsMax: 10, weight: 10, target: 'Hamstrings, glutes', alt: 'Dumbbell Romanian deadlift / Smith machine RDL', alternatives: ['Dumbbell Romanian deadlift', 'Smith machine RDL'], muscles: ['legs','glutes'], barbell: true },
       { id: 'thu-3', name: 'Stationary split squat', sets: 3, repsMin: 10, repsMax: 10, weight: 0, target: 'Quads, glutes (each leg)', alt: 'Walking lunges / Bulgarian split squat', alternatives: ['Walking lunges', 'Bulgarian split squat'], bw: true, muscles: ['legs','glutes'] },
-      { id: 'thu-4', name: 'Leg curl', sets: 3, repsMin: 10, repsMax: 12, weight: 15, target: 'Hamstrings', alt: 'Seated leg curl machine / Single-leg lying curl', alternatives: ['Seated leg curl machine', 'Single-leg lying curl'], warn: 'Watch hamstring', muscles: ['legs'] },
+      { id: 'thu-4', name: 'Leg curl', sets: 3, repsMin: 10, repsMax: 12, weight: 15, target: 'Hamstrings', alt: 'Seated leg curl machine / Single-leg lying curl', alternatives: ['Seated leg curl machine', 'Single-leg lying curl'], muscles: ['legs'] },
       { id: 'thu-5', name: 'Standing calf raise', sets: 3, repsMin: 12, repsMax: 15, weight: 10, target: 'Gastrocnemius', alt: 'Seated calf raise / Leg press calf raise', alternatives: ['Seated calf raise', 'Leg press calf raise'], muscles: ['legs'] },
       { id: 'thu-6', name: 'Plank', sets: 3, repsMin: 30, repsMax: 45, weight: 40, target: 'Core', alt: 'Dead bug / Hollow body hold', alternatives: ['Dead bug', 'Hollow body hold'], timed: true, muscles: ['core'] }
     ]
@@ -5163,6 +5162,27 @@ function renderMore() {
   // Settings
   const set = el('div', { class: 'card' });
   set.appendChild(el('div', { class: 'card-title' }, 'Settings'));
+
+  // Theme picker — cycles through indigo / ocean / forest / sunset / oled.
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: () => {
+      const opts = ['indigo', 'ocean', 'forest', 'sunset', 'oled'];
+      const cur = state.settings.theme || 'indigo';
+      const next = opts[(opts.indexOf(cur) + 1) % opts.length];
+      applyTheme(next);
+      save(); render();
+      toast('Theme: ' + next.charAt(0).toUpperCase() + next.slice(1));
+    }
+  }, [
+    el('div', {}, 'Theme'),
+    el('div', { class: 'right' }, [
+      el('span', { style: 'display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:-2px;' }),
+      el('span', { style: 'text-transform:capitalize;' }, state.settings.theme || 'indigo'),
+      el('span', {}, '›')
+    ])
+  ]));
+
   set.appendChild(el('div', {
     class: 'list-item',
     onclick: openAIKeyModal
@@ -5231,7 +5251,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.29 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.31 · Started ${PROGRAM_START}`));
 }
 
 /* =========== MODALS =========== */
