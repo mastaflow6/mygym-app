@@ -2152,7 +2152,7 @@ async function cloudCreateOrUpdate() {
   const payload = {
     ...state,
     customExerciseImages: {},
-    settings: { ...state.settings, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0 }
+    settings: { ...state.settings, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, anthropicApiKey: '' }
   };
   const body = JSON.stringify({
     description: CLOUD_GIST_DESC,
@@ -2377,7 +2377,7 @@ function buildCloudBackupCard() {
   card.appendChild(el('div', {
     class: 'small dim',
     style: 'margin-top:8px;line-height:1.5;'
-  }, 'Backup includes your Anthropic key so it auto-restores on a new device. GitHub token stays device-only.'));
+  }, 'Anthropic key and GitHub token are NEVER included in the backup (GitHub secret-scanning auto-revokes keys found in any gist). Re-enter both on a new device.'));
   return card;
 }
 
@@ -5919,7 +5919,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.46 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.47 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
