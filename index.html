@@ -2271,6 +2271,31 @@ async function cloudConnect(token) {
   return { ok: r.ok, foundExisting: false, ...r };
 }
 
+async function cloudDeleteGist() {
+  const token = state.settings.cloudGistToken;
+  const id = state.settings.cloudGistId;
+  if (!token || !id) return { ok: false, reason: 'not-configured' };
+  try {
+    const res = await fetch('https://api.github.com/gists/' + id, {
+      method: 'DELETE',
+      headers: cloudHeaders(),
+    });
+    if (res.status === 204 || res.ok) {
+      cloudDisconnect();
+      return { ok: true };
+    }
+    if (res.status === 401 || res.status === 403) return { ok: false, reason: 'auth' };
+    if (res.status === 404) {
+      cloudDisconnect();
+      return { ok: true, alreadyGone: true };
+    }
+    const t = await res.text().catch(() => '');
+    return { ok: false, reason: 'http-' + res.status, body: t.slice(0, 120) };
+  } catch (e) {
+    return { ok: false, reason: 'network', error: e.message };
+  }
+}
+
 function cloudDisconnect() {
   state.settings.cloudGistToken = '';
   state.settings.cloudGistId = '';
@@ -2361,6 +2386,21 @@ function buildCloudBackupCard() {
   card.appendChild(row);
 
   card.appendChild(el('button', {
+    class: 'btn small danger',
+    style: 'margin-top:8px;width:100%;',
+    onclick: async () => {
+      if (!confirm('Permanently delete this backup gist on GitHub (including all its history)? Your local data stays intact. This cannot be undone.')) return;
+      const r = await cloudDeleteGist();
+      if (r.ok) {
+        toast(r.alreadyGone ? '✓ Already deleted on GitHub — local creds cleared' : '✓ Gist deleted on GitHub');
+        render();
+      } else {
+        toast('Delete failed: ' + (r.reason || 'unknown'));
+      }
+    }
+  }, 'Delete gist on GitHub'));
+
+  card.appendChild(el('button', {
     class: 'btn small secondary',
     style: 'margin-top:8px;width:100%;',
     onclick: () => {
@@ -2378,6 +2418,14 @@ function buildCloudBackupCard() {
     class: 'small dim',
     style: 'margin-top:8px;line-height:1.5;'
   }, 'Anthropic key and GitHub token are NEVER included in the backup (GitHub secret-scanning auto-revokes keys found in any gist). Re-enter both on a new device.'));
+  card.appendChild(el('div', {
+    class: 'small dim',
+    style: 'margin-top:6px;line-height:1.5;'
+  }, [
+    el('span', {}, 'Manage other old gists at '),
+    el('a', { href: 'https://gist.github.com/mine', target: '_blank', rel: 'noopener', style: 'color:var(--accent);text-decoration:underline;' }, 'gist.github.com/mine'),
+    el('span', {}, '.')
+  ]));
   return card;
 }
 
@@ -3792,6 +3840,63 @@ function renderHome() {
       el('span', { class: 'skip-icon', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polygon points="5 4 15 12 5 20"/><line x1="19" y1="5" x2="19" y2="19"/></svg>' }),
       el('span', {}, 'Skip today · move to tomorrow')
     ]));
+
+    // Gym bag — inline checklist (right under Skip today)
+    {
+      const checked = new Set(todaysBag());
+      const bagDone = checked.size;
+      const bagTotal = BAG_ITEMS.length;
+      const bagFull = bagDone === bagTotal;
+      const collapsed = !!state.settings.bagCollapsed;
+
+      const bagCard = el('div', { class: 'card', style: 'margin-top:14px;' });
+      const header = el('div', {
+        class: 'row between',
+        style: 'cursor:pointer;align-items:center;gap:8px;' + (collapsed ? '' : 'margin-bottom:8px;'),
+        onclick: () => {
+          state.settings.bagCollapsed = !state.settings.bagCollapsed;
+          save(); render();
+        }
+      });
+      header.appendChild(el('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
+        el('div', { class: 'card-title', style: 'margin:0;' }, '🎒 Gym bag'),
+        el('span', { class: 'chip' + (bagFull ? ' success' : '') }, bagFull ? '✓ Packed' : `${bagDone} / ${bagTotal}`)
+      ]));
+      const rightControls = el('div', { class: 'row', style: 'gap:8px;align-items:center;' });
+      if (bagDone > 0 && !collapsed) {
+        rightControls.appendChild(el('button', {
+          class: 'btn small secondary',
+          style: 'padding:4px 10px;font-size:11px;',
+          onclick: (e) => {
+            e.stopPropagation();
+            state.bag[today()] = [];
+            save(); render();
+          }
+        }, 'Clear'));
+      }
+      rightControls.appendChild(el('span', {
+        style: 'color:var(--text-muted);font-size:14px;transition:transform 0.2s;' + (collapsed ? '' : 'transform:rotate(90deg);')
+      }, '›'));
+      header.appendChild(rightControls);
+      bagCard.appendChild(header);
+
+      if (!collapsed) {
+        const ul = el('ul', { class: 'checklist' });
+        BAG_ITEMS.forEach(it => {
+          const isChecked = checked.has(it.id);
+          const li = el('li', {
+            class: 'bag-row' + (isChecked ? ' done' : ''),
+            onclick: () => { bagToggle(it.id); render(); }
+          });
+          li.innerHTML = `
+            <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 12 10 18 20 6"/></svg></span>
+            <span class="text">${escapeHtml(it.label)}</span>`;
+          ul.appendChild(li);
+        });
+        bagCard.appendChild(ul);
+      }
+      v.appendChild(bagCard);
+    }
   }
 
   // Stat grid — Today's sets · Calories · Last session · Last sleep
@@ -3847,63 +3952,6 @@ function renderHome() {
   ql.appendChild(makeQuickBtn('Sleep', '😴', openSleepModal));
   ql.appendChild(makeQuickBtn('Meal', '🍽', openAddMealModal));
   v.appendChild(ql);
-
-  // Gym bag (workout days only) — inline checklist
-  if (day) {
-    const checked = new Set(todaysBag());
-    const bagDone = checked.size;
-    const bagTotal = BAG_ITEMS.length;
-    const bagFull = bagDone === bagTotal;
-    const collapsed = !!state.settings.bagCollapsed;
-
-    const bagCard = el('div', { class: 'card' });
-    const header = el('div', {
-      class: 'row between',
-      style: 'cursor:pointer;align-items:center;gap:8px;' + (collapsed ? '' : 'margin-bottom:8px;'),
-      onclick: () => {
-        state.settings.bagCollapsed = !state.settings.bagCollapsed;
-        save(); render();
-      }
-    });
-    header.appendChild(el('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
-      el('div', { class: 'card-title', style: 'margin:0;' }, '🎒 Gym bag'),
-      el('span', { class: 'chip' + (bagFull ? ' success' : '') }, bagFull ? '✓ Packed' : `${bagDone} / ${bagTotal}`)
-    ]));
-    const rightControls = el('div', { class: 'row', style: 'gap:8px;align-items:center;' });
-    if (bagDone > 0 && !collapsed) {
-      rightControls.appendChild(el('button', {
-        class: 'btn small secondary',
-        style: 'padding:4px 10px;font-size:11px;',
-        onclick: (e) => {
-          e.stopPropagation();
-          state.bag[today()] = [];
-          save(); render();
-        }
-      }, 'Clear'));
-    }
-    rightControls.appendChild(el('span', {
-      style: 'color:var(--text-muted);font-size:14px;transition:transform 0.2s;' + (collapsed ? '' : 'transform:rotate(90deg);')
-    }, '›'));
-    header.appendChild(rightControls);
-    bagCard.appendChild(header);
-
-    if (!collapsed) {
-      const ul = el('ul', { class: 'checklist' });
-      BAG_ITEMS.forEach(it => {
-        const isChecked = checked.has(it.id);
-        const li = el('li', {
-          class: 'bag-row' + (isChecked ? ' done' : ''),
-          onclick: () => { bagToggle(it.id); render(); }
-        });
-        li.innerHTML = `
-          <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 12 10 18 20 6"/></svg></span>
-          <span class="text">${escapeHtml(it.label)}</span>`;
-        ul.appendChild(li);
-      });
-      bagCard.appendChild(ul);
-    }
-    v.appendChild(bagCard);
-  }
 
   // Today's tasks — slim daily reminder, AI paste-able. Tap to clear (recurring tasks come back next matching day).
   {
@@ -5086,22 +5134,44 @@ function pruneMealPhotos() {
   if (pruned > 0) save({ skipCloud: true });
 }
 
-async function analyzeMealPhoto(dataUrl, weightG) {
+async function analyzeMealPhoto(dataUrl, weightG, userDescription) {
   if (!state.settings.anthropicApiKey) throw new Error('Set up Claude API key first');
   // dataUrl is "data:image/jpeg;base64,/9j/..." — split media type and base64
   const m = dataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/i);
   if (!m) throw new Error('Bad image data');
   const mediaType = m[1];
   const data = m[2];
+
   const weightLine = weightG
-    ? `The user has weighed the meal: ${weightG} grams. Estimate macros for that exact weight.`
-    : `The user has not weighed the meal. Estimate macros for a typical single serving you can see in the photo.`;
-  const sys = `You are a precise nutrition estimator. Given a meal photo, return calories and macros.
+    ? `The user has weighed the meal: ${weightG} grams. Use this as the total weight for portion sizing.`
+    : `The user has NOT weighed the meal. Use the photo for portion sizing.`;
+  const descLine = userDescription
+    ? `The user provided this description (treat as ground truth for what's in the meal — ingredients, counts, weights when given). Cross-check against the photo and refine portions Claude can see better than the user described:\n"""${userDescription}"""`
+    : `The user gave no text description. Identify each visible item from the photo only.`;
+
+  const sys = `You are a precise nutrition estimator. Given a meal photo (and possibly a user description) return calories and macros.
+
 ${weightLine}
-Be conservative — if unsure, lean realistic, not optimistic.
-Return ONLY a single JSON object with keys: name (short, 2-5 words), calories (int), protein (int grams), carbs (int grams), fat (int grams), confidence ("low"|"medium"|"high"), note (short string explaining assumptions, max 100 chars).
+${descLine}
+
+Process:
+1. List every distinct food item visible in the photo (and listed in the user description).
+2. For each item, estimate its weight in grams from visual cues (plate diameter ≈ 25cm, slice of bread ≈ 30g, egg ≈ 50g shelled, etc.) and the user's description if any.
+3. Look up typical macros per 100g for each item. Sum them.
+4. Be REALISTIC, not over-cautious. A slice of bread has ~15g carbs — don't undershoot.
+5. If you see bread, pasta, rice, potato, or any visible carb source, MAKE SURE carbs reflect it (12-20g per slice/100g).
+
+Return ONLY a single JSON object with keys: name (2-5 words summarizing the meal), calories (int), protein (int grams), carbs (int grams), fat (int grams), confidence ("low"|"medium"|"high"), note (string, max 140 chars, list each item + your assumed weight, e.g. "3 eggs (150g), 1 bread slice (30g), 100g spinach, 1 tbsp butter").
+
 No prose, no markdown, no code fences.
-Example: {"name":"chicken rice broccoli","calories":520,"protein":45,"carbs":58,"fat":12,"confidence":"medium","note":"~150g chicken, ~200g rice"}`;
+Example: {"name":"eggs spinach bread","calories":510,"protein":24,"carbs":22,"fat":36,"confidence":"medium","note":"3 eggs ~150g, 1 bread slice ~30g, 100g spinach, 1 tbsp butter, sprinkle of cheese"}`;
+
+  const userText = [
+    weightG ? `Total weight: ${weightG} g.` : null,
+    userDescription ? `What's in it: ${userDescription}` : null,
+    !userDescription && !weightG ? 'Estimate a typical serving from the photo.' : null,
+  ].filter(Boolean).join('\n');
+
   const res = await fetch(AI_API_URL, {
     method: 'POST',
     headers: {
@@ -5112,13 +5182,13 @@ Example: {"name":"chicken rice broccoli","calories":520,"protein":45,"carbs":58,
     },
     body: JSON.stringify({
       model: AI_MODEL,
-      max_tokens: 300,
+      max_tokens: 400,
       system: sys,
       messages: [{
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: mediaType, data } },
-          { type: 'text', text: weightG ? `Weight: ${weightG} g.` : 'Estimate a typical serving from the photo.' }
+          { type: 'text', text: userText || ' ' }
         ]
       }]
     }),
@@ -5239,7 +5309,14 @@ function openAddMealModal() {
   form.appendChild(photoBox);
   form.appendChild(fileInp);
 
-  form.appendChild(el('label', {}, 'Weight (grams, optional)'));
+  form.appendChild(el('label', {}, "What's in it? (optional, helps accuracy)"));
+  const descInp = el('input', {
+    type: 'text',
+    placeholder: 'e.g. 3 eggs, 1 slice bread, 100g spinach, cheese'
+  });
+  form.appendChild(descInp);
+
+  form.appendChild(el('label', {}, 'Total weight in grams (optional, only if you weighed it)'));
   const weightInp = el('input', { type: 'number', placeholder: 'e.g. 350', min: '0' });
   weightInp.oninput = () => { weightG = parseInt(weightInp.value, 10) || null; };
   form.appendChild(weightInp);
@@ -5254,7 +5331,8 @@ function openAddMealModal() {
       analyzeBtn.disabled = true;
       analyzeStatus.textContent = 'Analyzing with Claude…';
       try {
-        parsed = await analyzeMealPhoto(dataUrl, weightG);
+        const desc = (descInp.value || '').trim();
+        parsed = await analyzeMealPhoto(dataUrl, weightG, desc || null);
         nameInp.value = parsed.name || '';
         kcalInp.value = parsed.calories || '';
         pInp.value = parsed.protein || '';
@@ -5919,7 +5997,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.47 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.51 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
@@ -6130,7 +6208,30 @@ function openAIKeyModal(onSaved) {
   });
   m.appendChild(inp);
 
-  const status = el('div', { class: 'small', style: 'margin-top:8px;min-height:18px;' });
+  // Show/hide toggle + char counter — helps spot truncated/wrong pastes
+  const meta = el('div', {
+    style: 'display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:11px;color:var(--text-muted);'
+  });
+  const showBtn = el('button', {
+    type: 'button',
+    style: 'background:transparent;border:none;color:var(--accent);font-size:11px;cursor:pointer;padding:0;',
+    onclick: () => {
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+      showBtn.textContent = inp.type === 'password' ? '👁 Show key' : '🙈 Hide key';
+    }
+  }, '👁 Show key');
+  const counter = el('span', {});
+  const updateCounter = () => {
+    const v = inp.value.trim();
+    counter.textContent = v ? `${v.length} chars · starts with "${v.slice(0, 8)}"` : '';
+  };
+  inp.oninput = updateCounter;
+  setTimeout(updateCounter, 0);
+  meta.appendChild(showBtn);
+  meta.appendChild(counter);
+  m.appendChild(meta);
+
+  const status = el('div', { class: 'small', style: 'margin-top:8px;min-height:18px;word-break:break-word;' });
   m.appendChild(status);
 
   const testBtn = el('button', {
