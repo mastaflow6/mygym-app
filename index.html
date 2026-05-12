@@ -3936,16 +3936,21 @@ function renderHome() {
 
   // Stat grid — Today's sets · Calories · Last session · Last sleep
   const grid = el('div', { class: 'stat-grid' });
-  // Slot 1: Today's sets
+  // Slot 1: Today's exercises
+  const _exCount = day ? (day.exercises ? day.exercises.length : 0) : 0;
   const _todayProg = day ? workoutProgress(date, todayKey) : { done: 0, total: 0 };
+  const _doneExercises = day && day.exercises ? day.exercises.filter(ex => {
+    const logs = state.workouts[date]?.logs?.[ex.id] || [];
+    return logs.length > 0 && logs.every(s => s.d);
+  }).length : 0;
   grid.appendChild(el('div', {
     class: 'stat',
     style: day ? 'cursor:pointer;' : '',
     onclick: day ? (() => { activeTab = 'today'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }) : undefined
   }, [
-    el('div', { class: 'label' }, 'Today sets'),
-    el('div', { class: 'value' }, day ? `${_todayProg.done} / ${_todayProg.total}` : '—'),
-    el('div', { class: 'sub' }, day ? (_todayProg.done >= _todayProg.total ? '✓ All done' : `${_todayProg.total - _todayProg.done} to go`) : 'Rest day')
+    el('div', { class: 'label' }, 'Today'),
+    el('div', { class: 'value' }, day ? `${_doneExercises} / ${_exCount}` : '—'),
+    el('div', { class: 'sub' }, day ? (_doneExercises >= _exCount ? '✓ All done' : `${_exCount - _doneExercises} exercise${(_exCount - _doneExercises) === 1 ? '' : 's'} left`) : 'Rest day')
   ]));
   // Slot 2: Calories (links to Food)
   const _kcalDone = mealTotalsForDate(today()).calories;
@@ -6458,7 +6463,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.56 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.57 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
