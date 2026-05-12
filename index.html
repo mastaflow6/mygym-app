@@ -2095,6 +2095,7 @@ const defaultState = {
   customDayExercises: {},   // dayKey → [exercise...] appended to DAYS[k].exercises at runtime
   exerciseSwaps: {},        // { [exId]: swapIdx } — last-confirmed swap, default for future days
   meals: [],                // [{ id, date, time, dataUrl?, weightG?, name, calories, protein, carbs, fat, source, notes? }]
+  foodLibrary: [],          // [{ id, name, kcal100, p100, c100, f100, note?, createdAt }] — reusable food entries with per-100g macros
   coachLogs: [],            // [{ id, date, kind, energy?, soreness?, text, dayKey?, createdAt }]
   photos: [],
   notes: {},
@@ -5236,6 +5237,79 @@ function renderPlan() {
 function _ensureMeals() {
   if (!Array.isArray(state.meals)) state.meals = [];
 }
+
+// Reusable food library — per-100g macros for foods the user eats often.
+function ensureFoodLibrary() {
+  if (!Array.isArray(state.foodLibrary)) state.foodLibrary = [];
+}
+function newFoodId() { return 'fd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6); }
+function addFood({ name, kcal100, p100, c100, f100, note }) {
+  ensureFoodLibrary();
+  const cleanName = (name || '').trim();
+  if (!cleanName) return null;
+  const f = {
+    id: newFoodId(),
+    name: cleanName,
+    kcal100: Math.max(0, Number(kcal100) || 0),
+    p100: Math.max(0, Number(p100) || 0),
+    c100: Math.max(0, Number(c100) || 0),
+    f100: Math.max(0, Number(f100) || 0),
+    note: (note || '').trim() || null,
+    createdAt: Date.now()
+  };
+  state.foodLibrary.push(f);
+  save();
+  return f;
+}
+function updateFood(id, patch) {
+  ensureFoodLibrary();
+  const f = state.foodLibrary.find(x => x.id === id);
+  if (!f) return;
+  Object.assign(f, patch);
+  save();
+}
+function deleteFood(id) {
+  ensureFoodLibrary();
+  state.foodLibrary = state.foodLibrary.filter(x => x.id !== id);
+  save();
+}
+function getFoodLibrary() {
+  ensureFoodLibrary();
+  return state.foodLibrary.slice().sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// Ask Claude to estimate per-100g macros from a name and/or photo.
+async function analyzeFoodWithAI({ name, imageDataUrl }) {
+  if (!state.settings.anthropicApiKey) throw new Error('Set up your Anthropic API key first');
+  const sys = `You estimate per-100g macros for a food item. Output ONLY a single JSON object (no prose, no markdown fences):
+{
+  "name": "concise food name, capitalized (e.g. 'Cooked white rice')",
+  "kcal100": number (kcal per 100g),
+  "p100": number (grams of protein per 100g),
+  "c100": number (grams of carbs per 100g),
+  "f100": number (grams of fat per 100g),
+  "note": "short cooking method or qualifier, optional"
+}
+
+Use standard USDA-like values. Default to COOKED unless the user clearly says raw / dry / uncooked.
+Examples:
+- Cooked white rice ≈ 130 kcal, 2.7g P, 28g C, 0.3g F.
+- Cooked skinless chicken breast ≈ 165 kcal, 31g P, 0g C, 3.6g F.
+- Avocado (raw, flesh) ≈ 160 kcal, 2g P, 9g C, 15g F.
+Round to 1 decimal for protein/carbs/fat, integer for kcal. Don't invent numbers if truly unsure — keep them within realistic ranges.`;
+  const userText = name ? ('Food: ' + name) : 'Identify the food in the image and estimate macros.';
+  let raw;
+  if (imageDataUrl) {
+    raw = await callAnthropicVision({ system: sys, userText, imageDataUrl, maxTokens: 500 });
+  } else {
+    raw = await callAnthropic({ system: sys, messages: [{ role: 'user', content: userText }], maxTokens: 500 });
+  }
+  const cleaned = _stripJsonObjectFence(raw);
+  let parsed;
+  try { parsed = JSON.parse(cleaned); }
+  catch (_) { throw new Error('Claude returned non-JSON: ' + raw.slice(0, 150)); }
+  return parsed;
+}
 function mealsForDate(d) {
   _ensureMeals();
   return state.meals.filter(m => m.date === d).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
@@ -5374,6 +5448,49 @@ function renderFood() {
   ]);
   v.appendChild(addBtn);
 
+  // Food library (reusable per-100g macros)
+  const lib = getFoodLibrary();
+  const libCard = el('div', { class: 'card', style: 'padding:0;' });
+  libCard.appendChild(el('div', { class: 'row between', style: 'padding:14px 14px 8px;align-items:center;' }, [
+    el('div', { class: 'card-title', style: 'margin:0;' }, 'Food library'),
+    el('span', { class: 'chip' }, String(lib.length))
+  ]));
+  libCard.appendChild(el('button', {
+    class: 'btn',
+    style: 'margin:0 14px 12px;width:calc(100% - 28px);background:linear-gradient(135deg, var(--accent), var(--accent-strong));',
+    onclick: openAddFoodModal
+  }, '✨ Add food (text or photo + AI)'));
+  if (!lib.length) {
+    libCard.appendChild(el('div', { class: 'meal-empty', style: 'padding:0 14px 16px;' }, 'No foods yet. Add ones you eat regularly — the macros will auto-scale when you build meals.'));
+  } else {
+    lib.forEach(f => {
+      const row = el('div', {
+        class: 'food-lib-row',
+        style: 'display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--surface-2);cursor:pointer;',
+        onclick: () => openEditFoodModal(f.id)
+      });
+      const body = el('div', { style: 'flex:1;min-width:0;' });
+      body.appendChild(el('div', { style: 'font-size:14px;font-weight:700;color:var(--text);' }, f.name));
+      body.appendChild(el('div', {
+        style: 'font-size:11px;color:var(--text-muted);margin-top:2px;font-variant-numeric:tabular-nums;'
+      }, `per 100g · ${Math.round(f.kcal100)} kcal · P ${f.p100}g · C ${f.c100}g · F ${f.f100}g`));
+      if (f.note) body.appendChild(el('div', { style: 'font-size:11px;color:var(--text-dim);margin-top:1px;' }, f.note));
+      row.appendChild(body);
+      row.appendChild(el('button', {
+        style: 'background:none;border:none;color:var(--text-dim);padding:6px;cursor:pointer;',
+        html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>',
+        onclick: (e) => {
+          e.stopPropagation();
+          deleteFood(f.id);
+          render();
+          toast('Removed ' + f.name);
+        }
+      }));
+      libCard.appendChild(row);
+    });
+  }
+  v.appendChild(libCard);
+
   // Today's meals list
   const meals = mealsForDate(date);
   const listCard = el('div', { class: 'card', style: 'padding:0;' });
@@ -5401,6 +5518,212 @@ function renderFood() {
     });
   }
   v.appendChild(listCard);
+}
+
+// Add a food to the library. User types a name and/or attaches a photo; Claude
+// fills per-100g macros which the user can edit before saving.
+function openAddFoodModal() {
+  let pickedDataUrl = null;
+  let aiFilled = false;
+  let r = { name: '', kcal100: 0, p100: 0, c100: 0, f100: 0, note: '' };
+
+  const m = el('div');
+  m.appendChild(el('h3', {}, '✨ Add food to library'));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' },
+    'Type the food name and/or attach a photo. Claude will fill the per-100g macros — you can tweak before saving.'));
+
+  // Name
+  m.appendChild(el('label', {}, 'Food name'));
+  const nameInp = el('input', { type: 'text', placeholder: 'e.g. cooked white rice' });
+  nameInp.oninput = () => { r.name = nameInp.value; };
+  m.appendChild(nameInp);
+
+  // Photo
+  const fileInp = el('input', { type: 'file', accept: 'image/*', capture: 'environment', style: 'display:none' });
+  const photoBtn = el('button', { class: 'btn secondary', type: 'button', style: 'margin-top:10px;padding:8px 14px;font-size:13px;' }, '📷 Add photo (optional)');
+  const photoStatus = el('span', { class: 'small muted', style: 'margin-left:8px;' }, '');
+  photoBtn.onclick = () => fileInp.click();
+  fileInp.onchange = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    try {
+      pickedDataUrl = await resizeImageToDataUrl(f, 900, 0.78);
+      photoStatus.textContent = '✓ photo attached';
+      photoStatus.style.color = 'var(--success)';
+      photoBtn.textContent = '📷 Replace photo';
+    } catch (err) {
+      photoStatus.textContent = 'bad image';
+      photoStatus.style.color = 'var(--danger)';
+    }
+  };
+  m.appendChild(fileInp);
+  m.appendChild(el('div', {}, [photoBtn, photoStatus]));
+
+  // Status / loading
+  const status = el('div', { style: 'min-height:24px;margin:10px 0 4px;' });
+  m.appendChild(status);
+
+  // Macros grid (editable, hidden until AI fills OR user opens manually)
+  const macroBlock = el('div', { style: 'display:none;margin-top:6px;' });
+  function buildMacroBlock() {
+    macroBlock.innerHTML = '';
+    macroBlock.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:6px;' }, 'Per 100g — edit if Claude got it slightly off.'));
+    const grid = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:8px;' });
+    function fld(lbl, key, unit) {
+      const wrap = el('div', { style: 'display:flex;flex-direction:column;gap:4px;' });
+      wrap.appendChild(el('label', { style: 'margin:0;font-size:10px;' }, lbl));
+      const inp = el('input', { type: 'number', step: '0.1', min: '0', value: String(r[key]) });
+      inp.oninput = () => { r[key] = parseFloat(inp.value) || 0; };
+      wrap.appendChild(inp);
+      return wrap;
+    }
+    grid.appendChild(fld('Calories (kcal)', 'kcal100'));
+    grid.appendChild(fld('Protein (g)', 'p100'));
+    grid.appendChild(fld('Carbs (g)', 'c100'));
+    grid.appendChild(fld('Fat (g)', 'f100'));
+    macroBlock.appendChild(grid);
+    if (r.note) {
+      macroBlock.appendChild(el('div', { class: 'small muted', style: 'margin-top:6px;font-style:italic;' }, r.note));
+    }
+  }
+  m.appendChild(macroBlock);
+
+  // Buttons
+  const analyzeBtn = el('button', {
+    class: 'btn',
+    style: 'margin-top:10px;',
+    onclick: async () => {
+      const nm = (r.name || nameInp.value || '').trim();
+      if (!nm && !pickedDataUrl) { toast('Type a food name or attach a photo'); return; }
+      analyzeBtn.disabled = true;
+      analyzeBtn.style.opacity = '0.5';
+      status.innerHTML = '<div class="ai-loading"><span class="spinner"></span><span>Asking Claude…</span></div>';
+      try {
+        const parsed = await analyzeFoodWithAI({ name: nm, imageDataUrl: pickedDataUrl });
+        if (parsed && typeof parsed === 'object') {
+          if (parsed.name && !nameInp.value) {
+            nameInp.value = String(parsed.name).trim();
+            r.name = nameInp.value;
+          } else {
+            r.name = nameInp.value || (parsed.name || '');
+          }
+          r.kcal100 = Math.max(0, Math.round(Number(parsed.kcal100) || 0));
+          r.p100 = Math.max(0, parseFloat((Number(parsed.p100) || 0).toFixed(1)));
+          r.c100 = Math.max(0, parseFloat((Number(parsed.c100) || 0).toFixed(1)));
+          r.f100 = Math.max(0, parseFloat((Number(parsed.f100) || 0).toFixed(1)));
+          r.note = String(parsed.note || '').trim();
+          aiFilled = true;
+          status.innerHTML = '<div class="small" style="color:var(--success);">✓ Filled from Claude — review and save.</div>';
+          macroBlock.style.display = 'block';
+          buildMacroBlock();
+          saveBtn.style.display = 'block';
+        } else {
+          status.innerHTML = '<div class="small" style="color:var(--danger);">Couldn\'t parse macros.</div>';
+        }
+      } catch (err) {
+        status.innerHTML = '<div class="small" style="color:var(--danger);">' + escapeHtml(String(err.message || 'Failed').slice(0, 200)) + '</div>';
+      } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.style.opacity = '1';
+      }
+    }
+  }, '✨ Analyze with Claude');
+  m.appendChild(analyzeBtn);
+
+  const manualBtn = el('button', {
+    class: 'btn secondary',
+    style: 'margin-top:8px;',
+    onclick: () => {
+      r.name = nameInp.value || r.name;
+      macroBlock.style.display = 'block';
+      buildMacroBlock();
+      saveBtn.style.display = 'block';
+      manualBtn.style.display = 'none';
+    }
+  }, 'Enter macros manually');
+  m.appendChild(manualBtn);
+
+  const saveBtn = el('button', {
+    class: 'btn',
+    style: 'margin-top:14px;display:none;',
+    onclick: () => {
+      const nm = (nameInp.value || r.name || '').trim();
+      if (!nm) { toast('Add a food name'); return; }
+      if (!r.kcal100 && !r.p100 && !r.c100 && !r.f100) {
+        toast('Macros are all zero — fill at least one'); return;
+      }
+      addFood({
+        name: nm,
+        kcal100: r.kcal100, p100: r.p100, c100: r.c100, f100: r.f100,
+        note: r.note
+      });
+      closeModal();
+      render();
+      toast('Added: ' + nm);
+    }
+  }, 'Save to library');
+  m.appendChild(saveBtn);
+
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Cancel'));
+  openModal(m);
+  setTimeout(() => nameInp.focus(), 80);
+}
+
+// Edit an existing food in the library.
+function openEditFoodModal(id) {
+  ensureFoodLibrary();
+  const f = state.foodLibrary.find(x => x.id === id);
+  if (!f) { toast('Food not found'); return; }
+  let r = { name: f.name, kcal100: f.kcal100, p100: f.p100, c100: f.c100, f100: f.f100, note: f.note || '' };
+
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Edit food'));
+
+  m.appendChild(el('label', {}, 'Name'));
+  const nameInp = el('input', { type: 'text', value: r.name });
+  nameInp.oninput = () => { r.name = nameInp.value; };
+  m.appendChild(nameInp);
+
+  m.appendChild(el('div', { class: 'small muted', style: 'margin:10px 0 4px;' }, 'Per 100g'));
+  const grid = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:8px;' });
+  function fld(lbl, key) {
+    const wrap = el('div', { style: 'display:flex;flex-direction:column;gap:4px;' });
+    wrap.appendChild(el('label', { style: 'margin:0;font-size:10px;' }, lbl));
+    const inp = el('input', { type: 'number', step: '0.1', min: '0', value: String(r[key]) });
+    inp.oninput = () => { r[key] = parseFloat(inp.value) || 0; };
+    wrap.appendChild(inp);
+    return wrap;
+  }
+  grid.appendChild(fld('Calories (kcal)', 'kcal100'));
+  grid.appendChild(fld('Protein (g)', 'p100'));
+  grid.appendChild(fld('Carbs (g)', 'c100'));
+  grid.appendChild(fld('Fat (g)', 'f100'));
+  m.appendChild(grid);
+
+  m.appendChild(el('button', {
+    class: 'btn',
+    style: 'margin-top:14px;',
+    onclick: () => {
+      const nm = (r.name || '').trim();
+      if (!nm) { toast('Add a name'); return; }
+      updateFood(id, { name: nm, kcal100: Math.max(0, r.kcal100), p100: Math.max(0, r.p100), c100: Math.max(0, r.c100), f100: Math.max(0, r.f100) });
+      closeModal();
+      render();
+      toast('Saved');
+    }
+  }, 'Save'));
+  m.appendChild(el('button', {
+    class: 'btn danger',
+    style: 'margin-top:8px;',
+    onclick: () => {
+      deleteFood(id);
+      closeModal();
+      render();
+      toast('Removed');
+    }
+  }, 'Delete from library'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Cancel'));
+  openModal(m);
 }
 
 function openAddMealModal() {
@@ -6125,7 +6448,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.53 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.54 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
