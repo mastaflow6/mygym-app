@@ -4525,6 +4525,13 @@ function renderExercise(ex, date, dayKey) {
   nameEl.appendChild(document.createTextNode(displayName));
   if (swapIdx > 0) nameEl.appendChild(el('span', { class: 'chip', style: 'margin-left:6px;font-size:10px;' }, 'swapped'));
   if (hasPRThisSession) nameEl.appendChild(el('span', { class: 'chip pr', style: 'margin-left:6px;' }, '★ PR'));
+  const exVariant = (w.variants && w.variants[ex.id]) ? String(w.variants[ex.id]).trim() : '';
+  if (exVariant) {
+    nameEl.appendChild(el('span', {
+      class: 'chip',
+      style: 'margin-left:6px;font-size:10px;background:var(--info-soft);color:var(--info);border:1px solid rgba(96,165,250,0.35);'
+    }, '🏷 ' + exVariant));
+  }
   headerLeft.appendChild(nameEl);
   headerLeft.appendChild(el('div', { class: 'ex-target' }, ex.target));
   header.appendChild(headerLeft);
@@ -6759,7 +6766,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.60 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.61 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
@@ -7212,6 +7219,20 @@ function buildCoachContext() {
     exNotes.slice(0, 6).forEach(e => lines.push(`- ${e.d} · ${e.exId}: "${e.n}"`));
   }
 
+  // Recent machine variants logged (so the Coach can disambiguate load drops across machines)
+  const exVariants = [];
+  for (const [d, w] of Object.entries(state.workouts || {})) {
+    if (!w || !w.variants) continue;
+    for (const [exId, v] of Object.entries(w.variants)) {
+      if (v && String(v).trim()) exVariants.push({ d, exId, v });
+    }
+  }
+  exVariants.sort((a, b) => b.d.localeCompare(a.d));
+  if (exVariants.length) {
+    lines.push('\n## Recent machine variants (different machine = different load scale; don\'t compare across variants)');
+    exVariants.slice(0, 10).forEach(e => lines.push(`- ${e.d} · ${e.exId} = "${e.v}"`));
+  }
+
   // Body weight
   const bw = state.bodyWeight || [];
   if (bw.length) {
@@ -7283,7 +7304,9 @@ function buildExerciseHistorySnippet() {
       }
       if (best) {
         const wlbl = ex.bw ? `BW × ${best.r}${ex.timed ? 's' : ''}` : `${best.w}kg × ${best.r}${ex.timed ? 's' : ''}`;
-        tops.push(`${wlbl} (${best.d})`);
+        const variant = w.variants && w.variants[ex.id];
+        const vtag = variant ? ` [variant: "${variant}"]` : '';
+        tops.push(`${wlbl} (${best.d})${vtag}`);
       }
       if (tops.length >= 4) break;
     }
@@ -7315,6 +7338,7 @@ Rules:
 - 'reduce' = soreness/notes flag risk, or he missed reps last time.
 - 'swap' = recent note explicitly asked to swap.
 - 'focus' = no number change, just a form cue.
+- IMPORTANT — Machine variants: top sets may carry a [variant: "..."] tag indicating the specific machine used. Different machines of the same lift can have very different load scales. When comparing top sets across dates, only treat a number drop as a "reduce" verdict if BOTH sets used the same variant (or both were untagged). If variants differ, surface a brief 'focus' or 'keep' verdict and mention "different machine — load isn't comparable" in the advice instead of flagging it as a regression.
 - Output only valid JSON, no preamble, no trailing text.
 
 CONTEXT:
@@ -7386,10 +7410,12 @@ function getLastSessionsForReview(n) {
       });
       if (sets.length === 0) continue;
       const exNote = w.notes && w.notes[ex.id];
+      const variant = w.variants && w.variants[ex.id];
       exercises.push({
         name: ex.name,
         sets: sets,
-        note: exNote ? String(exNote).trim() : null
+        note: exNote ? String(exNote).trim() : null,
+        variant: variant ? String(variant).trim() : null
       });
     }
     out.push({
@@ -7421,7 +7447,10 @@ function _priorSameDay(beforeDate, dayKey) {
       const rp = parseInt(s.r, 10) || 0;
       return ex.bw ? `BW × ${rp}${ex.timed ? 's' : ''}` : `${wt}kg × ${rp}${ex.timed ? 's' : ''}`;
     });
-    if (sets.length) exs.push(`${ex.name}: ${sets.join(', ')}`);
+    if (sets.length) {
+      const v = w.variants && w.variants[ex.id];
+      exs.push(`${ex.name}${v ? ` [variant: "${v}"]` : ''}: ${sets.join(', ')}`);
+    }
   }
   return { date: d, dayName: day.name, mins, exercises: exs };
 }
@@ -7431,7 +7460,8 @@ function buildSessionReviewPrompt(sessions) {
     const lines = [`## Session ${s.date} · ${s.dayName} · ~${s.mins} min`];
     if (s.sessionNote) lines.push(`Session note: "${s.sessionNote}"`);
     for (const ex of s.exercises) {
-      lines.push(`- ${ex.name}: ${ex.sets.join(', ')}${ex.note ? ` (note: "${ex.note}")` : ''}`);
+      const variantTag = ex.variant ? ` [variant: "${ex.variant}"]` : '';
+      lines.push(`- ${ex.name}${variantTag}: ${ex.sets.join(', ')}${ex.note ? ` (note: "${ex.note}")` : ''}`);
     }
     const prior = _priorSameDay(s.date, s.dayKey);
     if (prior) {
@@ -7457,6 +7487,10 @@ Rules:
 - Quote real numbers and exact exercise names from the data — never invent.
 - Be terse: every field is read on a phone.
 - highlights/cautions can be empty arrays if nothing notable.
+- IMPORTANT — Machine variants: if an exercise has a [variant: "..."] tag, that means the user trained on a SPECIFIC machine. Different machines of the same exercise often have very different load scales — a "Harder machine" 39kg can be equivalent to or harder than a "Standard" 45kg on another machine.
+  • If the current session's variant for an exercise is DIFFERENT from the prior session's variant for that same exercise, do NOT call it a load drop or regression. State "different machine — not directly comparable" or omit from cautions entirely.
+  • If both sessions used the SAME variant (or both untagged), compare as usual.
+  • If notes hint at a machine difference ("different machine", "easier machine", "harder machine", "machine 2"), treat it the same way and skip the regression flag.
 - Output ONLY the JSON array.
 
 SESSIONS TO REVIEW (most recent first):
@@ -8178,15 +8212,55 @@ function openSleepModal() {
 function openExerciseNoteModal(date, dayKey, ex) {
   const m = el('div');
   m.appendChild(el('h3', {}, `Note · ${ex.name}`));
-  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;' }, 'Form felt, machine #, twinges, anything to remember.'));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;' }, 'Form felt, twinges, anything to remember.'));
   const w = ensureWorkout(date, dayKey);
-  const ta = el('textarea', { placeholder: 'e.g. Machine 3, seat height 5, knee felt fine.' });
+
+  // Variant picker — tells the Coach which machine you used so it doesn't compare
+  // loads across different machines.
+  if (!w.variants) w.variants = {};
+  const VARIANT_PRESETS = ['Easier machine', 'Harder machine'];
+  let chosenVariant = w.variants[ex.id] || '';
+
+  m.appendChild(el('label', { style: 'margin-bottom:6px;' }, 'Machine variant (which machine you used)'));
+  const variantChipsRow = el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;' });
+  function refreshVariantChips() {
+    variantChipsRow.innerHTML = '';
+    const all = ['', ...VARIANT_PRESETS];
+    if (chosenVariant && !all.includes(chosenVariant)) all.push(chosenVariant);
+    all.forEach(v => {
+      const label = v || 'Standard / none';
+      const chip = el('button', {
+        type: 'button',
+        class: 'feel-chip' + (chosenVariant === v ? ' active' : ''),
+        onclick: () => { chosenVariant = v; variantInp.value = v; refreshVariantChips(); }
+      }, label);
+      variantChipsRow.appendChild(chip);
+    });
+  }
+  m.appendChild(variantChipsRow);
+  const variantInp = el('input', {
+    type: 'text',
+    placeholder: 'Or type a custom variant (e.g. "Machine 2 by the window")',
+    value: chosenVariant,
+    style: 'width:100%;padding:8px 10px;background:var(--surface-2);border:1px solid var(--surface-3);color:var(--text);border-radius:8px;font-size:13px;outline:none;'
+  });
+  variantInp.oninput = () => { chosenVariant = variantInp.value.trim(); refreshVariantChips(); };
+  m.appendChild(variantInp);
+  refreshVariantChips();
+
+  m.appendChild(el('label', { style: 'margin-top:14px;' }, 'Note'));
+  const ta = el('textarea', { placeholder: 'e.g. Seat height 5, knee felt fine, form cue.' });
   ta.value = w.notes[ex.id] || '';
   m.appendChild(ta);
+
   m.appendChild(el('button', { class: 'btn', onclick: () => {
     w.notes[ex.id] = ta.value.trim();
     if (!w.notes[ex.id]) delete w.notes[ex.id];
-    save(); closeModal(); render(); toast('Note saved');
+    if (!w.variants) w.variants = {};
+    const v = (chosenVariant || '').trim();
+    if (v) w.variants[ex.id] = v;
+    else delete w.variants[ex.id];
+    save(); closeModal(); render(); toast('Saved');
   } }, 'Save'));
   m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Cancel'));
   openModal(m);
