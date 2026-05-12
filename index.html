@@ -1462,6 +1462,67 @@
   }
   .coach-fab:active { transform: scale(0.92); }
 
+  /* Coach briefing — proactive daily analysis card */
+  .briefing-section { padding: 14px 16px; }
+  .briefing-section .b-head {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;
+  }
+  .briefing-section .b-head .b-meta { font-weight: 600; letter-spacing: 0.04em; color: var(--text-dim); text-transform: none; }
+  .briefing-section .b-head .b-refresh {
+    background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--surface-3);
+    border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+  .briefing-section .b-head .b-refresh:active { transform: scale(0.95); }
+  .briefing-section .b-body { font-size: 14px; line-height: 1.55; color: var(--text); }
+
+  .brief-caution {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px; border-radius: 10px; margin-top: 6px;
+    font-size: 13px; line-height: 1.45;
+  }
+  .brief-caution.warn {
+    background: rgba(245,158,11,0.10); border: 1px solid rgba(245,158,11,0.35); color: #fcd34d;
+  }
+  .brief-caution.info {
+    background: var(--info-soft); border: 1px solid rgba(96,165,250,0.35); color: var(--info);
+  }
+  .brief-caution::before {
+    content: '⚠'; flex-shrink: 0; font-size: 14px; margin-top: 1px; opacity: 0.85;
+  }
+  .brief-caution.info::before { content: 'i'; font-style: italic; font-weight: 700; font-family: serif; padding: 0 4px; }
+
+  .exsug-row {
+    display: grid; grid-template-columns: 1fr auto; gap: 6px 10px;
+    padding: 10px 0; border-top: 1px solid var(--surface-2);
+    align-items: start;
+  }
+  .exsug-row:first-of-type { border-top: none; padding-top: 4px; }
+  .exsug-row .exsug-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .exsug-row .exsug-advice { grid-column: 1 / -1; font-size: 12.5px; color: var(--text-muted); line-height: 1.45; }
+  .verdict-chip {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 6px; align-self: start; white-space: nowrap;
+  }
+  .verdict-chip.bump   { background: var(--success-soft); color: var(--success); }
+  .verdict-chip.keep   { background: var(--surface-3); color: var(--text-muted); }
+  .verdict-chip.reduce { background: var(--warn-soft); color: var(--warn); }
+  .verdict-chip.swap   { background: var(--info-soft); color: var(--info); }
+  .verdict-chip.focus  { background: var(--accent-soft); color: var(--accent); }
+
+  .brief-progress {
+    font-size: 13.5px; font-style: italic; line-height: 1.55; color: var(--text);
+    padding: 4px 0 2px;
+  }
+  .brief-highlights {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+  }
+  .brief-highlights .hchip {
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--surface-3);
+    padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  }
+
   /* Coach chat */
   .coach-chat {
     display: flex; flex-direction: column; gap: 10px;
@@ -2100,6 +2161,7 @@ const defaultState = {
   meals: [],                // [{ id, date, time, dataUrl?, weightG?, name, calories, protein, carbs, fat, source, notes? }]
   foodLibrary: [],          // [{ id, name, kcal100, p100, c100, f100, note?, createdAt }] — reusable food entries with per-100g macros
   coachLogs: [],            // [{ id, date, kind, energy?, soreness?, text, dayKey?, createdAt }]
+  coachBriefing: null,      // { date, json: {strategy, cautions, exerciseSuggestions, progress, highlights}, generatedAt }
   photos: [],
   notes: {},
   settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false, anthropicApiKey: '', theme: 'indigo' }
@@ -5903,17 +5965,140 @@ function openEditMealModal(id) {
 pruneMealPhotos();
 
 /* =========== COACH TAB =========== */
+function _briefingFreshnessLabel(ts) {
+  if (!ts) return '';
+  const diff = Date.now() - ts;
+  const mins = Math.round(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.round(hrs / 24)}d ago`;
+}
+
+async function _generateBriefingInline(section, btn) {
+  section.innerHTML = '<div class="ai-loading"><span class="spinner"></span><span>Generating today\'s briefing…</span></div>';
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+  try {
+    await requestCoachBriefing();
+    render(); // re-render to show the briefing
+  } catch (err) {
+    section.innerHTML = '<div class="small" style="color:var(--danger);padding:10px;">' + escapeHtml(String(err.message || 'Failed').slice(0, 200)) + '</div>';
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+}
+
+function _renderBriefingBody(parent, j) {
+  // Strategy
+  if (j.strategy) {
+    parent.appendChild(el('div', {
+      class: 'b-body',
+      style: 'padding:12px 14px;background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;margin-bottom:10px;'
+    }, j.strategy));
+  }
+  // Cautions
+  if (Array.isArray(j.cautions) && j.cautions.length) {
+    parent.appendChild(el('div', { class: 'small muted', style: 'margin:10px 4px 4px;font-weight:700;letter-spacing:0.04em;' }, 'CAUTIONS'));
+    j.cautions.forEach(c => {
+      const lvl = c.level === 'info' ? 'info' : 'warn';
+      parent.appendChild(el('div', { class: 'brief-caution ' + lvl }, [el('span', {}, String(c.text || '').trim())]));
+    });
+  }
+  // Exercise suggestions
+  if (Array.isArray(j.exerciseSuggestions) && j.exerciseSuggestions.length) {
+    parent.appendChild(el('div', { class: 'small muted', style: 'margin:14px 4px 4px;font-weight:700;letter-spacing:0.04em;' }, 'TODAY\'S EXERCISES'));
+    j.exerciseSuggestions.forEach(s => {
+      const validVerdicts = ['bump','keep','reduce','swap','focus'];
+      const verdict = validVerdicts.includes(s.verdict) ? s.verdict : 'keep';
+      const row = el('div', { class: 'exsug-row' }, [
+        el('div', { class: 'exsug-name' }, String(s.name || '').trim()),
+        el('span', { class: 'verdict-chip ' + verdict }, verdict),
+        el('div', { class: 'exsug-advice' }, String(s.advice || '').trim())
+      ]);
+      parent.appendChild(row);
+    });
+  }
+  // Progress
+  if (j.progress) {
+    parent.appendChild(el('div', { class: 'small muted', style: 'margin:14px 4px 4px;font-weight:700;letter-spacing:0.04em;' }, 'PROGRESS'));
+    parent.appendChild(el('div', { class: 'brief-progress' }, j.progress));
+  }
+  // Highlights
+  if (Array.isArray(j.highlights) && j.highlights.length) {
+    const wrap = el('div', { class: 'brief-highlights' });
+    j.highlights.slice(0, 4).forEach(h => wrap.appendChild(el('span', { class: 'hchip' }, String(h).trim())));
+    parent.appendChild(wrap);
+  }
+}
+
 function renderCoach() {
   const v = $('view');
 
-  // Hero — Open Coach button
+  // Proactive briefing block — leads the Coach tab.
+  const briefingCard = el('div', { class: 'card briefing-section' });
+  const head = el('div', { class: 'b-head' });
+  head.appendChild(el('span', {}, '🤖 Today\'s briefing'));
+  const headRight = el('div', { style: 'display:flex;align-items:center;gap:8px;' });
+  briefingCard.appendChild(head);
+  const body = el('div', {});
+  briefingCard.appendChild(body);
+  v.appendChild(briefingCard);
+
+  const stale = shouldRefreshBriefing();
+  const br = state.coachBriefing;
+
+  if (br && br.json && !stale) {
+    // Show cached briefing with refresh button
+    const meta = el('span', { class: 'b-meta' }, _briefingFreshnessLabel(br.generatedAt));
+    const refresh = el('button', {
+      class: 'b-refresh',
+      onclick: () => _generateBriefingInline(body, null)
+    }, '↻ Refresh');
+    headRight.appendChild(meta);
+    headRight.appendChild(refresh);
+    head.appendChild(headRight);
+    _renderBriefingBody(body, br.json);
+  } else if (br && br.json && stale) {
+    // Have a previous briefing but it's stale — show it dimmed with a prominent refresh
+    const refresh = el('button', {
+      class: 'b-refresh',
+      style: 'background:var(--accent);color:white;border-color:var(--accent);',
+      onclick: () => _generateBriefingInline(body, null)
+    }, '↻ Refresh');
+    headRight.appendChild(el('span', { class: 'b-meta' }, 'new data since ' + _briefingFreshnessLabel(br.generatedAt)));
+    headRight.appendChild(refresh);
+    head.appendChild(headRight);
+    body.style.opacity = '0.65';
+    _renderBriefingBody(body, br.json);
+  } else {
+    // No briefing yet — first generation
+    if (!state.settings.anthropicApiKey) {
+      body.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:8px;' },
+        'Set up your Anthropic API key in More → Settings to use the Coach briefing.'));
+      body.appendChild(el('button', {
+        class: 'btn secondary',
+        onclick: openAIKeyModal
+      }, 'Set up AI key'));
+    } else {
+      const genBtn = el('button', {
+        class: 'btn',
+        style: 'width:100%;background:linear-gradient(135deg, var(--accent), var(--accent-strong));',
+        onclick: function() { _generateBriefingInline(body, this); }
+      }, '✨ Generate today\'s briefing');
+      body.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' },
+        'Claude reads your last sessions, exercise history, feel logs, and today\'s plan, then writes a short briefing with cautions and per-exercise suggestions.'));
+      body.appendChild(genBtn);
+    }
+  }
+
+  // Open Coach chat — follow-up channel
   v.appendChild(el('button', {
-    class: 'add-meal-btn',
-    style: 'background:linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);',
+    class: 'btn secondary',
+    style: 'width:100%;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;',
     onclick: () => { coachChatHistory = []; openCoachModal(); }
   }, [
-    el('span', { html: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M19 16l.7 1.8L21.5 18l-1.8.7L19 20l-.7-1.3L17 18l1.7-.5z"/></svg>' }),
-    el('span', {}, 'Open Coach chat')
+    el('span', { html: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>' }),
+    el('span', {}, 'Open Coach chat for follow-up')
   ]));
 
   // Quick prompts
@@ -6461,7 +6646,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.58 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.59 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
@@ -6955,6 +7140,114 @@ function buildCoachContext() {
   }
 
   return lines.join('\n');
+}
+
+// Compact per-exercise top-set history for today's planned exercises (last ~4 entries each).
+// Lets the Coach say "you hit 10 reps top set last Monday — bump to +1kg."
+function buildExerciseHistorySnippet() {
+  const td = today();
+  const todayKey = effectiveDayKey(td);
+  const day = todayKey != null ? DAYS[todayKey] : null;
+  if (!day || !day.exercises) return '';
+  const lines = ['## Today\'s exercises · last 4 logged top sets'];
+  for (const ex of day.exercises) {
+    const tops = [];
+    const dates = Object.keys(state.workouts || {}).sort((a, b) => b.localeCompare(a));
+    for (const d of dates) {
+      if (d === td) continue; // skip in-progress today
+      const w = state.workouts[d];
+      const logs = (w && w.logs && w.logs[ex.id]) || [];
+      if (!logs.length) continue;
+      // find top set by Epley estimate (w * (1 + r/30))
+      let best = null;
+      for (const s of logs) {
+        if (!s.d) continue;
+        const wv = parseFloat(s.w) || 0;
+        const rv = parseInt(s.r, 10) || 0;
+        if (rv < 1) continue;
+        const e = (ex.bw ? rv : wv) * (1 + rv / 30);
+        if (!best || e > best.e) best = { w: wv, r: rv, d, e };
+      }
+      if (best) {
+        const wlbl = ex.bw ? `BW × ${best.r}${ex.timed ? 's' : ''}` : `${best.w}kg × ${best.r}${ex.timed ? 's' : ''}`;
+        tops.push(`${wlbl} (${best.d})`);
+      }
+      if (tops.length >= 4) break;
+    }
+    const tgt = ex.bw ? `BW · target ${ex.repsMin}-${ex.repsMax}` : `target ${ex.weight}kg × ${ex.repsMin}-${ex.repsMax}`;
+    lines.push(`- ${ex.name} (${tgt}) · ${tops.length ? tops.join(' · ') : '(no prior logs)'}`);
+  }
+  return lines.join('\n');
+}
+
+function buildCoachBriefingPrompt() {
+  return `You are MyGym Coach giving Mustapha a short daily briefing. Output ONLY a single JSON object (no prose, no markdown fences). Schema:
+
+{
+  "strategy": "2-3 sentences: what today's session focus should be, grounded in his last sessions, today's planned exercises, and how he feels. If today is rest, talk about recovery.",
+  "cautions": [
+    { "level": "warn" | "info", "text": "short caution, e.g. 'Soreness 4/5 logged on 2026-05-09 — drop RDL to 8kg today.'" }
+  ],
+  "exerciseSuggestions": [
+    { "name": "Exact name from the day's plan", "verdict": "bump" | "keep" | "reduce" | "swap" | "focus", "advice": "one short sentence — concrete number when possible. E.g. '+1kg to 13.5kg; you hit 10 reps top set last Mon.'" }
+  ],
+  "progress": "1-2 sentences. Reference real numbers (weight delta, sessions this week, streak, total sessions).",
+  "highlights": [ "very short chips, max 4. e.g. '3/4 this week', '+1.0kg from start', '4-week streak'" ]
+}
+
+Rules:
+- Be concrete with weights and reps; quote the user's actual numbers from the history snippet, never invent.
+- 'bump' = he hit the top of the rep range last time, suggest +1-2.5kg.
+- 'keep' = mid rep range, stay the course.
+- 'reduce' = soreness/notes flag risk, or he missed reps last time.
+- 'swap' = recent note explicitly asked to swap.
+- 'focus' = no number change, just a form cue.
+- Output only valid JSON, no preamble, no trailing text.
+
+CONTEXT:
+
+${buildCoachContext()}
+
+${buildExerciseHistorySnippet()}`;
+}
+
+function _briefingMostRecentSignalTs() {
+  let ts = 0;
+  // latest finished session timestamp (use w.finished if present, else max log timestamp)
+  for (const [d, w] of Object.entries(state.workouts || {})) {
+    if (!w) continue;
+    if (typeof w.finished === 'number' && w.finished > ts) ts = w.finished;
+    if (typeof w.started === 'number' && w.started > ts) ts = w.started;
+  }
+  // latest feel log
+  const logs = Array.isArray(state.coachLogs) ? state.coachLogs : [];
+  for (const l of logs) if (typeof l.createdAt === 'number' && l.createdAt > ts) ts = l.createdAt;
+  return ts;
+}
+
+function shouldRefreshBriefing() {
+  const br = state.coachBriefing;
+  if (!br || !br.json || br.date !== today()) return true;
+  const sig = _briefingMostRecentSignalTs();
+  if (sig > (br.generatedAt || 0)) return true;
+  return false;
+}
+
+async function requestCoachBriefing() {
+  if (!state.settings.anthropicApiKey) throw new Error('Set up your Anthropic API key first');
+  const raw = await callAnthropic({
+    system: buildCoachBriefingPrompt(),
+    messages: [{ role: 'user', content: 'Briefing.' }],
+    maxTokens: 1400
+  });
+  const cleaned = _stripJsonObjectFence(raw);
+  let parsed;
+  try { parsed = JSON.parse(cleaned); }
+  catch (_) { throw new Error('Coach returned non-JSON: ' + raw.slice(0, 150)); }
+  if (!parsed || typeof parsed !== 'object') throw new Error('Coach returned invalid shape');
+  state.coachBriefing = { date: today(), json: parsed, generatedAt: Date.now() };
+  save();
+  return parsed;
 }
 
 // Multi-turn chat history kept in memory for the lifetime of the modal.
