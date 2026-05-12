@@ -3836,7 +3836,7 @@ function renderHome() {
     const wkout = state.workouts[date];
     const tag = (todayKey !== dow && DAYS[dow]) ? ' <span class="plan-shifted-tag">shifted</span>' : '';
     cta.appendChild(el('div', { class: 'today-label', html: `${DAY_LABELS[dow]} · ${day.name} day${tag}` }));
-    cta.appendChild(el('div', { class: 'today-stats' }, `${prog.done} / ${prog.total} sets`));
+    cta.appendChild(el('div', { class: 'today-stats' }, `${day.exercises.length} exercise${day.exercises.length === 1 ? '' : 's'}`));
     cta.appendChild(el('div', { class: 'today-progress' }, [
       el('div', { class: 'progress-bar' }, [el('span', { style: `width:${pct}%` })])
     ]));
@@ -6458,7 +6458,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.55 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.56 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
