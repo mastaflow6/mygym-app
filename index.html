@@ -1523,6 +1523,39 @@
     padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
   }
 
+  /* Session review cards — one per finished session */
+  .sr-card {
+    padding: 14px 16px; margin-bottom: 10px;
+    border: 1px solid var(--surface-2); background: var(--surface-1);
+    border-radius: 14px;
+  }
+  .sr-card .sr-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 8px; gap: 8px;
+  }
+  .sr-card .sr-day { font-size: 14px; font-weight: 800; color: var(--text); }
+  .sr-card .sr-date { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.04em; }
+  .sr-card .sr-summary { font-size: 13.5px; color: var(--text); line-height: 1.5; }
+  .sr-card .sr-section-lbl {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-muted); margin: 10px 0 4px;
+  }
+  .sr-card .sr-list { margin: 0; padding: 0; list-style: none; }
+  .sr-card .sr-list li {
+    font-size: 12.5px; line-height: 1.5; color: var(--text);
+    padding: 3px 0 3px 14px; position: relative;
+  }
+  .sr-card .sr-list li::before {
+    content: '•'; position: absolute; left: 4px; color: var(--accent);
+  }
+  .sr-card .sr-list.cautions li::before { color: var(--warn); }
+  .sr-card .sr-progress {
+    margin-top: 10px; padding: 8px 10px;
+    background: var(--accent-soft); border-left: 3px solid var(--accent);
+    border-radius: 8px; font-size: 12.5px; line-height: 1.5; color: var(--text);
+    font-style: italic;
+  }
+
   /* Coach chat */
   .coach-chat {
     display: flex; flex-direction: column; gap: 10px;
@@ -2162,6 +2195,7 @@ const defaultState = {
   foodLibrary: [],          // [{ id, name, kcal100, p100, c100, f100, note?, createdAt }] — reusable food entries with per-100g macros
   coachLogs: [],            // [{ id, date, kind, energy?, soreness?, text, dayKey?, createdAt }]
   coachBriefing: null,      // { date, json: {strategy, cautions, exerciseSuggestions, progress, highlights}, generatedAt }
+  sessionReviews: {},       // { 'YYYY-MM-DD': { json: {summary, highlights, cautions, progress}, generatedAt } }
   photos: [],
   notes: {},
   settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false, anthropicApiKey: '', theme: 'indigo' }
@@ -6091,6 +6125,85 @@ function renderCoach() {
     }
   }
 
+  // Session reviews — last 4 finished sessions, auto-summarised by Claude
+  const lastSessions = getLastSessionsForReview(4);
+  if (lastSessions.length) {
+    const reviewsCard = el('div', { class: 'card briefing-section', style: 'margin-top:14px;' });
+    const rHead = el('div', { class: 'b-head' });
+    rHead.appendChild(el('span', {}, '📋 Last sessions review'));
+    const rHeadRight = el('div', { style: 'display:flex;align-items:center;gap:8px;' });
+    rHead.appendChild(rHeadRight);
+    reviewsCard.appendChild(rHead);
+    const rBody = el('div', {});
+    reviewsCard.appendChild(rBody);
+    v.appendChild(reviewsCard);
+
+    const needsRefresh = shouldRefreshSessionReviews();
+    const allCached = lastSessions.every(s => state.sessionReviews && state.sessionReviews[s.date] && state.sessionReviews[s.date].json);
+
+    function generateReviews(targetBody) {
+      targetBody.innerHTML = '<div class="ai-loading"><span class="spinner"></span><span>Writing reviews of your last sessions…</span></div>';
+      requestSessionReviews()
+        .then(() => render())
+        .catch(err => {
+          targetBody.innerHTML = '<div class="small" style="color:var(--danger);padding:10px;">' + escapeHtml(String(err.message || 'Failed').slice(0, 200)) + '</div>';
+        });
+    }
+
+    if (!state.settings.anthropicApiKey) {
+      rBody.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:8px;' },
+        'Set up your Anthropic API key in More → Settings to use session reviews.'));
+    } else if (!allCached) {
+      // First-time generation
+      const genBtn = el('button', {
+        class: 'btn',
+        style: 'width:100%;background:linear-gradient(135deg, var(--accent), var(--accent-strong));',
+        onclick: () => generateReviews(rBody)
+      }, '✨ Generate session reviews');
+      rBody.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' },
+        'Claude writes a short structured review for each of your last ' + lastSessions.length + ' finished sessions — what improved, what to watch, vs prior session of the same type.'));
+      rBody.appendChild(genBtn);
+    } else {
+      // Render cached reviews + Refresh button if a new session is missing
+      const refreshLbl = needsRefresh ? '↻ Refresh (new session)' : '↻ Refresh';
+      const refreshBtn = el('button', {
+        class: 'b-refresh',
+        style: needsRefresh ? 'background:var(--accent);color:white;border-color:var(--accent);' : '',
+        onclick: () => generateReviews(rBody)
+      }, refreshLbl);
+      rHeadRight.appendChild(refreshBtn);
+
+      lastSessions.forEach(s => {
+        const cached = state.sessionReviews[s.date];
+        const j = cached && cached.json;
+        if (!j) return;
+        const card = el('div', { class: 'sr-card' });
+        const head2 = el('div', { class: 'sr-head' }, [
+          el('span', { class: 'sr-day' }, s.dayName),
+          el('span', { class: 'sr-date' }, s.date + ' · ~' + s.mins + ' min')
+        ]);
+        card.appendChild(head2);
+        if (j.summary) card.appendChild(el('div', { class: 'sr-summary' }, String(j.summary).trim()));
+        if (Array.isArray(j.highlights) && j.highlights.length) {
+          card.appendChild(el('div', { class: 'sr-section-lbl' }, 'Highlights'));
+          const ul = el('ul', { class: 'sr-list' });
+          j.highlights.forEach(h => ul.appendChild(el('li', {}, String(h).trim())));
+          card.appendChild(ul);
+        }
+        if (Array.isArray(j.cautions) && j.cautions.length) {
+          card.appendChild(el('div', { class: 'sr-section-lbl' }, 'Watch'));
+          const ul = el('ul', { class: 'sr-list cautions' });
+          j.cautions.forEach(c => ul.appendChild(el('li', {}, String(c).trim())));
+          card.appendChild(ul);
+        }
+        if (j.progress) {
+          card.appendChild(el('div', { class: 'sr-progress' }, String(j.progress).trim()));
+        }
+        rBody.appendChild(card);
+      });
+    }
+  }
+
   // Open Coach chat — follow-up channel
   v.appendChild(el('button', {
     class: 'btn secondary',
@@ -6646,7 +6759,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.59 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.60 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
@@ -7246,6 +7359,142 @@ async function requestCoachBriefing() {
   catch (_) { throw new Error('Coach returned non-JSON: ' + raw.slice(0, 150)); }
   if (!parsed || typeof parsed !== 'object') throw new Error('Coach returned invalid shape');
   state.coachBriefing = { date: today(), json: parsed, generatedAt: Date.now() };
+  save();
+  return parsed;
+}
+
+// ---------- Session reviews (auto-generated for the last N finished sessions) ----------
+
+// Get the last N finished sessions, most recent first, with detailed data for review.
+function getLastSessionsForReview(n) {
+  const out = [];
+  const dates = Object.entries(state.workouts || {})
+    .filter(([d, w]) => isRealSession(w))
+    .sort((a, b) => b[0].localeCompare(a[0]));
+  for (const [d, w] of dates) {
+    if (out.length >= n) break;
+    const day = DAYS[w.dayKey];
+    if (!day) continue;
+    const mins = Math.round(((w.timers?.warmup || 0) + (w.timers?.workout || 0)) / 60000);
+    const exercises = [];
+    for (const ex of day.exercises) {
+      const logs = (w.logs && w.logs[ex.id]) || [];
+      const sets = logs.filter(s => s.d).map(s => {
+        const wt = parseFloat(s.w) || 0;
+        const rp = parseInt(s.r, 10) || 0;
+        return ex.bw ? `BW × ${rp}${ex.timed ? 's' : ''}` : `${wt}kg × ${rp}${ex.timed ? 's' : ''}`;
+      });
+      if (sets.length === 0) continue;
+      const exNote = w.notes && w.notes[ex.id];
+      exercises.push({
+        name: ex.name,
+        sets: sets,
+        note: exNote ? String(exNote).trim() : null
+      });
+    }
+    out.push({
+      date: d,
+      dayName: day.name,
+      dayKey: w.dayKey,
+      mins,
+      sessionNote: w.sessionNote ? String(w.sessionNote).trim() : null,
+      exercises
+    });
+  }
+  return out;
+}
+
+// Find the previous session of the same dayKey before a given date (for progress comparison).
+function _priorSameDay(beforeDate, dayKey) {
+  const dates = Object.entries(state.workouts || {})
+    .filter(([d, w]) => isRealSession(w) && w.dayKey === dayKey && d < beforeDate)
+    .sort((a, b) => b[0].localeCompare(a[0]));
+  if (!dates.length) return null;
+  const [d, w] = dates[0];
+  const day = DAYS[w.dayKey];
+  const mins = Math.round(((w.timers?.warmup || 0) + (w.timers?.workout || 0)) / 60000);
+  const exs = [];
+  for (const ex of day.exercises) {
+    const logs = (w.logs && w.logs[ex.id]) || [];
+    const sets = logs.filter(s => s.d).map(s => {
+      const wt = parseFloat(s.w) || 0;
+      const rp = parseInt(s.r, 10) || 0;
+      return ex.bw ? `BW × ${rp}${ex.timed ? 's' : ''}` : `${wt}kg × ${rp}${ex.timed ? 's' : ''}`;
+    });
+    if (sets.length) exs.push(`${ex.name}: ${sets.join(', ')}`);
+  }
+  return { date: d, dayName: day.name, mins, exercises: exs };
+}
+
+function buildSessionReviewPrompt(sessions) {
+  const blocks = sessions.map(s => {
+    const lines = [`## Session ${s.date} · ${s.dayName} · ~${s.mins} min`];
+    if (s.sessionNote) lines.push(`Session note: "${s.sessionNote}"`);
+    for (const ex of s.exercises) {
+      lines.push(`- ${ex.name}: ${ex.sets.join(', ')}${ex.note ? ` (note: "${ex.note}")` : ''}`);
+    }
+    const prior = _priorSameDay(s.date, s.dayKey);
+    if (prior) {
+      lines.push(`Prior ${s.dayName} session (${prior.date}, ${prior.mins}min):`);
+      prior.exercises.forEach(line => lines.push(`  · ${line}`));
+    }
+    return lines.join('\n');
+  });
+
+  return `You are MyGym Coach. Generate short structured reviews for these recent gym sessions. Output ONLY a JSON array (no prose, no markdown fences). One object per session, IN THE SAME ORDER:
+
+[
+  {
+    "date": "YYYY-MM-DD",
+    "summary": "1-2 sentences: factually recap what was trained and any notable top sets.",
+    "highlights": [ "short wins, max 3, e.g. 'PR 13kg × 10 on incline DB press'" ],
+    "cautions": [ "short flags from notes or set drops, max 3" ],
+    "progress": "1 sentence comparing this session to the prior same-day session: volume, top sets, time. If no prior data, say 'first session of this type.'"
+  }
+]
+
+Rules:
+- Quote real numbers and exact exercise names from the data — never invent.
+- Be terse: every field is read on a phone.
+- highlights/cautions can be empty arrays if nothing notable.
+- Output ONLY the JSON array.
+
+SESSIONS TO REVIEW (most recent first):
+
+${blocks.join('\n\n')}`;
+}
+
+function shouldRefreshSessionReviews() {
+  if (!state.sessionReviews || typeof state.sessionReviews !== 'object') return true;
+  const last4 = getLastSessionsForReview(4);
+  if (!last4.length) return false;
+  for (const s of last4) {
+    if (!state.sessionReviews[s.date] || !state.sessionReviews[s.date].json) return true;
+  }
+  return false;
+}
+
+async function requestSessionReviews() {
+  if (!state.settings.anthropicApiKey) throw new Error('Set up your Anthropic API key first');
+  const sessions = getLastSessionsForReview(4);
+  if (!sessions.length) return [];
+  const raw = await callAnthropic({
+    system: buildSessionReviewPrompt(sessions),
+    messages: [{ role: 'user', content: 'Reviews.' }],
+    maxTokens: 1800
+  });
+  const cleaned = _stripJsonFence(raw); // expects an array
+  let parsed;
+  try { parsed = JSON.parse(cleaned); }
+  catch (_) { throw new Error('Coach returned non-JSON: ' + raw.slice(0, 200)); }
+  if (!Array.isArray(parsed)) throw new Error('Expected an array of reviews');
+  if (!state.sessionReviews || typeof state.sessionReviews !== 'object') state.sessionReviews = {};
+  // Match by date; fall back to positional order if the model omitted/changed dates
+  parsed.forEach((rev, idx) => {
+    const target = (rev && rev.date) ? rev.date : (sessions[idx] && sessions[idx].date);
+    if (!target) return;
+    state.sessionReviews[target] = { json: rev, generatedAt: Date.now() };
+  });
   save();
   return parsed;
 }
