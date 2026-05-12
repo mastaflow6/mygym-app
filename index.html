@@ -439,8 +439,19 @@
   }
   .meal-modal-form .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
   .meal-modal-form .grid4 input { padding: 8px 10px; font-size: 13px; text-align: center; }
-  .meal-photo-preview { width: 100%; max-height: 220px; object-fit: cover; border-radius: 12px; background: var(--surface-2); display: block; }
-  .meal-photo-empty { width: 100%; height: 140px; border: 1px dashed var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 13px; }
+  .meal-photo-preview {
+    width: 100%; max-height: 96px; object-fit: cover; border-radius: 10px;
+    background: var(--surface-2); display: block; margin-bottom: 10px;
+  }
+  .meal-photo-empty {
+    width: 100%; padding: 12px; border: 1px dashed var(--border); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    color: var(--text-muted); font-size: 13px; font-weight: 600;
+    background: var(--surface-2); margin-bottom: 10px; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .meal-photo-empty:hover { border-color: var(--accent); color: var(--text); }
+  .meal-photo-empty:active { transform: scale(0.98); }
   .macro.p .v { color: #f87171; }
   .macro.c .v { color: #60a5fa; }
   .macro.f .v { color: #fbbf24; }
@@ -5860,7 +5871,7 @@ function openAddMealModal() {
   m.appendChild(el('h3', {}, 'Add meal'));
   const form = el('div', { class: 'meal-modal-form' });
 
-  const photoBox = el('div', { class: 'meal-photo-empty' }, 'Tap to add a photo (optional)');
+  const photoBox = el('div', { class: 'meal-photo-empty' }, '📷 Tap to add a photo (optional)');
   photoBox.style.cursor = 'pointer';
   const fileInp = el('input', { type: 'file', accept: 'image/*', style: 'display:none;' });
   photoBox.onclick = () => fileInp.click();
@@ -6776,7 +6787,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.63 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.64 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
