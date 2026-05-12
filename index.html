@@ -4476,13 +4476,117 @@ function renderExercise(ex, date, dayKey) {
 function askCoachAboutExercise(ex, date) {
   if (!state.settings.anthropicApiKey) { openAIKeyModal(() => askCoachAboutExercise(ex, date)); return; }
   const displayName = getDisplayName(ex, date);
-  const alts = getAlternatives(ex);
-  const altStr = alts.length ? `Listed alternatives: ${alts.join(', ')}.` : 'No alternatives are pre-listed.';
   const muscles = (ex.muscles || []).join(', ');
-  const prefilled = `About "${displayName}"${muscles ? ` (targets ${muscles})` : ''}. Which variant should I do today, or what's a good substitute I could use at my gym? ${altStr}`;
-  // reset chat history so the question lands clean
-  coachChatHistory = [];
-  openCoachModal(prefilled);
+  const alts = getAlternatives(ex);
+  const altStr = alts.length ? alts.join(', ') : '(none listed)';
+
+  let pickedDataUrl = null;
+
+  const m = el('div');
+  m.appendChild(el('h3', {}, '✨ Ask about ' + displayName));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' },
+    'Ask in text, attach a photo (machine / form / setup), or both. One-shot answer — no chat thread.'));
+
+  const ta = el('textarea', {
+    class: 'ai-textarea',
+    style: 'min-height:90px;',
+    placeholder: 'e.g. "Does this fit my plan?", "Form check", "Is +1kg OK?", or leave blank if the photo says it all.'
+  });
+  m.appendChild(ta);
+
+  // Photo picker (optional)
+  const photoRow = el('div', { style: 'display:flex;align-items:center;gap:10px;margin-top:10px;' });
+  const fileInp = el('input', { type: 'file', accept: 'image/*', capture: 'environment', style: 'display:none' });
+  const photoBtn = el('button', { class: 'btn secondary', type: 'button', style: 'padding:8px 14px;font-size:13px;' }, '📷 Add photo (optional)');
+  const photoStatus = el('span', { class: 'small muted' }, '');
+  photoBtn.onclick = () => fileInp.click();
+  fileInp.onchange = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    try {
+      pickedDataUrl = await resizeImageToDataUrl(f, 1100, 0.8);
+      photoStatus.textContent = '✓ Photo attached · tap to replace';
+      photoStatus.style.color = 'var(--success)';
+      photoBtn.textContent = '📷 Replace photo';
+    } catch (err) {
+      photoStatus.textContent = 'Bad image';
+      photoStatus.style.color = 'var(--danger)';
+    }
+  };
+  photoRow.appendChild(photoBtn);
+  photoRow.appendChild(photoStatus);
+  m.appendChild(fileInp);
+  m.appendChild(photoRow);
+
+  const status = el('div', { style: 'min-height:24px;margin:10px 0;' });
+  m.appendChild(status);
+
+  // Reply container
+  const replyBox = el('div', {
+    style: 'margin-top:10px;padding:12px 14px;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:12px;line-height:1.55;font-size:14px;white-space:pre-wrap;display:none;'
+  });
+  m.appendChild(replyBox);
+
+  const askBtn = el('button', {
+    class: 'btn',
+    onclick: async () => {
+      const text = ta.value.trim();
+      if (!text && !pickedDataUrl) { toast('Type a question or attach a photo'); return; }
+      askBtn.disabled = true;
+      askBtn.style.opacity = '0.5';
+      status.innerHTML = '<div class="ai-loading"><span class="spinner"></span><span>Asking Claude…</span></div>';
+      replyBox.style.display = 'none';
+
+      const sys = `You are MyGym Coach. The user is asking about ONE specific exercise during their session. Answer in one short, practical block (2-5 sentences). Tone: clear, friendly, actionable. No emoji spam. Don't invent numbers.
+
+The exercise in question:
+- Name: ${displayName}
+- Target muscles: ${muscles || '(unspecified)'}
+- Programmed: ${ex.sets}×${ex.repsMin}-${ex.repsMax}${ex.timed ? 's' : ''} @ ${ex.bw ? 'BW' : ex.weight + 'kg'}
+- Listed alternatives: ${altStr}
+
+Always include:
+1) A short opinion on whether this exercise fits the user's plan TODAY.
+2) Any caution flags relevant to their data (recovery, soreness, form risk).
+3) One concrete suggestion (weight bump, swap idea, tempo cue, or "keep as planned").
+
+Wider context for grounding:
+
+${buildCoachContext()}`;
+
+      const userText = text || 'Look at this image and give feedback on this exercise.';
+      try {
+        let raw;
+        if (pickedDataUrl) {
+          raw = await callAnthropicVision({
+            system: sys,
+            userText,
+            imageDataUrl: pickedDataUrl,
+            maxTokens: 600
+          });
+        } else {
+          raw = await callAnthropic({
+            system: sys,
+            messages: [{ role: 'user', content: userText }],
+            maxTokens: 600
+          });
+        }
+        status.innerHTML = '';
+        replyBox.textContent = String(raw || '').trim();
+        replyBox.style.display = 'block';
+      } catch (err) {
+        status.innerHTML = '<div class="small" style="color:var(--danger);">' + escapeHtml(String(err.message || 'Failed').slice(0, 200)) + '</div>';
+      } finally {
+        askBtn.disabled = false;
+        askBtn.style.opacity = '1';
+      }
+    }
+  }, 'Ask');
+  m.appendChild(askBtn);
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;', onclick: closeModal }, 'Close'));
+
+  openModal(m);
+  setTimeout(() => ta.focus(), 80);
 }
 
 function makeActionBtn(label, svgHtml, onclick, hasData) {
@@ -6021,7 +6125,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.52 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.53 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
