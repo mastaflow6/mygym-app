@@ -3028,17 +3028,20 @@ function describeRepeat(rule) {
   return rule;
 }
 
-function addTask({ title, time, category, repeat }) {
+function addTask({ title, time, category, repeat, date }) {
   ensureTasksArr();
   const t = (title || '').trim();
   if (!t) return null;
   const okRepeat = (typeof repeat === 'string' && /^(daily|weekdays|weekly:[\d,]+|monthly:\d+)$/.test(repeat)) ? repeat : null;
+  // Date is only kept for one-off tasks. Recurring rules drive their own scheduling.
+  const okDate = (!okRepeat && typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) ? date : null;
   const task = {
     id: newTaskId(),
     title: t,
     time: (time && /^\d{1,2}:\d{2}$/.test(time)) ? time.padStart(5, '0') : null,
     category: ['work','personal','family','gym','health'].includes(category) ? category : null,
     repeat: okRepeat,
+    date: okDate,
     dismissedDates: [],
     createdAt: Date.now()
   };
@@ -3108,7 +3111,12 @@ function getTasks() {
       if (!matchesRepeat(t.repeat, td)) continue;
       if (Array.isArray(t.dismissedDates) && t.dismissedDates.includes(td)) continue;
       out.push(t);
+    } else if (t.date) {
+      // Dated one-off: show only on its date. (Past-dated tasks are filtered out;
+      // future-dated tasks wait until their day arrives.)
+      if (t.date === td) out.push(t);
     } else {
+      // Undated one-off — treat as "today / anytime".
       out.push(t);
     }
   }
@@ -3118,6 +3126,22 @@ function getTasks() {
     if (ta !== tb) return ta < tb ? -1 : 1;
     return (a.createdAt || 0) - (b.createdAt || 0);
   });
+  return out;
+}
+
+// Tasks for a specific calendar date — used by the upcoming-tasks count, if needed.
+function getTasksForDate(dateStr) {
+  ensureTasksArr();
+  const out = [];
+  for (const t of state.mastalifeTasks) {
+    if (t.repeat) {
+      if (!matchesRepeat(t.repeat, dateStr)) continue;
+      if (Array.isArray(t.dismissedDates) && t.dismissedDates.includes(dateStr)) continue;
+      out.push(t);
+    } else if (t.date) {
+      if (t.date === dateStr) out.push(t);
+    }
+  }
   return out;
 }
 
@@ -5997,7 +6021,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.51 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.52 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
@@ -6289,23 +6313,38 @@ function openAIKeyModal(onSaved) {
 }
 
 function _aiSystemPrompt() {
+  const td = today();
+  const tom = nextDateStr(td);
+  const refDate = new Date(td + 'T00:00:00');
+  const dowName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][refDate.getDay()];
   return `You convert a user's casual to-do list into a JSON array of tasks. Output ONLY a valid JSON array, no prose, no markdown fences.
+
+Reference: today is ${td} (${dowName}). Tomorrow is ${tom}. Default year is ${refDate.getFullYear()}.
 
 Schema for each task:
 {
   "title": string (clean it up, fix obvious typos, keep concise),
   "time": "HH:MM" (24h) or null,
   "category": "work" | "personal" | "family" | "gym" | "health" | null,
-  "repeat": "daily" | "weekdays" | "weekly:1,3" (dow numbers 0=Sun..6=Sat) | "monthly:15" | null
+  "repeat": "daily" | "weekdays" | "weekly:1,3" (dow numbers 0=Sun..6=Sat) | "monthly:15" | null,
+  "date": "YYYY-MM-DD" or null
 }
 
-Rules:
-- Default scope is today. If the line says "every monday" / "weekly" / "every weekday" / "daily" / "monthly on the 15th", set repeat accordingly. Otherwise repeat is null.
-- "every monday" => "weekly:1". "every Tuesday and Thursday" => "weekly:2,4". "weekdays" or "every weekday" => "weekdays". "daily" or "every day" => "daily". "every 15th" or "monthly on the 15th" => "monthly:15".
-- Times: assume the list flows chronologically. Bare numbers like "02" or "03" appearing AFTER morning entries (8, 9, 10, 11) mean afternoon (14:00, 15:00).
-- "08" or "8" first thing in the morning => 08:00. "9 breakfast" => 09:00.
-- Category guesses: "gym" / "workout" => gym; "meal" / "supplement" / "doctor" / "vitamin" / "breakfast" / "lunch" / "dinner" => health; "meeting" / "call" / "client" / "deadline" => work; "family time" / "kids" / "wife" / "husband" / "parents" / "dinner with family" => family; otherwise "shopping" / "errand" / "passport" / "papers" / "personal" => personal. Use null only if truly unclear.
+Date vs. repeat rules:
+- If a recurrence is mentioned ("every monday", "weekly", "weekdays", "daily", "every 15th") → set repeat, leave date null.
+- If a SPECIFIC day is mentioned ("today", "tomorrow", "monday" without "every", "next friday", "May 15", "15/05", "15 mai", "on the 12th") → set date to the absolute YYYY-MM-DD (next future occurrence). Leave repeat null.
+- If neither is mentioned → both date and repeat are null (treated as today / anytime).
+- "every monday" => repeat "weekly:1". "every Tuesday and Thursday" => "weekly:2,4". "weekdays" => "weekdays". "daily" / "every day" => "daily". "every 15th" / "monthly on the 15th" => "monthly:15".
+- "monday" alone (no "every") => date set to the next upcoming Monday on/after ${td}.
+- "may 15" / "15/05" / "15 mai" / "15th of may" => "${refDate.getFullYear()}-05-15" (or next year if that date is already past).
+
+Times:
+- "08" or "8" first thing in the morning => 08:00. "9 breakfast" => 09:00. "at 11" => 11:00.
+- Bare numbers like "02" or "03" appearing AFTER morning entries (8, 9, 10, 11) mean afternoon (14:00, 15:00).
 - If a line has no time, set time to null. Don't invent times.
+
+Other rules:
+- Category guesses: "gym" / "workout" => gym; "meal" / "supplement" / "doctor" / "vitamin" / "breakfast" / "lunch" / "dinner" => health; "meeting" / "call" / "client" / "deadline" => work; "family time" / "kids" / "wife" / "husband" / "parents" / "dinner with family" => family; otherwise "shopping" / "errand" / "passport" / "papers" / "personal" => personal. Use null only if truly unclear.
 - Skip header/preamble lines like "Tasks i have today".
 - Output ONLY the JSON array, nothing before or after.`;
 }
@@ -6860,7 +6899,7 @@ function openAIParseModal() {
   m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' },
     'Paste a casual list for today. Claude will pull out times and categories.'));
 
-  const ta = el('textarea', { class: 'ai-textarea', placeholder: 'wakeup 8\n9 breakfast\nmeeting at 11\n02 preworkout meal\n03 gym session\n…' });
+  const ta = el('textarea', { class: 'ai-textarea', placeholder: 'Paste anything — times, days (Mon), or specific dates (May 15) all work.' });
   m.appendChild(ta);
 
   const status = el('div', { style: 'min-height:24px;margin:6px 0;' });
@@ -6905,14 +6944,20 @@ function openAIParseModal() {
 function openAIPreviewModal(parsedTasks) {
   // Each row has its own state: skipped + an editable copy.
   const validRepeat = (r) => (typeof r === 'string' && /^(daily|weekdays|weekly:[\d,]+|monthly:\d+)$/.test(r)) ? r : null;
-  const rows = parsedTasks.map(t => ({
-    title: String(t.title || '').trim() || 'Untitled',
-    time: t.time && /^\d{1,2}:\d{2}$/.test(t.time) ? t.time.padStart(5, '0') : null,
-    category: ['work', 'personal', 'family', 'gym', 'health'].includes(t.category) ? t.category : null,
-    repeat: validRepeat(t.repeat),
-    skipped: false,
-    expanded: false
-  }));
+  const validDate = (d) => (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) ? d : null;
+  const rows = parsedTasks.map(t => {
+    const repeat = validRepeat(t.repeat);
+    return {
+      title: String(t.title || '').trim() || 'Untitled',
+      time: t.time && /^\d{1,2}:\d{2}$/.test(t.time) ? t.time.padStart(5, '0') : null,
+      category: ['work', 'personal', 'family', 'gym', 'health'].includes(t.category) ? t.category : null,
+      repeat,
+      // Date is only meaningful for non-recurring tasks; clear it if AI returned both.
+      date: repeat ? null : validDate(t.date),
+      skipped: false,
+      expanded: false
+    };
+  });
 
   const m = el('div');
   const head = el('div', { class: 'row between', style: 'align-items:center;margin-bottom:12px;' }, [
@@ -6931,10 +6976,25 @@ function openAIPreviewModal(parsedTasks) {
       row.appendChild(el('div', { class: 'pr-title' }, r.title));
       const metaParts = [];
       if (r.time) metaParts.push(r.time);
-      if (r.repeat) metaParts.push('<span style="color:var(--accent);">↻ ' + describeRepeat(r.repeat) + '</span>');
+      if (r.repeat) {
+        metaParts.push('<span style="color:var(--accent);">↻ ' + describeRepeat(r.repeat) + '</span>');
+      } else if (r.date) {
+        const td = today();
+        const tom = nextDateStr(td);
+        let label;
+        if (r.date === td) label = 'Today';
+        else if (r.date === tom) label = 'Tomorrow';
+        else {
+          const d = new Date(r.date + 'T00:00:00');
+          const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+          label = `${dow} ${months[d.getMonth()]} ${d.getDate()}`;
+        }
+        metaParts.push('<span style="color:var(--accent);">📅 ' + label + '</span>');
+      }
       if (r.category) metaParts.push(`<span class="cat-chip cat-${r.category}">${r.category}</span>`);
       const meta = el('div', { class: 'pr-meta' });
-      meta.innerHTML = metaParts.join(' · ') || '<span style="color:var(--text-dim);">no time</span>';
+      meta.innerHTML = metaParts.join(' · ') || '<span style="color:var(--text-dim);">today · anytime</span>';
       row.appendChild(meta);
 
       const actions = el('div', { class: 'pr-actions' });
@@ -6959,6 +7019,14 @@ function openAIPreviewModal(parsedTasks) {
         const timeInp = el('input', { type: 'time', value: r.time || '' });
         timeInp.oninput = () => { r.time = timeInp.value || null; };
         edit.appendChild(timeInp);
+
+        // Date — disabled when repeat is set, because the recurrence rule drives scheduling.
+        edit.appendChild(el('label', {}, 'Date (blank = today / anytime)'));
+        const dateInp = el('input', { type: 'date', value: r.date || '' });
+        dateInp.disabled = !!r.repeat;
+        if (r.repeat) dateInp.style.opacity = '0.5';
+        dateInp.oninput = () => { r.date = dateInp.value || null; rebuild(); };
+        edit.appendChild(dateInp);
 
         edit.appendChild(el('label', {}, 'Category'));
         const catSel = el('select');
@@ -6991,7 +7059,11 @@ function openAIPreviewModal(parsedTasks) {
           if ((r.repeat || '') === v) o.selected = true;
           repSel.appendChild(o);
         });
-        repSel.onchange = () => { r.repeat = repSel.value || null; };
+        repSel.onchange = () => {
+          r.repeat = repSel.value || null;
+          if (r.repeat) r.date = null; // recurrence overrides a specific date
+          rebuild();
+        };
         edit.appendChild(repSel);
 
         row.appendChild(edit);
@@ -7011,7 +7083,7 @@ function openAIPreviewModal(parsedTasks) {
     style: 'margin-top:14px;',
     onclick: () => {
       const keep = rows.filter(r => !r.skipped);
-      keep.forEach(r => addTask({ title: r.title, time: r.time, category: r.category, repeat: r.repeat }));
+      keep.forEach(r => addTask({ title: r.title, time: r.time, category: r.category, repeat: r.repeat, date: r.date }));
       closeModal();
       render();
       toast(`Saved ${keep.length} task${keep.length === 1 ? '' : 's'}`);
