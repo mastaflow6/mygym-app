@@ -1035,6 +1035,11 @@
     box-shadow: 0 4px 14px rgba(129, 140, 248, 0.32);
   }
   .fab-pause svg { width: 22px; height: 22px; }
+  /* When any modal is open, get the floating FABs out of the way so they don't
+     overlap the modal sheet (the Pause FAB on the gym workout was blocking the
+     "Ask" modal during an active session). */
+  body.modal-open .fab-pause,
+  body.modal-open .coach-fab { display: none !important; }
 
   .quick-log {
     display: grid;
@@ -3418,8 +3423,13 @@ function openModal(node) {
   if (typeof node === 'string') $('modalContent').innerHTML = node;
   else $('modalContent').appendChild(node);
   $('modalBg').classList.add('show');
+  // Hide floating FABs (Pause / Coach) so they don't overlap the modal sheet.
+  document.body.classList.add('modal-open');
 }
-function closeModal() { $('modalBg').classList.remove('show'); }
+function closeModal() {
+  $('modalBg').classList.remove('show');
+  document.body.classList.remove('modal-open');
+}
 $('modalBg').addEventListener('click', e => { if (e.target === $('modalBg')) closeModal(); });
 
 /* =========== ROOT RENDER =========== */
@@ -6448,7 +6458,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.54 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.55 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
