@@ -6776,7 +6776,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.62 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.63 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
@@ -7316,12 +7316,16 @@ function buildExerciseHistorySnippet() {
         const wlbl = ex.bw ? `BW × ${best.r}${ex.timed ? 's' : ''}` : `${best.w}kg × ${best.r}${ex.timed ? 's' : ''}`;
         const variant = w.variants && w.variants[ex.id];
         const vtag = variant ? ` [variant: "${variant}"]` : '';
-        tops.push(`${wlbl} (${best.d})${vtag}`);
+        const note = w.notes && w.notes[ex.id];
+        const ntag = (note && String(note).trim()) ? ` · note: "${String(note).trim()}"` : '';
+        tops.push(`${wlbl} (${best.d})${vtag}${ntag}`);
       }
       if (tops.length >= 4) break;
     }
     const tgt = ex.bw ? `BW · target ${ex.repsMin}-${ex.repsMax}` : `target ${ex.weight}kg × ${ex.repsMin}-${ex.repsMax}`;
-    lines.push(`- ${ex.name} (${tgt}) · ${tops.length ? tops.join(' · ') : '(no prior logs)'}`);
+    lines.push(`- ${ex.name} (${tgt})`);
+    tops.forEach(t => lines.push(`   · ${t}`));
+    if (!tops.length) lines.push('   · (no prior logs)');
   }
   return lines.join('\n');
 }
@@ -7348,7 +7352,10 @@ Rules:
 - 'reduce' = soreness/notes flag risk, or he missed reps last time.
 - 'swap' = recent note explicitly asked to swap.
 - 'focus' = no number change, just a form cue.
-- IMPORTANT — Machine variants: top sets may carry a [variant: "..."] tag indicating the specific machine used. Different machines of the same lift can have very different load scales. When comparing top sets across dates, only treat a number drop as a "reduce" verdict if BOTH sets used the same variant (or both were untagged). If variants differ, surface a brief 'focus' or 'keep' verdict and mention "different machine — load isn't comparable" in the advice instead of flagging it as a regression.
+- IMPORTANT — Machine differences: a number drop across sessions does NOT mean regression when machines differ. Signals to look for:
+  (a) An explicit [variant: "..."] tag attached to the top set — different tags = different machines.
+  (b) The per-exercise note or session note mentioning a different machine — phrases like "different machine", "harder machine", "easier machine", "machine 2", "other machine", "same weight different machine", "machine 1 today", calibration cues, brand differences. Notes are equally valid as the explicit tag, even when no [variant: "..."] is present.
+  If EITHER signal indicates a machine change between the sessions being compared, do NOT issue a "reduce" verdict on load grounds. Use 'keep' or 'focus' and put "different machine — load isn't directly comparable" in the advice. Only compare loads when the machines clearly match (same variant or both untagged AND no note conflicts).
 - Output only valid JSON, no preamble, no trailing text.
 
 CONTEXT:
@@ -7497,10 +7504,11 @@ Rules:
 - Quote real numbers and exact exercise names from the data — never invent.
 - Be terse: every field is read on a phone.
 - highlights/cautions can be empty arrays if nothing notable.
-- IMPORTANT — Machine variants: if an exercise has a [variant: "..."] tag, that means the user trained on a SPECIFIC machine. Different machines of the same exercise often have very different load scales — a "Harder machine" 39kg can be equivalent to or harder than a "Standard" 45kg on another machine.
-  • If the current session's variant for an exercise is DIFFERENT from the prior session's variant for that same exercise, do NOT call it a load drop or regression. State "different machine — not directly comparable" or omit from cautions entirely.
-  • If both sessions used the SAME variant (or both untagged), compare as usual.
-  • If notes hint at a machine difference ("different machine", "easier machine", "harder machine", "machine 2"), treat it the same way and skip the regression flag.
+- IMPORTANT — Machine differences: a load drop across sessions does NOT mean regression when machines differ. Detect machine changes from EITHER of:
+  (a) Explicit [variant: "..."] tag — different tags between this session and the prior one = different machines.
+  (b) The per-exercise note or the session note mentioning a different machine — phrases like "different machine", "harder machine", "easier machine", "machine 2", "other machine", "same weight different machine", "machine 1 today", calibration cues. Notes are equally valid as the explicit tag, even when no [variant: "..."] is present.
+  If either signal indicates a machine change, do NOT call it a load drop or regression. State "different machine — not directly comparable" or omit from cautions entirely.
+  Compare loads only when the machines clearly match (same variant or both untagged AND no note conflicts).
 - Output ONLY the JSON array.
 
 SESSIONS TO REVIEW (most recent first):
