@@ -2334,13 +2334,41 @@ async function cloudPull() {
       return { ok: false, reason: 'http-' + res.status };
     }
     const data = await res.json();
-    const content = data.files && data.files[CLOUD_GIST_FILENAME] && data.files[CLOUD_GIST_FILENAME].content;
+    const fileEntry = data.files && data.files[CLOUD_GIST_FILENAME];
+    let content = fileEntry && fileEntry.content;
     if (!content) {
       cloudSyncStatus = 'error'; cloudLastError = 'No backup file in gist';
       refreshCloudStatusUI();
       return { ok: false, reason: 'no-content' };
     }
-    const remote = JSON.parse(content);
+    // GitHub truncates inline gist content at ~1 MB. Fetch raw_url to get the full file.
+    if (fileEntry.truncated && fileEntry.raw_url) {
+      try {
+        const rawRes = await fetch(fileEntry.raw_url, { headers: cloudHeaders() });
+        if (rawRes.ok) {
+          content = await rawRes.text();
+        } else {
+          cloudSyncStatus = 'error';
+          cloudLastError = 'Could not fetch full backup (raw ' + rawRes.status + ')';
+          refreshCloudStatusUI();
+          return { ok: false, reason: 'raw-' + rawRes.status };
+        }
+      } catch (e) {
+        cloudSyncStatus = 'error';
+        cloudLastError = 'Raw fetch failed: ' + (e.message || 'unknown');
+        refreshCloudStatusUI();
+        return { ok: false, reason: 'raw-network' };
+      }
+    }
+    let remote;
+    try {
+      remote = JSON.parse(content);
+    } catch (e) {
+      cloudSyncStatus = 'error';
+      cloudLastError = 'Backup content corrupted (size: ' + Math.round(content.length / 1024) + 'KB)';
+      refreshCloudStatusUI();
+      return { ok: false, reason: 'parse-error', error: e.message };
+    }
     // Preserve cloud creds (token + gist id stay device-local)
     const keepToken = state.settings.cloudGistToken;
     const keepId = state.settings.cloudGistId;
@@ -6886,7 +6914,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.68 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.69 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
