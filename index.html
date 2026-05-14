@@ -2392,6 +2392,62 @@ async function cloudPull() {
   }
 }
 
+// Manual JSON import — recovery path when cloud is stale and the user has the JSON
+// from a gist revision (https://gist.github.com/USER/GIST/revisions) or another export.
+function openImportJSONModal() {
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Import backup JSON'));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;line-height:1.5;' },
+    'Paste a full backup JSON below. This REPLACES your local data with the pasted content. ' +
+    'Useful for restoring an older gist revision (gist.github.com/<your-user>/<gist-id>/revisions → click a revision → copy the raw file content).'));
+  const ta = el('textarea', {
+    placeholder: '{"workouts":{...},"bodyWeight":[...],...}',
+    style: 'width:100%;min-height:160px;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:ui-monospace,Menlo,monospace;font-size:12px;resize:vertical;outline:none;'
+  });
+  m.appendChild(ta);
+  const status = el('div', { class: 'small', style: 'margin-top:6px;min-height:18px;' });
+  m.appendChild(status);
+
+  m.appendChild(el('button', {
+    class: 'btn',
+    style: 'margin-top:12px;width:100%;',
+    onclick: () => {
+      const txt = (ta.value || '').trim();
+      if (!txt) { status.textContent = 'Paste some JSON first'; status.style.color = 'var(--warn)'; return; }
+      let obj;
+      try { obj = JSON.parse(txt); }
+      catch (e) { status.textContent = '✗ Not valid JSON: ' + (e.message || '').slice(0, 80); status.style.color = 'var(--danger)'; return; }
+      if (!obj || typeof obj !== 'object' || !obj.workouts) {
+        status.textContent = '✗ Looks like the wrong shape — no workouts field';
+        status.style.color = 'var(--danger)';
+        return;
+      }
+      // Count sessions for the confirm dialog
+      const newCount = Object.values(obj.workouts).filter(w => w && (w.finished || (w.logs && Object.values(w.logs).some(arr => arr.some(s => s && s.d))))).length;
+      const localCount = Object.values(state.workouts || {}).filter(w => w && (w.finished || (w.logs && Object.values(w.logs).some(arr => arr.some(s => s && s.d))))).length;
+      if (!confirm(`Replace local data?\n\nLocal: ${localCount} sessions\nPasted: ${newCount} sessions\n\nLocal data will be overwritten. This cannot be undone unless you have another backup.`)) return;
+      // Preserve cloud creds and API key (they are device-local, not in the gist)
+      const keepToken = state.settings.cloudGistToken;
+      const keepId = state.settings.cloudGistId;
+      const keepKey = state.settings.anthropicApiKey;
+      state = obj;
+      if (!state.settings) state.settings = {};
+      state.settings.cloudGistToken = keepToken;
+      state.settings.cloudGistId = keepId;
+      if (keepKey && !state.settings.anthropicApiKey) state.settings.anthropicApiKey = keepKey;
+      // Backfill any newer default keys
+      for (const k of Object.keys(defaultState)) if (state[k] === undefined) state[k] = defaultState[k];
+      for (const k of Object.keys(defaultState.settings)) if (state.settings[k] === undefined) state.settings[k] = defaultState.settings[k];
+      save({ skipCloud: true });
+      closeModal();
+      render();
+      toast(`✓ Imported ${newCount} sessions`);
+    }
+  }, 'Import & replace local data'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;width:100%;', onclick: closeModal }, 'Cancel'));
+  openModal(m);
+}
+
 async function cloudFindExisting() {
   const token = state.settings.cloudGistToken;
   if (!token) return null;
@@ -2464,6 +2520,27 @@ function scheduleCloudPush() {
   cloudPushTimer = setTimeout(() => { cloudPushTimer = null; cloudCreateOrUpdate(); }, 3000);
 }
 
+// Force-flush any pending debounced push. Called when the app goes background / page hides,
+// so a session logged seconds before close still reaches the cloud.
+function flushCloudPushNow() {
+  if (!state || !state.settings || !state.settings.cloudGistToken) return;
+  if (cloudSyncStatus === 'auth-error') return;
+  if (!cloudPushTimer) return; // nothing pending
+  clearTimeout(cloudPushTimer);
+  cloudPushTimer = null;
+  // Fire the push immediately; fetch's keepalive isn't trivial here (we use PATCH + a body),
+  // but the request usually starts before the page is fully gone on mobile.
+  cloudCreateOrUpdate().catch(() => {});
+}
+
+if (typeof window !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushCloudPushNow();
+  });
+  window.addEventListener('pagehide', flushCloudPushNow);
+  window.addEventListener('beforeunload', flushCloudPushNow);
+}
+
 function refreshCloudStatusUI() {
   // Re-render More tab if visible so the status row updates. Cheap because the More tab is small.
   if (typeof activeTab !== 'undefined' && activeTab === 'more') render();
@@ -2534,6 +2611,12 @@ function buildCloudBackupCard() {
     }
   }, 'Restore from cloud'));
   card.appendChild(row);
+
+  card.appendChild(el('button', {
+    class: 'btn small secondary',
+    style: 'margin-top:8px;width:100%;',
+    onclick: () => openImportJSONModal()
+  }, 'Import backup JSON (paste)'));
 
   card.appendChild(el('button', {
     class: 'btn small danger',
@@ -6914,7 +6997,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.69 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.70 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
