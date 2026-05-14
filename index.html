@@ -329,6 +329,7 @@
   .stat .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
   .stat .value { font-size: 24px; font-weight: 700; margin-top: 4px; letter-spacing: -0.02em; }
   .stat .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .stat.positive .value { color: var(--success); }
 
   .phase-track { display: flex; flex-direction: column; gap: 12px; }
   .phase-step { display: flex; gap: 12px; align-items: flex-start; }
@@ -4051,50 +4052,108 @@ function renderHome() {
 
   // Stat grid — Today's sets · Calories · Last session · Last sleep
   const grid = el('div', { class: 'stat-grid' });
-  // Slot 1: Today's exercises
-  const _exCount = day ? (day.exercises ? day.exercises.length : 0) : 0;
-  const _todayProg = day ? workoutProgress(date, todayKey) : { done: 0, total: 0 };
-  const _doneExercises = day && day.exercises ? day.exercises.filter(ex => {
-    const logs = state.workouts[date]?.logs?.[ex.id] || [];
-    return logs.length > 0 && logs.every(s => s.d);
-  }).length : 0;
+
+  // Slot 1: Last session (or Next session on rest days)
+  const _lastFinDates = Object.entries(state.workouts || {})
+    .filter(([d, w]) => w && w.finished && d <= today())
+    .sort((a, b) => b[0].localeCompare(a[0]));
+  const _lastFin = _lastFinDates[0];
+  const _lastFinDate = _lastFin ? _lastFin[0] : null;
+  const _lastFinW = _lastFin ? _lastFin[1] : null;
+  const _lastFinMs = _lastFinW ? ((_lastFinW.timers?.warmup || 0) + (_lastFinW.timers?.workout || 0)) : 0;
+  const _lastFinDay = _lastFinW && DAYS[_lastFinW.dayKey] ? DAYS[_lastFinW.dayKey] : null;
+  function _agoLabel(d) {
+    if (!d) return '';
+    if (d === today()) return 'today';
+    const td = new Date(today() + 'T00:00:00');
+    const ld = new Date(d + 'T00:00:00');
+    const days = Math.round((td - ld) / 86400000);
+    return days === 1 ? 'yesterday' : `${days}d ago`;
+  }
+  if (day) {
+    // Workout day → show last finished session (with timer + day name)
+    grid.appendChild(el('div', {
+      class: 'stat' + (_lastFinMs > 0 ? ' positive' : ''),
+      style: 'cursor:pointer;',
+      onclick: () => { activeTab = 'progress'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    }, [
+      el('div', { class: 'label' }, 'Last session'),
+      el('div', { class: 'value', style: 'font-size:20px;' }, _lastFinMs > 0 ? fmtTime(_lastFinMs) : '—'),
+      el('div', { class: 'sub' }, _lastFinDay
+        ? `${_lastFinDay.name} · ${_agoLabel(_lastFinDate)}`
+        : 'no sessions yet')
+    ]));
+  } else {
+    // Rest day → show NEXT planned session
+    let nextDate = null, nextDay = null;
+    let dCheck = nextDateStr(today());
+    for (let i = 0; i < 7; i++) {
+      const k = effectiveDayKey(dCheck);
+      if (k != null) { nextDate = dCheck; nextDay = DAYS[k]; break; }
+      dCheck = nextDateStr(dCheck);
+    }
+    const daysUntil = nextDate ? Math.round((new Date(nextDate + 'T00:00:00') - new Date(today() + 'T00:00:00')) / 86400000) : null;
+    const untilLabel = daysUntil === 1 ? 'tomorrow' : daysUntil != null ? `in ${daysUntil}d` : '—';
+    grid.appendChild(el('div', {
+      class: 'stat' + (nextDay ? ' positive' : ''),
+      style: nextDay ? 'cursor:pointer;' : '',
+      onclick: nextDay ? (() => { activeTab = 'plan'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }) : undefined
+    }, [
+      el('div', { class: 'label' }, 'Next session'),
+      el('div', { class: 'value', style: 'font-size:20px;' }, nextDay ? nextDay.name : '—'),
+      el('div', { class: 'sub' }, nextDay ? untilLabel : 'no upcoming')
+    ]));
+  }
+
+  // Slot 2: Streak
+  const _streak = getStreak();
   grid.appendChild(el('div', {
-    class: 'stat',
-    style: day ? 'cursor:pointer;' : '',
-    onclick: day ? (() => { activeTab = 'today'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }) : undefined
+    class: 'stat' + (_streak > 0 ? ' positive' : '')
   }, [
-    el('div', { class: 'label' }, 'Today'),
-    el('div', { class: 'value' }, day ? `${_doneExercises} / ${_exCount}` : '—'),
-    el('div', { class: 'sub' }, day ? (_doneExercises >= _exCount ? '✓ All done' : `${_exCount - _doneExercises} exercise${(_exCount - _doneExercises) === 1 ? '' : 's'} left`) : 'Rest day')
+    el('div', { class: 'label' }, 'Streak'),
+    el('div', { class: 'value' }, _streak > 0 ? `${_streak}w` : '—'),
+    el('div', { class: 'sub' }, _streak > 0 ? 'consecutive weeks (4+/wk)' : 'hit 4 to start')
   ]));
-  // Slot 2: Calories (links to Food)
-  const _kcalDone = mealTotalsForDate(today()).calories;
-  const _kcalTarget = NUTRITION.calories;
-  const _kcalPct = Math.min(100, _kcalTarget ? Math.round(_kcalDone / _kcalTarget * 100) : 0);
+
+  // Slot 3: Energy / How I feel — latest feel-log
+  const _feelLogs = (Array.isArray(state.coachLogs) ? state.coachLogs : [])
+    .filter(l => l && l.kind === 'feel')
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const _latestFeel = _feelLogs[0] || null;
+  const _feelHasData = _latestFeel && (_latestFeel.energy != null || _latestFeel.soreness != null);
+  let _feelVal = '—';
+  let _feelSub = 'Tap to log how you feel';
+  if (_feelHasData) {
+    const e = _latestFeel.energy != null ? `E ${_latestFeel.energy}` : '—';
+    const s = _latestFeel.soreness != null ? `S ${_latestFeel.soreness}` : '—';
+    _feelVal = `${e} · ${s}`;
+    _feelSub = _latestFeel.date === today() ? 'today · energy / soreness'
+      : (_latestFeel.date ? `${_agoLabel(_latestFeel.date)} · E / S` : 'energy / soreness');
+  }
+  // Positive if energy is good (4-5) and soreness is low (1-2) — i.e. ready to train
+  const _feelPositive = _feelHasData
+    && (_latestFeel.energy != null && _latestFeel.energy >= 4)
+    && (_latestFeel.soreness != null ? _latestFeel.soreness <= 2 : true);
   grid.appendChild(el('div', {
-    class: 'stat',
+    class: 'stat' + (_feelPositive ? ' positive' : ''),
     style: 'cursor:pointer;',
-    onclick: () => { activeTab = 'food'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    onclick: () => {
+      if (typeof openFeelLogModal === 'function') openFeelLogModal();
+      else { activeTab = 'coach'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    }
   }, [
-    el('div', { class: 'label' }, 'Calories'),
-    el('div', { class: 'value' }, _kcalDone > 0 ? `${Math.round(_kcalDone)}` : '—'),
-    el('div', { class: 'sub' }, _kcalDone > 0 ? `${_kcalPct}% of ${_kcalTarget}` : `target ${_kcalTarget} · tap to log`)
+    el('div', { class: 'label' }, 'How I feel'),
+    el('div', { class: 'value', style: 'font-size:20px;' }, _feelVal),
+    el('div', { class: 'sub' }, _feelSub)
   ]));
-  // Slot 3: Water today (action — links to More for water UI)
-  const _wDone = todaysWater();
-  const _wTarget = state.settings.waterTarget || 4;
-  grid.appendChild(el('div', {
-    class: 'stat',
-    style: 'cursor:pointer;',
-    onclick: () => { activeTab = 'more'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-  }, [
-    el('div', { class: 'label' }, 'Water'),
-    el('div', { class: 'value' }, `${_wDone} / ${_wTarget}`),
-    el('div', { class: 'sub' }, _wDone >= _wTarget ? '✓ Hit target' : `${(_wDone * 0.5).toFixed(1)}L of ${(_wTarget * 0.5).toFixed(1)}L`)
-  ]));
+
   // Slot 4: Last sleep
   const ls = lastSleep();
-  grid.appendChild(el('div', { class: 'stat', onclick: openSleepModal, style: 'cursor:pointer;' }, [
+  grid.appendChild(el('div', {
+    class: 'stat' + (ls && ls.hours >= (state.settings.sleepTarget || 8) - 0.5 ? ' positive' : ''),
+    onclick: openSleepModal,
+    style: 'cursor:pointer;'
+  }, [
     el('div', { class: 'label' }, 'Last sleep'),
     el('div', { class: 'value' }, ls ? `${ls.hours.toFixed(1)} h` : '—'),
     el('div', { class: 'sub' }, ls ? `${(ls.hours - state.settings.sleepTarget) >= 0 ? '+' : ''}${(ls.hours - state.settings.sleepTarget).toFixed(1)}h vs target` : 'Tap to log')
@@ -4254,18 +4313,34 @@ function renderHome() {
       ? `${_delta >= 0 ? '+' : ''}${_delta.toFixed(1)} kg from start`
       : 'log to track';
 
+    // Calories + Water
+    const _winsKcalDone = mealTotalsForDate(today()).calories;
+    const _winsKcalTarget = NUTRITION.calories;
+    const _winsKcalPct = Math.min(100, _winsKcalTarget ? Math.round(_winsKcalDone / _winsKcalTarget * 100) : 0);
+    const _winsWDone = todaysWater();
+    const _winsWTarget = state.settings.waterTarget || 4;
+    const _winsWHit = _winsWDone >= _winsWTarget;
+
     const winsSection = el('div', { class: 'ml-section' });
     winsSection.appendChild(el('div', { class: 'ml-section-head' }, [el('span', {}, 'Recent wins')]));
     const winsRow = el('div', { class: 'wins-row' });
-    winsRow.appendChild(el('div', { class: 'win-card' + (streak > 0 ? ' positive' : '') }, [
-      el('div', { class: 'w-lbl', html: ML_ICONS.star + ' <span>Streak</span>' }),
-      el('div', { class: 'w-val' }, `${streak}w`),
-      el('div', { class: 'w-sub' }, streak > 0 ? 'consecutive weeks' : 'start one')
+    winsRow.appendChild(el('div', {
+      class: 'win-card' + (_winsKcalDone > 0 ? ' positive' : ''),
+      style: 'cursor:pointer;',
+      onclick: () => { activeTab = 'food'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    }, [
+      el('div', { class: 'w-lbl', html: (ML_ICONS.flame || ML_ICONS.star) + ' <span>Calories</span>' }),
+      el('div', { class: 'w-val' }, _winsKcalDone > 0 ? `${Math.round(_winsKcalDone)}` : '—'),
+      el('div', { class: 'w-sub' }, _winsKcalDone > 0 ? `${_winsKcalPct}% of ${_winsKcalTarget}` : `target ${_winsKcalTarget} kcal`)
     ]));
-    winsRow.appendChild(el('div', { class: 'win-card' + (lastTotalMs > 0 ? ' positive' : '') }, [
-      el('div', { class: 'w-lbl', html: ML_ICONS.clock + ' <span>Last session</span>' }),
-      el('div', { class: 'w-val' }, lastTotalMs ? fmtTime(lastTotalMs) : '—'),
-      el('div', { class: 'w-sub' }, lastSubLabel)
+    winsRow.appendChild(el('div', {
+      class: 'win-card' + (_winsWHit ? ' positive' : ''),
+      style: 'cursor:pointer;',
+      onclick: () => { activeTab = 'more'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    }, [
+      el('div', { class: 'w-lbl', html: (ML_ICONS.drop || ML_ICONS.star) + ' <span>Water</span>' }),
+      el('div', { class: 'w-val' }, `${_winsWDone}/${_winsWTarget}`),
+      el('div', { class: 'w-sub' }, _winsWHit ? '✓ Hit target' : `${(_winsWDone * 0.5).toFixed(1)}L of ${(_winsWTarget * 0.5).toFixed(1)}L`)
     ]));
     winsRow.appendChild(el('div', { class: 'win-card' + (_topPR ? ' positive' : '') }, [
       el('div', { class: 'w-lbl', html: (ML_ICONS.trend || ML_ICONS.star) + ' <span>Latest PR</span>' }),
@@ -4777,6 +4852,30 @@ function renderSetRow(ex, date, dayKey, logs, i, lastSession) {
         if (!state.exerciseSwaps) state.exerciseSwaps = {};
         const swapNow = w.swaps?.[ex.id];
         if (swapNow) state.exerciseSwaps[ex.id] = swapNow;
+        // Auto-finish: if EVERY exercise in today's plan has all its sets marked done, mark workout finished.
+        if (!w.finished) {
+          const day = DAYS[dayKey];
+          const allExercisesDone = day && day.exercises.length > 0 && day.exercises.every(ex2 => {
+            const arr = (w.logs && w.logs[ex2.id]) || [];
+            if (arr.length < ex2.sets) return false;
+            return arr.every(s2 => s2 && s2.d);
+          });
+          if (allExercisesDone) {
+            if (w.activePhase && w.phaseStart) {
+              w.timers[w.activePhase] = (w.timers[w.activePhase] || 0) + (Date.now() - w.phaseStart);
+              w.activePhase = null; w.phaseStart = null;
+            }
+            w.finished = Date.now();
+            stopRest();
+            if (typeof phaseTickInterval !== 'undefined' && phaseTickInterval) clearInterval(phaseTickInterval);
+            if (typeof releaseWakeLock === 'function') releaseWakeLock();
+            if (typeof homeFocusExited !== 'undefined') homeFocusExited = false;
+            if (navigator.vibrate) navigator.vibrate([100, 60, 100, 60, 200]);
+            toast('🎯 Workout auto-finished — all sets done', 'celebrate');
+            save(); render();
+            return;
+          }
+        }
         save(); render();
         startRest();
         if (navigator.vibrate) navigator.vibrate(20);
@@ -6051,28 +6150,32 @@ async function _generateBriefingInline(section, btn) {
 }
 
 function _renderBriefingBody(parent, j) {
-  // Strategy
+  // Highlights first (top chips — quick scan)
+  if (Array.isArray(j.highlights) && j.highlights.length) {
+    const wrap = el('div', { class: 'brief-highlights', style: 'margin-bottom:10px;' });
+    j.highlights.slice(0, 4).forEach(h => wrap.appendChild(el('span', { class: 'hchip' }, String(h).trim())));
+    parent.appendChild(wrap);
+  }
+  // Strategy — the punch line
   if (j.strategy) {
     parent.appendChild(el('div', {
       class: 'b-body',
-      style: 'padding:12px 14px;background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;margin-bottom:10px;'
+      style: 'padding:10px 12px;background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;margin-bottom:10px;font-weight:600;line-height:1.4;'
     }, j.strategy));
   }
   // Cautions
   if (Array.isArray(j.cautions) && j.cautions.length) {
-    parent.appendChild(el('div', { class: 'small muted', style: 'margin:10px 4px 4px;font-weight:700;letter-spacing:0.04em;' }, 'CAUTIONS'));
     j.cautions.forEach(c => {
       const lvl = c.level === 'info' ? 'info' : 'warn';
-      parent.appendChild(el('div', { class: 'brief-caution ' + lvl }, [el('span', {}, String(c.text || '').trim())]));
+      parent.appendChild(el('div', { class: 'brief-caution ' + lvl, style: 'margin-bottom:6px;' }, [el('span', {}, String(c.text || '').trim())]));
     });
   }
-  // Exercise suggestions
+  // Exercise suggestions (no big section title — chips speak for themselves)
   if (Array.isArray(j.exerciseSuggestions) && j.exerciseSuggestions.length) {
-    parent.appendChild(el('div', { class: 'small muted', style: 'margin:14px 4px 4px;font-weight:700;letter-spacing:0.04em;' }, 'TODAY\'S EXERCISES'));
     j.exerciseSuggestions.forEach(s => {
       const validVerdicts = ['bump','keep','reduce','swap','focus'];
       const verdict = validVerdicts.includes(s.verdict) ? s.verdict : 'keep';
-      const row = el('div', { class: 'exsug-row' }, [
+      const row = el('div', { class: 'exsug-row', style: 'margin-top:6px;' }, [
         el('div', { class: 'exsug-name' }, String(s.name || '').trim()),
         el('span', { class: 'verdict-chip ' + verdict }, verdict),
         el('div', { class: 'exsug-advice' }, String(s.advice || '').trim())
@@ -6080,16 +6183,12 @@ function _renderBriefingBody(parent, j) {
       parent.appendChild(row);
     });
   }
-  // Progress
+  // Progress line — single line, no subhead
   if (j.progress) {
-    parent.appendChild(el('div', { class: 'small muted', style: 'margin:14px 4px 4px;font-weight:700;letter-spacing:0.04em;' }, 'PROGRESS'));
-    parent.appendChild(el('div', { class: 'brief-progress' }, j.progress));
-  }
-  // Highlights
-  if (Array.isArray(j.highlights) && j.highlights.length) {
-    const wrap = el('div', { class: 'brief-highlights' });
-    j.highlights.slice(0, 4).forEach(h => wrap.appendChild(el('span', { class: 'hchip' }, String(h).trim())));
-    parent.appendChild(wrap);
+    parent.appendChild(el('div', {
+      class: 'brief-progress small dim',
+      style: 'margin-top:10px;line-height:1.4;'
+    }, j.progress));
   }
 }
 
@@ -6787,7 +6886,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.64 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.68 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
@@ -7342,32 +7441,37 @@ function buildExerciseHistorySnippet() {
 }
 
 function buildCoachBriefingPrompt() {
-  return `You are MyGym Coach giving Mustapha a short daily briefing. Output ONLY a single JSON object (no prose, no markdown fences). Schema:
+  return `You are MyGym Coach. Give Mustapha a SHORT, sharp daily briefing — punchy lines, real numbers, zero filler. Output ONLY a single JSON object, no prose, no markdown fences.
+
+Schema (STRICT lengths — be brutal about brevity):
 
 {
-  "strategy": "2-3 sentences: what today's session focus should be, grounded in his last sessions, today's planned exercises, and how he feels. If today is rest, talk about recovery.",
+  "strategy": "ONE sentence, ≤ 90 chars. Tell him what to actually do today. Lead with a number when relevant. E.g. 'Push day — +2.5kg on bench, drop RDL load (sore hamstrings).'",
   "cautions": [
-    { "level": "warn" | "info", "text": "short caution, e.g. 'Soreness 4/5 logged on 2026-05-09 — drop RDL to 8kg today.'" }
+    { "level": "warn" | "info", "text": "ONE sentence, ≤ 70 chars. Only include if there's a real signal in his data. Max 2 items total." }
   ],
   "exerciseSuggestions": [
-    { "name": "Exact name from the day's plan", "verdict": "bump" | "keep" | "reduce" | "swap" | "focus", "advice": "one short sentence — concrete number when possible. E.g. '+1kg to 13.5kg; you hit 10 reps top set last Mon.'" }
+    { "name": "Exact name from today's plan", "verdict": "bump" | "keep" | "reduce" | "swap" | "focus", "advice": "ONE short sentence, ≤ 60 chars, concrete number, e.g. '+1kg → 13.5kg, hit 10 last Mon'" }
   ],
-  "progress": "1-2 sentences. Reference real numbers (weight delta, sessions this week, streak, total sessions).",
-  "highlights": [ "very short chips, max 4. e.g. '3/4 this week', '+1.0kg from start', '4-week streak'" ]
+  "progress": "ONE sentence, ≤ 80 chars, with at least one real number from his data.",
+  "highlights": [ "Chips, ≤ 18 chars each, max 4. E.g. '3/4 this week', '+1.0kg', '4-wk streak', 'PR 70×8'" ]
 }
 
-Rules:
-- Be concrete with weights and reps; quote the user's actual numbers from the history snippet, never invent.
-- 'bump' = he hit the top of the rep range last time, suggest +1-2.5kg.
+Hard rules:
+- Every claim must reference a real number from the data — no generic encouragement, no fluff like 'great job', 'keep pushing', 'stay focused'.
+- If you have no data for a section, omit the field rather than write filler.
+- Cautions array: only include if soreness ≥4, missed reps, or recent note flags a problem. Otherwise empty array.
+- Exercise suggestions: ONE row per exercise in today's plan that has prior data. Skip exercises with no history.
+- 'bump' = hit top of rep range last time → +1-2.5kg.
 - 'keep' = mid rep range, stay the course.
-- 'reduce' = soreness/notes flag risk, or he missed reps last time.
+- 'reduce' = soreness/notes flag risk OR missed reps last time.
 - 'swap' = recent note explicitly asked to swap.
 - 'focus' = no number change, just a form cue.
-- IMPORTANT — Machine differences: a number drop across sessions does NOT mean regression when machines differ. Signals to look for:
-  (a) An explicit [variant: "..."] tag attached to the top set — different tags = different machines.
-  (b) The per-exercise note or session note mentioning a different machine — phrases like "different machine", "harder machine", "easier machine", "machine 2", "other machine", "same weight different machine", "machine 1 today", calibration cues, brand differences. Notes are equally valid as the explicit tag, even when no [variant: "..."] is present.
-  If EITHER signal indicates a machine change between the sessions being compared, do NOT issue a "reduce" verdict on load grounds. Use 'keep' or 'focus' and put "different machine — load isn't directly comparable" in the advice. Only compare loads when the machines clearly match (same variant or both untagged AND no note conflicts).
-- Output only valid JSON, no preamble, no trailing text.
+- Machine differences: a number drop across sessions does NOT mean regression when machines differ. Signals:
+  (a) [variant: "..."] tag attached to the top set — different tags = different machines.
+  (b) Per-exercise note or session note mentioning machine change (phrases like 'different machine', 'machine 2', 'same weight different machine', 'machine 1 today', brand cues).
+  If EITHER signal indicates machine change, do NOT issue 'reduce' on load grounds — use 'keep' or 'focus' and say 'different machine, not comparable'.
+- Output ONLY valid JSON. No preamble, no trailing text. Be terse.
 
 CONTEXT:
 
