@@ -195,6 +195,21 @@
   .coach-note svg { flex-shrink: 0; margin-top: 2px; }
   .coach-note button { margin-left: auto; color: inherit; opacity: 0.8; font-weight: 600; padding: 0 4px; }
 
+  /* Coach card collapse — long bodies get clamped + Show more button */
+  .coach-body.clamped {
+    max-height: 130px; overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent);
+            mask-image: linear-gradient(to bottom, black 60%, transparent);
+  }
+  .coach-expand-btn {
+    margin-top: 8px; width: 100%;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-muted); padding: 6px 10px;
+    border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer;
+  }
+  .coach-expand-btn:hover { background: var(--surface-2); color: var(--text); }
+
   /* Phase timer (lab) */
   .lab-timer {
     background: var(--surface); border: 1px solid var(--border);
@@ -1486,6 +1501,51 @@
 
   /* Coach briefing — proactive daily analysis card */
   .briefing-section { padding: 14px 16px; }
+  .coach-line {
+    padding: 12px 14px; background: var(--accent-soft);
+    border: 1px solid rgba(129,140,248,0.35); border-radius: 14px;
+    font-size: 14px; font-weight: 600; line-height: 1.5;
+    margin-bottom: 12px; color: var(--text);
+  }
+  .coach-line .cl-meta {
+    display: block; margin-top: 4px; font-size: 10px; font-weight: 600;
+    color: var(--text-muted); letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .pl-card { padding: 14px 16px; }
+  .pl-row {
+    padding: 10px 0; border-top: 1px solid var(--surface-2);
+  }
+  .pl-row:first-of-type { border-top: none; padding-top: 4px; }
+  .pl-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .pl-tops {
+    font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums;
+    margin-bottom: 4px;
+  }
+  .pl-diag { font-size: 12.5px; color: var(--text); line-height: 1.5; margin-bottom: 4px; }
+  .pl-rec {
+    font-size: 12.5px; color: var(--text); line-height: 1.5;
+    padding: 6px 10px; background: var(--accent-soft); border-left: 3px solid var(--accent);
+    border-radius: 8px;
+  }
+  .ru-card { padding: 14px 16px; }
+  .ru-summary {
+    padding: 10px 12px; background: var(--accent-soft); border-left: 3px solid var(--accent);
+    border-radius: 10px; font-size: 13.5px; line-height: 1.55; color: var(--text);
+    margin-bottom: 10px;
+  }
+  .ru-section-lbl {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-muted); margin: 10px 0 4px;
+  }
+  .ru-list { margin: 0; padding: 0; list-style: none; }
+  .ru-list li {
+    font-size: 12.5px; line-height: 1.5; color: var(--text);
+    padding: 3px 0 3px 14px; position: relative;
+  }
+  .ru-list li::before {
+    content: '•'; position: absolute; left: 4px; color: var(--accent);
+  }
+  .ru-list.warn li::before { color: var(--warn); }
   .briefing-section .b-head {
     display: flex; align-items: center; justify-content: space-between;
     font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
@@ -2218,6 +2278,8 @@ const defaultState = {
   coachLogs: [],            // [{ id, date, kind, energy?, soreness?, text, dayKey?, createdAt }]
   coachBriefing: null,      // { date, json: {strategy, cautions, exerciseSuggestions, progress, highlights}, generatedAt }
   sessionReviews: {},       // { 'YYYY-MM-DD': { json: {summary, highlights, cautions, progress}, generatedAt } }
+  recentUpdate: null,       // { date, json: {summary, improvements, watchNow, next}, generatedAt } — last 14 days only
+  plateauReport: null,      // { date, json: {plateaus, summary}, generatedAt } — full-history plateau scan
   photos: [],
   notes: {},
   settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false, anthropicApiKey: '', theme: 'indigo' }
@@ -4271,13 +4333,6 @@ function renderHome() {
   ]));
   v.appendChild(grid);
 
-  // Quick log
-  const ql = el('div', { class: 'quick-log' });
-  ql.appendChild(makeQuickBtn('Weight', '⚖️', openWeightModal));
-  ql.appendChild(makeQuickBtn('Sleep', '😴', openSleepModal));
-  ql.appendChild(makeQuickBtn('Meal', '🍽', openAddMealModal));
-  v.appendChild(ql);
-
   // Today's tasks — slim daily reminder, AI paste-able. Tap to clear (recurring tasks come back next matching day).
   {
     const tlist = getTasks();
@@ -4355,6 +4410,13 @@ function renderHome() {
     }
     v.appendChild(tcard);
   }
+
+  // Quick log
+  const ql = el('div', { class: 'quick-log' });
+  ql.appendChild(makeQuickBtn('Weight', '⚖️', openWeightModal));
+  ql.appendChild(makeQuickBtn('Sleep', '😴', openSleepModal));
+  ql.appendChild(makeQuickBtn('Meal', '🍽', openAddMealModal));
+  v.appendChild(ql);
 
   // Recent wins
   {
@@ -6260,186 +6322,266 @@ async function _generateBriefingInline(section, btn) {
   }
 }
 
-function _renderBriefingBody(parent, j) {
-  // Highlights first (top chips — quick scan)
-  if (Array.isArray(j.highlights) && j.highlights.length) {
-    const wrap = el('div', { class: 'brief-highlights', style: 'margin-bottom:10px;' });
-    j.highlights.slice(0, 4).forEach(h => wrap.appendChild(el('span', { class: 'hchip' }, String(h).trim())));
-    parent.appendChild(wrap);
-  }
-  // Strategy — the punch line
-  if (j.strategy) {
+function _renderCoachLine(parent, j) {
+  if (!j || !j.strategy) return false;
+  parent.appendChild(el('div', { class: 'coach-line' }, [
+    el('span', {}, String(j.strategy).trim()),
+    el('span', { class: 'cl-meta' }, "Today's coach line")
+  ]));
+  return true;
+}
+
+function _renderCautions(parent, j) {
+  if (!j || !Array.isArray(j.cautions) || !j.cautions.length) return false;
+  j.cautions.forEach(c => {
+    const lvl = c.level === 'info' ? 'info' : 'warn';
     parent.appendChild(el('div', {
-      class: 'b-body',
-      style: 'padding:10px 12px;background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:10px;margin-bottom:10px;font-weight:600;line-height:1.4;'
-    }, j.strategy));
+      class: 'brief-caution ' + lvl, style: 'margin-bottom:6px;'
+    }, [el('span', {}, String(c.text || '').trim())]));
+  });
+  return true;
+}
+
+function _renderExerciseTips(parent, j) {
+  if (!j || !Array.isArray(j.exerciseSuggestions) || !j.exerciseSuggestions.length) return false;
+  const validVerdicts = ['bump','keep','reduce','swap','focus'];
+  j.exerciseSuggestions.forEach(s => {
+    const verdict = validVerdicts.includes(s.verdict) ? s.verdict : 'keep';
+    parent.appendChild(el('div', { class: 'exsug-row' }, [
+      el('div', { class: 'exsug-name' }, String(s.name || '').trim()),
+      el('span', { class: 'verdict-chip ' + verdict }, verdict),
+      el('div', { class: 'exsug-advice' }, String(s.advice || '').trim())
+    ]));
+  });
+  return true;
+}
+
+function _renderRecentUpdate(parent, j) {
+  if (!j) return;
+  if (j.summary) parent.appendChild(el('div', { class: 'ru-summary' }, String(j.summary).trim()));
+  if (Array.isArray(j.improvements) && j.improvements.length) {
+    parent.appendChild(el('div', { class: 'ru-section-lbl' }, 'Improvements'));
+    const ul = el('ul', { class: 'ru-list' });
+    j.improvements.forEach(it => ul.appendChild(el('li', {}, String(it).trim())));
+    parent.appendChild(ul);
   }
-  // Cautions
-  if (Array.isArray(j.cautions) && j.cautions.length) {
-    j.cautions.forEach(c => {
-      const lvl = c.level === 'info' ? 'info' : 'warn';
-      parent.appendChild(el('div', { class: 'brief-caution ' + lvl, style: 'margin-bottom:6px;' }, [el('span', {}, String(c.text || '').trim())]));
+  if (Array.isArray(j.watchNow) && j.watchNow.length) {
+    parent.appendChild(el('div', { class: 'ru-section-lbl' }, 'Watch now'));
+    const ul = el('ul', { class: 'ru-list warn' });
+    j.watchNow.forEach(it => ul.appendChild(el('li', {}, String(it).trim())));
+    parent.appendChild(ul);
+  }
+  if (Array.isArray(j.next) && j.next.length) {
+    parent.appendChild(el('div', { class: 'ru-section-lbl' }, 'Next'));
+    const ul = el('ul', { class: 'ru-list' });
+    j.next.forEach(it => ul.appendChild(el('li', {}, String(it).trim())));
+    parent.appendChild(ul);
+  }
+}
+
+function _renderPlateaus(parent, j) {
+  if (!j) return;
+  if (!Array.isArray(j.plateaus) || !j.plateaus.length) {
+    parent.appendChild(el('div', { class: 'small dim', style: 'padding:6px 0;line-height:1.5;' },
+      String(j.summary || 'No plateaus detected — keep going.').trim()));
+    return;
+  }
+  if (j.summary) {
+    parent.appendChild(el('div', { class: 'ru-summary' }, String(j.summary).trim()));
+  }
+  j.plateaus.forEach(p => {
+    const row = el('div', { class: 'pl-row' });
+    row.appendChild(el('div', { class: 'pl-name' }, String(p.name || '').trim()));
+    if (Array.isArray(p.lastTopSets) && p.lastTopSets.length) {
+      row.appendChild(el('div', { class: 'pl-tops' }, p.lastTopSets.join(' · ')));
+    }
+    if (p.diagnosis) row.appendChild(el('div', { class: 'pl-diag' }, String(p.diagnosis).trim()));
+    if (p.recommendation) row.appendChild(el('div', { class: 'pl-rec' }, String(p.recommendation).trim()));
+    parent.appendChild(row);
+  });
+}
+
+async function _generateRecentUpdateInline(section, btn) {
+  section.innerHTML = '<div class="ai-loading"><span class="spinner"></span><span>Reading the last 2 weeks…</span></div>';
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+  try {
+    await requestRecentUpdate();
+    render();
+  } catch (err) {
+    section.innerHTML = '<div class="small" style="color:var(--danger);padding:10px;">' + escapeHtml(String(err.message || 'Failed').slice(0, 200)) + '</div>';
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+}
+
+async function _generatePlateauReportInline(section, btn) {
+  section.innerHTML = '<div class="ai-loading"><span class="spinner"></span><span>Scanning history for plateaus…</span></div>';
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+  try {
+    await requestPlateauReport();
+    render();
+  } catch (err) {
+    section.innerHTML = '<div class="small" style="color:var(--danger);padding:10px;">' + escapeHtml(String(err.message || 'Failed').slice(0, 200)) + '</div>';
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+}
+
+function _coachCardShell(title, opts) {
+  // opts: { stale, generatedAt, onRefresh }
+  const card = el('div', { class: 'card briefing-section' });
+  const head = el('div', { class: 'b-head' });
+  head.appendChild(el('span', {}, title));
+  const headRight = el('div', { style: 'display:flex;align-items:center;gap:8px;' });
+  card.appendChild(head);
+  const body = el('div', { class: 'coach-body' });
+  card.appendChild(body);
+  if (opts && opts.onRefresh) {
+    if (opts.generatedAt) {
+      const lbl = opts.stale
+        ? 'new data since ' + _briefingFreshnessLabel(opts.generatedAt)
+        : _briefingFreshnessLabel(opts.generatedAt);
+      headRight.appendChild(el('span', { class: 'b-meta' }, lbl));
+    }
+    const refresh = el('button', {
+      class: 'b-refresh',
+      style: opts.stale ? 'background:var(--accent);color:white;border-color:var(--accent);' : '',
+      onclick: opts.onRefresh
+    }, '↻ Refresh');
+    headRight.appendChild(refresh);
+  }
+  head.appendChild(headRight);
+  return { card, body };
+}
+
+function _coachFirstRunBlock(body, blurb, label, generator) {
+  if (!state.settings.anthropicApiKey) {
+    body.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:8px;' },
+      'Set up your Anthropic API key in More → Settings.'));
+    body.appendChild(el('button', { class: 'btn secondary', onclick: openAIKeyModal }, 'Set up AI key'));
+    return;
+  }
+  body.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' }, blurb));
+  body.appendChild(el('button', {
+    class: 'btn',
+    style: 'width:100%;background:linear-gradient(135deg, var(--accent), var(--accent-strong));',
+    onclick: function() { generator(body, this); }
+  }, label));
+}
+
+function _applyCoachClamp(root) {
+  // Any .coach-body taller than ~5 lines gets clamped with a Show more / Show less toggle.
+  const MAX_PX = 130;
+  root.querySelectorAll('.coach-body').forEach(body => {
+    if (body.dataset.clampDone === '1') return;
+    body.dataset.clampDone = '1';
+    requestAnimationFrame(() => {
+      if (body.scrollHeight <= MAX_PX + 20) return;
+      body.classList.add('clamped');
+      const btn = el('button', {
+        class: 'coach-expand-btn',
+        onclick: function() {
+          body.classList.toggle('clamped');
+          this.textContent = body.classList.contains('clamped') ? 'Show more ▾' : 'Show less ▴';
+        }
+      }, 'Show more ▾');
+      body.parentNode.insertBefore(btn, body.nextSibling);
     });
-  }
-  // Exercise suggestions (no big section title — chips speak for themselves)
-  if (Array.isArray(j.exerciseSuggestions) && j.exerciseSuggestions.length) {
-    j.exerciseSuggestions.forEach(s => {
-      const validVerdicts = ['bump','keep','reduce','swap','focus'];
-      const verdict = validVerdicts.includes(s.verdict) ? s.verdict : 'keep';
-      const row = el('div', { class: 'exsug-row', style: 'margin-top:6px;' }, [
-        el('div', { class: 'exsug-name' }, String(s.name || '').trim()),
-        el('span', { class: 'verdict-chip ' + verdict }, verdict),
-        el('div', { class: 'exsug-advice' }, String(s.advice || '').trim())
-      ]);
-      parent.appendChild(row);
-    });
-  }
-  // Progress line — single line, no subhead
-  if (j.progress) {
-    parent.appendChild(el('div', {
-      class: 'brief-progress small dim',
-      style: 'margin-top:10px;line-height:1.4;'
-    }, j.progress));
-  }
+  });
 }
 
 function renderCoach() {
   const v = $('view');
 
-  // Proactive briefing block — leads the Coach tab.
-  const briefingCard = el('div', { class: 'card briefing-section' });
-  const head = el('div', { class: 'b-head' });
-  head.appendChild(el('span', {}, '🤖 Today\'s briefing'));
-  const headRight = el('div', { style: 'display:flex;align-items:center;gap:8px;' });
-  briefingCard.appendChild(head);
-  const body = el('div', {});
-  briefingCard.appendChild(body);
-  v.appendChild(briefingCard);
-
-  const stale = shouldRefreshBriefing();
   const br = state.coachBriefing;
+  const briefingStale = shouldRefreshBriefing();
+  const haveBriefing = br && br.json;
 
-  if (br && br.json && !stale) {
-    // Show cached briefing with refresh button
-    const meta = el('span', { class: 'b-meta' }, _briefingFreshnessLabel(br.generatedAt));
-    const refresh = el('button', {
-      class: 'b-refresh',
-      onclick: () => _generateBriefingInline(body, null)
-    }, '↻ Refresh');
-    headRight.appendChild(meta);
-    headRight.appendChild(refresh);
-    head.appendChild(headRight);
-    _renderBriefingBody(body, br.json);
-  } else if (br && br.json && stale) {
-    // Have a previous briefing but it's stale — show it dimmed with a prominent refresh
-    const refresh = el('button', {
-      class: 'b-refresh',
-      style: 'background:var(--accent);color:white;border-color:var(--accent);',
-      onclick: () => _generateBriefingInline(body, null)
-    }, '↻ Refresh');
-    headRight.appendChild(el('span', { class: 'b-meta' }, 'new data since ' + _briefingFreshnessLabel(br.generatedAt)));
-    headRight.appendChild(refresh);
-    head.appendChild(headRight);
-    body.style.opacity = '0.65';
-    _renderBriefingBody(body, br.json);
-  } else {
-    // No briefing yet — first generation
-    if (!state.settings.anthropicApiKey) {
-      body.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:8px;' },
-        'Set up your Anthropic API key in More → Settings to use the Coach briefing.'));
-      body.appendChild(el('button', {
-        class: 'btn secondary',
-        onclick: openAIKeyModal
-      }, 'Set up AI key'));
+  // --- 1. Coach line ---
+  {
+    const { card, body } = _coachCardShell("🤖 Today's coach line", {
+      stale: briefingStale,
+      generatedAt: haveBriefing ? br.generatedAt : 0,
+      onRefresh: haveBriefing ? (() => _generateBriefingInline(body, null)) : null
+    });
+    if (haveBriefing) {
+      if (briefingStale) body.style.opacity = '0.65';
+      if (!_renderCoachLine(body, br.json)) {
+        body.appendChild(el('div', { class: 'small dim' }, 'No strategy returned. Tap refresh.'));
+      }
     } else {
-      const genBtn = el('button', {
-        class: 'btn',
-        style: 'width:100%;background:linear-gradient(135deg, var(--accent), var(--accent-strong));',
-        onclick: function() { _generateBriefingInline(body, this); }
-      }, '✨ Generate today\'s briefing');
-      body.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' },
-        'Claude reads your last sessions, exercise history, feel logs, and today\'s plan, then writes a short briefing with cautions and per-exercise suggestions.'));
-      body.appendChild(genBtn);
+      _coachFirstRunBlock(body,
+        "Claude reads your last sessions, today's plan, feel logs, and writes a short coach line, cautions, and per-exercise tips.",
+        "✨ Generate today's briefing",
+        _generateBriefingInline);
     }
+    v.appendChild(card);
   }
 
-  // Session reviews — last 4 finished sessions, auto-summarised by Claude
-  const lastSessions = getLastSessionsForReview(4);
-  if (lastSessions.length) {
-    const reviewsCard = el('div', { class: 'card briefing-section', style: 'margin-top:14px;' });
-    const rHead = el('div', { class: 'b-head' });
-    rHead.appendChild(el('span', {}, '📋 Last sessions review'));
-    const rHeadRight = el('div', { style: 'display:flex;align-items:center;gap:8px;' });
-    rHead.appendChild(rHeadRight);
-    reviewsCard.appendChild(rHead);
-    const rBody = el('div', {});
-    reviewsCard.appendChild(rBody);
-    v.appendChild(reviewsCard);
+  // --- 2. Cautions (only when present) ---
+  if (haveBriefing && Array.isArray(br.json.cautions) && br.json.cautions.length) {
+    const card = el('div', { class: 'card briefing-section', style: 'margin-top:14px;' });
+    card.appendChild(el('div', { class: 'b-head' }, [el('span', {}, '⚠️ Cautions')]));
+    const body = el('div', { class: 'coach-body' });
+    _renderCautions(body, br.json);
+    card.appendChild(body);
+    v.appendChild(card);
+  }
 
-    const needsRefresh = shouldRefreshSessionReviews();
-    const allCached = lastSessions.every(s => state.sessionReviews && state.sessionReviews[s.date] && state.sessionReviews[s.date].json);
+  // --- 3. Today's exercise tips ---
+  if (haveBriefing && Array.isArray(br.json.exerciseSuggestions) && br.json.exerciseSuggestions.length) {
+    const card = el('div', { class: 'card briefing-section', style: 'margin-top:14px;' });
+    card.appendChild(el('div', { class: 'b-head' }, [el('span', {}, "🎯 Today's exercise tips")]));
+    const body = el('div', { class: 'coach-body' });
+    _renderExerciseTips(body, br.json);
+    card.appendChild(body);
+    v.appendChild(card);
+  }
 
-    function generateReviews(targetBody) {
-      targetBody.innerHTML = '<div class="ai-loading"><span class="spinner"></span><span>Writing reviews of your last sessions…</span></div>';
-      requestSessionReviews()
-        .then(() => render())
-        .catch(err => {
-          targetBody.innerHTML = '<div class="small" style="color:var(--danger);padding:10px;">' + escapeHtml(String(err.message || 'Failed').slice(0, 200)) + '</div>';
-        });
-    }
-
-    if (!state.settings.anthropicApiKey) {
-      rBody.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:8px;' },
-        'Set up your Anthropic API key in More → Settings to use session reviews.'));
-    } else if (!allCached) {
-      // First-time generation
-      const genBtn = el('button', {
-        class: 'btn',
-        style: 'width:100%;background:linear-gradient(135deg, var(--accent), var(--accent-strong));',
-        onclick: () => generateReviews(rBody)
-      }, '✨ Generate session reviews');
-      rBody.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' },
-        'Claude writes a short structured review for each of your last ' + lastSessions.length + ' finished sessions — what improved, what to watch, vs prior session of the same type.'));
-      rBody.appendChild(genBtn);
+  // --- 4. This 2 weeks (NEW · strict 14-day cutoff) ---
+  {
+    const ru = state.recentUpdate;
+    const ruStale = shouldRefreshRecentUpdate();
+    const haveRu = ru && ru.json;
+    const { card, body } = _coachCardShell('📅 This 2 weeks', {
+      stale: ruStale,
+      generatedAt: haveRu ? ru.generatedAt : 0,
+      onRefresh: haveRu ? (() => _generateRecentUpdateInline(body, null)) : null
+    });
+    card.classList.add('ru-card');
+    card.style.marginTop = '14px';
+    if (haveRu) {
+      if (ruStale) body.style.opacity = '0.65';
+      _renderRecentUpdate(body, ru.json);
     } else {
-      // Render cached reviews + Refresh button if a new session is missing
-      const refreshLbl = needsRefresh ? '↻ Refresh (new session)' : '↻ Refresh';
-      const refreshBtn = el('button', {
-        class: 'b-refresh',
-        style: needsRefresh ? 'background:var(--accent);color:white;border-color:var(--accent);' : '',
-        onclick: () => generateReviews(rBody)
-      }, refreshLbl);
-      rHeadRight.appendChild(refreshBtn);
-
-      lastSessions.forEach(s => {
-        const cached = state.sessionReviews[s.date];
-        const j = cached && cached.json;
-        if (!j) return;
-        const card = el('div', { class: 'sr-card' });
-        const head2 = el('div', { class: 'sr-head' }, [
-          el('span', { class: 'sr-day' }, s.dayName),
-          el('span', { class: 'sr-date' }, s.date + ' · ~' + s.mins + ' min')
-        ]);
-        card.appendChild(head2);
-        if (j.summary) card.appendChild(el('div', { class: 'sr-summary' }, String(j.summary).trim()));
-        if (Array.isArray(j.highlights) && j.highlights.length) {
-          card.appendChild(el('div', { class: 'sr-section-lbl' }, 'Highlights'));
-          const ul = el('ul', { class: 'sr-list' });
-          j.highlights.forEach(h => ul.appendChild(el('li', {}, String(h).trim())));
-          card.appendChild(ul);
-        }
-        if (Array.isArray(j.cautions) && j.cautions.length) {
-          card.appendChild(el('div', { class: 'sr-section-lbl' }, 'Watch'));
-          const ul = el('ul', { class: 'sr-list cautions' });
-          j.cautions.forEach(c => ul.appendChild(el('li', {}, String(c).trim())));
-          card.appendChild(ul);
-        }
-        if (j.progress) {
-          card.appendChild(el('div', { class: 'sr-progress' }, String(j.progress).trim()));
-        }
-        rBody.appendChild(card);
-      });
+      _coachFirstRunBlock(body,
+        'Claude reads ONLY the last 14 days of sessions, notes and feel logs — so older cautions stop surfacing. Gives a short update + concrete next moves.',
+        '✨ Generate 2-week update',
+        _generateRecentUpdateInline);
     }
+    v.appendChild(card);
+  }
+
+  // --- 5. Plateaus (NEW · full history scan) ---
+  {
+    const pr = state.plateauReport;
+    const prStale = shouldRefreshPlateauReport();
+    const havePr = pr && pr.json;
+    const { card, body } = _coachCardShell('🧗 Plateaus', {
+      stale: prStale,
+      generatedAt: havePr ? pr.generatedAt : 0,
+      onRefresh: havePr ? (() => _generatePlateauReportInline(body, null)) : null
+    });
+    card.classList.add('pl-card');
+    card.style.marginTop = '14px';
+    if (havePr) {
+      if (prStale) body.style.opacity = '0.65';
+      _renderPlateaus(body, pr.json);
+    } else {
+      _coachFirstRunBlock(body,
+        'Scans your full history. Flags exercises stuck for 4+ sessions and suggests one concrete next move per stalled lift.',
+        '✨ Scan for plateaus',
+        _generatePlateauReportInline);
+    }
+    v.appendChild(card);
   }
 
   // Open Coach chat — follow-up channel
@@ -6452,66 +6594,7 @@ function renderCoach() {
     el('span', {}, 'Open Coach chat for follow-up')
   ]));
 
-  // Quick prompts
-  const quick = el('div', { class: 'card' });
-  quick.appendChild(el('div', { class: 'card-title', style: 'margin-bottom:10px;' }, 'Quick ask'));
-  const prompts = [
-    'Should I push today or back off?',
-    'How am I doing this week?',
-    'Plan tomorrow\'s session',
-    'Am I eating enough protein?',
-    'Any soreness concerns from my logs?',
-  ];
-  const pwrap = el('div', { style: 'display:flex;flex-direction:column;gap:6px;' });
-  prompts.forEach(p => {
-    pwrap.appendChild(el('button', {
-      class: 'btn secondary',
-      style: 'text-align:left;padding:10px 12px;font-size:13px;justify-content:flex-start;display:flex;align-items:center;gap:8px;',
-      onclick: () => { coachChatHistory = []; openCoachModal(p); }
-    }, [
-      el('span', { style: 'opacity:0.6;font-size:14px;' }, '›'),
-      el('span', {}, p)
-    ]));
-  });
-  quick.appendChild(pwrap);
-  v.appendChild(quick);
-
-  // How I feel — quick log + recent
-  const feel = el('div', { class: 'card', style: 'margin-top:14px;' });
-  feel.appendChild(el('div', { class: 'card-title' }, 'How I feel'));
-  feel.appendChild(el('button', {
-    class: 'btn',
-    style: 'width:100%;margin-top:6px;',
-    onclick: openFeelLogModal
-  }, 'Log how I feel today'));
-
-  const logs = (Array.isArray(state.coachLogs) ? state.coachLogs : [])
-    .filter(l => l.kind === 'feel')
-    .slice(-7).reverse();
-  if (logs.length) {
-    const list = el('div', { style: 'margin-top:14px;' });
-    logs.forEach(l => {
-      const dateLine = (l.date || '') + (l.dayKey != null && DAYS[l.dayKey] ? ' · ' + DAYS[l.dayKey].name : '');
-      const parts = [];
-      if (l.energy != null) parts.push(`Energy ${l.energy}/5`);
-      if (l.soreness != null) parts.push(`Soreness ${l.soreness}/5`);
-      list.appendChild(el('div', {
-        style: 'padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;'
-      }, [
-        el('div', { style: 'display:flex;justify-content:space-between;margin-bottom:2px;' }, [
-          el('span', { class: 'small dim' }, dateLine),
-          el('span', { style: 'font-weight:600;color:var(--text);' }, parts.join(' · ') || '—')
-        ]),
-        l.text ? el('div', { style: 'color:var(--text-muted);' }, l.text) : null
-      ].filter(Boolean)));
-    });
-    feel.appendChild(list);
-  } else {
-    feel.appendChild(el('div', {
-      class: 'small dim', style: 'margin-top:12px;text-align:center;'
-    }, 'No logs yet — tap above to start.'));
-  }
-  v.appendChild(feel);
+  _applyCoachClamp(v);
 }
 
 /* =========== PROGRESS =========== */
@@ -6997,7 +7080,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.70 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.73 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
@@ -7184,6 +7267,42 @@ async function callAnthropic({ system, messages, maxTokens }) {
   return txt;
 }
 
+// Forced tool-use call — Claude must reply by calling the given tool, so the result
+// is a structured object matching the tool's input_schema. Eliminates JSON-parse errors.
+async function callAnthropicWithTool({ system, userMessage, tool, maxTokens }) {
+  const key = state.settings.anthropicApiKey;
+  if (!key) throw new Error('No API key set');
+  const res = await fetch(AI_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: AI_MODEL,
+      max_tokens: maxTokens || 2048,
+      system,
+      messages: [{ role: 'user', content: userMessage }],
+      tools: [tool],
+      tool_choice: { type: 'tool', name: tool.name }
+    }),
+  });
+  if (res.status === 401 || res.status === 403) {
+    const txt = await res.text().catch(() => '');
+    throw new Error('Auth failed (' + res.status + '). Check your API key. ' + txt.slice(0, 120));
+  }
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error('Claude API error ' + res.status + ': ' + txt.slice(0, 200));
+  }
+  const data = await res.json();
+  const block = (data.content || []).find(b => b.type === 'tool_use' && b.name === tool.name);
+  if (!block || !block.input) throw new Error('Claude did not return a structured reply.');
+  return block.input;
+}
+
 // Helper: ensures the AI key is set, then runs the action.
 // If the key is missing, opens the key modal and runs the action automatically once saved.
 function withAIKey(action) {
@@ -7288,41 +7407,75 @@ function openAIKeyModal(onSaved) {
   setTimeout(() => inp.focus(), 100);
 }
 
+function _saveTasksTool() {
+  return {
+    name: 'save_tasks',
+    description: 'Save the user\'s parsed tasks. Always call this once with the full extracted list — even if the user\'s note only describes one task.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        tasks: {
+          type: 'array',
+          description: 'Tasks extracted from the input. May be empty only if the input is pure filler (no actionable content).',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: 'Clean, concise task title in English. Fix typos and abbreviations.' },
+              time: { type: ['string', 'null'], description: 'HH:MM in 24h format when a time is mentioned, otherwise null.' },
+              category: {
+                type: ['string', 'null'],
+                enum: ['work', 'personal', 'family', 'gym', 'health', null],
+                description: 'Best-fit category, or null if unclear.'
+              },
+              repeat: {
+                type: ['string', 'null'],
+                description: 'Recurrence string when the user mentioned a recurrence: "daily" | "weekdays" | "weekly:<dow>" (comma-separated dow numbers, 0=Sun..6=Sat) | "monthly:<day>". Null otherwise.'
+              },
+              date: {
+                type: ['string', 'null'],
+                description: 'YYYY-MM-DD for a specific upcoming day. Must be null when "repeat" is set.'
+              }
+            },
+            required: ['title']
+          }
+        }
+      },
+      required: ['tasks']
+    }
+  };
+}
+
 function _aiSystemPrompt() {
   const td = today();
   const tom = nextDateStr(td);
   const refDate = new Date(td + 'T00:00:00');
   const dowName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][refDate.getDay()];
-  return `You convert a user's casual to-do list into a JSON array of tasks. Output ONLY a valid JSON array, no prose, no markdown fences.
+  return `You turn a user's casual notes into a list of tasks by calling the save_tasks tool.
+
+Be permissive. ANY non-empty input that hints at something to do should produce at least one task — even very short notes like "gym 8", "buy milk", "doctor wed", "call mom every sun", or single words like "dentist". Fix obvious typos and abbreviations. If the user wrote in another language, translate the title to plain English. Never reply with an empty list unless the input is truly only filler (whitespace, "ok", "thanks", etc).
 
 Reference: today is ${td} (${dowName}). Tomorrow is ${tom}. Default year is ${refDate.getFullYear()}.
 
-Schema for each task:
-{
-  "title": string (clean it up, fix obvious typos, keep concise),
-  "time": "HH:MM" (24h) or null,
-  "category": "work" | "personal" | "family" | "gym" | "health" | null,
-  "repeat": "daily" | "weekdays" | "weekly:1,3" (dow numbers 0=Sun..6=Sat) | "monthly:15" | null,
-  "date": "YYYY-MM-DD" or null
-}
+Date vs repeat (one or the other, never both):
+- Recurrence words ("every monday", "weekly", "weekdays", "daily", "every 15th", "each tuesday") => set repeat, leave date null.
+- Specific day ("today", "tomorrow", "monday" alone, "next friday", "May 15", "15/05", "15 mai", "on the 12th") => set date to absolute YYYY-MM-DD (next future occurrence on/after ${td}). Leave repeat null.
+- Neither mentioned => both date and repeat null (treated as today / anytime).
+- "every monday" => repeat "weekly:1". "every Tuesday and Thursday" => "weekly:2,4". "weekdays" => "weekdays". "daily" / "every day" => "daily". "every 15th" / "monthly on the 15th" => "monthly:15". Day-of-week numbers: 0=Sun, 1=Mon … 6=Sat.
 
-Date vs. repeat rules:
-- If a recurrence is mentioned ("every monday", "weekly", "weekdays", "daily", "every 15th") → set repeat, leave date null.
-- If a SPECIFIC day is mentioned ("today", "tomorrow", "monday" without "every", "next friday", "May 15", "15/05", "15 mai", "on the 12th") → set date to the absolute YYYY-MM-DD (next future occurrence). Leave repeat null.
-- If neither is mentioned → both date and repeat are null (treated as today / anytime).
-- "every monday" => repeat "weekly:1". "every Tuesday and Thursday" => "weekly:2,4". "weekdays" => "weekdays". "daily" / "every day" => "daily". "every 15th" / "monthly on the 15th" => "monthly:15".
-- "monday" alone (no "every") => date set to the next upcoming Monday on/after ${td}.
-- "may 15" / "15/05" / "15 mai" / "15th of may" => "${refDate.getFullYear()}-05-15" (or next year if that date is already past).
+Time parsing:
+- "08" / "8 breakfast" / "at 8" => 08:00. "9" first thing in the morning => 09:00.
+- Bare numbers like "02" or "03" appearing AFTER morning entries (8, 9, 10, 11) mean afternoon (14:00, 15:00). Same for "1" / "2" after a morning block.
+- "8:30", "8.30", "8h30" => 08:30. "noon" => 12:00. "midnight" => 00:00.
+- No time mentioned => null. Never invent a time.
 
-Times:
-- "08" or "8" first thing in the morning => 08:00. "9 breakfast" => 09:00. "at 11" => 11:00.
-- Bare numbers like "02" or "03" appearing AFTER morning entries (8, 9, 10, 11) mean afternoon (14:00, 15:00).
-- If a line has no time, set time to null. Don't invent times.
+Category guesses (best fit, else null):
+- gym/workout/lifting/cardio => "gym"
+- meal/supplement/doctor/vitamin/breakfast/lunch/dinner/water/sleep/walk => "health"
+- meeting/call/client/deadline/email/report => "work"
+- family/kids/wife/husband/parents/birthday => "family"
+- shopping/errand/passport/papers/laundry/bills => "personal"
 
-Other rules:
-- Category guesses: "gym" / "workout" => gym; "meal" / "supplement" / "doctor" / "vitamin" / "breakfast" / "lunch" / "dinner" => health; "meeting" / "call" / "client" / "deadline" => work; "family time" / "kids" / "wife" / "husband" / "parents" / "dinner with family" => family; otherwise "shopping" / "errand" / "passport" / "papers" / "personal" => personal. Use null only if truly unclear.
-- Skip header/preamble lines like "Tasks i have today".
-- Output ONLY the JSON array, nothing before or after.`;
+Skip pure header lines like "tasks i have today" or "to do:" — they're not tasks themselves.`;
 }
 
 function _stripJsonFence(s) {
@@ -7557,21 +7710,22 @@ function buildCoachBriefingPrompt() {
 Schema (STRICT lengths — be brutal about brevity):
 
 {
-  "strategy": "ONE sentence, ≤ 90 chars. Tell him what to actually do today. Lead with a number when relevant. E.g. 'Push day — +2.5kg on bench, drop RDL load (sore hamstrings).'",
+  "strategy": "ONE sentence, ≤ 80 chars. Tell him what to actually do today. Lead with a number when relevant. E.g. 'Push +2.5kg on bench, drop RDL (sore hams).'",
   "cautions": [
-    { "level": "warn" | "info", "text": "ONE sentence, ≤ 70 chars. Only include if there's a real signal in his data. Max 2 items total." }
+    { "level": "warn" | "info", "text": "ONE sentence, ≤ 70 chars. Only include if there's a real signal in his RECENT data. Max 2 items total." }
   ],
   "exerciseSuggestions": [
     { "name": "Exact name from today's plan", "verdict": "bump" | "keep" | "reduce" | "swap" | "focus", "advice": "ONE short sentence, ≤ 60 chars, concrete number, e.g. '+1kg → 13.5kg, hit 10 last Mon'" }
   ],
   "progress": "ONE sentence, ≤ 80 chars, with at least one real number from his data.",
-  "highlights": [ "Chips, ≤ 18 chars each, max 4. E.g. '3/4 this week', '+1.0kg', '4-wk streak', 'PR 70×8'" ]
+  "highlights": [ "Chips, ≤ 18 chars each, max 3. E.g. '3/4 this week', '+1.0kg', '4-wk streak'" ]
 }
 
 Hard rules:
 - Every claim must reference a real number from the data — no generic encouragement, no fluff like 'great job', 'keep pushing', 'stay focused'.
 - If you have no data for a section, omit the field rather than write filler.
-- Cautions array: only include if soreness ≥4, missed reps, or recent note flags a problem. Otherwise empty array.
+- Cautions: only flag from notes/feel logs in the LAST 14 DAYS. Do NOT carry forward older cautions (e.g. an injury caution from a session weeks ago that's not mentioned recently). If a note is older and no fresh signal repeats it, treat it as resolved.
+- Cautions array: only include if soreness ≥4, missed reps, or a RECENT note flags a problem. Otherwise empty array.
 - Exercise suggestions: ONE row per exercise in today's plan that has prior data. Skip exercises with no history.
 - 'bump' = hit top of rep range last time → +1-2.5kg.
 - 'keep' = mid rep range, stay the course.
@@ -7626,6 +7780,280 @@ async function requestCoachBriefing() {
   catch (_) { throw new Error('Coach returned non-JSON: ' + raw.slice(0, 150)); }
   if (!parsed || typeof parsed !== 'object') throw new Error('Coach returned invalid shape');
   state.coachBriefing = { date: today(), json: parsed, generatedAt: Date.now() };
+  save();
+  return parsed;
+}
+
+// ---------- 2-week update — strictly the last 14 days of data ----------
+
+// Date-filtered context. Anything older than today−daysBack is dropped so stale
+// notes/cautions (e.g. the very first Legs session's hamstring note) cannot bleed
+// into the report.
+function buildRecentContext(daysBack) {
+  const td = today();
+  const cutoffDate = new Date(td + 'T00:00:00');
+  cutoffDate.setDate(cutoffDate.getDate() - (daysBack || 14));
+  const cutoff = dateToLocal(cutoffDate);
+  const lines = [];
+  lines.push(`# Mustapha's recent context — window: ${cutoff} → ${td} (last ${daysBack || 14} days)`);
+  const ph = currentPhase();
+  lines.push(`Program phase ${ph.num} · ${ph.name}. 4-day split: Push / Pull / Legs / Upper+Arms.`);
+
+  // Sessions in the window
+  const sessions = Object.entries(state.workouts || {})
+    .filter(([d, w]) => isRealSession(w) && d >= cutoff && d <= td)
+    .sort((a, b) => b[0].localeCompare(a[0]));
+  if (sessions.length) {
+    lines.push('\n## Sessions in this window');
+    for (const [d, w] of sessions) {
+      const day = DAYS[w.dayKey];
+      const mins = Math.round(((w.timers?.warmup || 0) + (w.timers?.workout || 0)) / 60000);
+      const sets = Object.values(w.logs || {}).reduce((s, arr) => s + arr.filter(x => x.d).length, 0);
+      const dn = day ? day.name : '?';
+      const note = w.sessionNote ? ` — "${w.sessionNote}"` : '';
+      lines.push(`- ${d} · ${dn} · ${sets} sets · ~${mins} min${note}`);
+      if (day && w.logs) {
+        for (const ex of day.exercises) {
+          const logs = w.logs[ex.id] || [];
+          const done = logs.filter(s => s.d);
+          if (!done.length) continue;
+          // top set by Epley
+          let best = null;
+          for (const s of done) {
+            const wv = parseFloat(s.w) || 0;
+            const rv = parseInt(s.r, 10) || 0;
+            if (rv < 1) continue;
+            const e = (ex.bw ? rv : wv) * (1 + rv / 30);
+            if (!best || e > best.e) best = { w: wv, r: rv, e };
+          }
+          if (best) {
+            const wlbl = ex.bw ? `BW × ${best.r}${ex.timed ? 's' : ''}` : `${best.w}kg × ${best.r}${ex.timed ? 's' : ''}`;
+            const variant = w.variants && w.variants[ex.id];
+            const vtag = variant ? ` [variant: "${variant}"]` : '';
+            const exNote = w.notes && w.notes[ex.id];
+            const ntag = (exNote && String(exNote).trim()) ? ` · note: "${String(exNote).trim()}"` : '';
+            lines.push(`    · ${ex.name}: top ${wlbl}${vtag}${ntag}`);
+          }
+        }
+      }
+    }
+  } else {
+    lines.push('\n## Sessions in this window\n_(none)_');
+  }
+
+  // Feel logs in the window
+  const feels = (Array.isArray(state.coachLogs) ? state.coachLogs : [])
+    .filter(l => l.kind === 'feel' && l.date >= cutoff && l.date <= td)
+    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  if (feels.length) {
+    lines.push('\n## Feel logs in this window');
+    for (const f of feels) {
+      const parts = [];
+      if (typeof f.energy === 'number') parts.push(`energy ${f.energy}/5`);
+      if (typeof f.soreness === 'number') parts.push(`soreness ${f.soreness}/5`);
+      if (f.text) parts.push(`"${f.text}"`);
+      const dk = f.dayKey != null && DAYS[f.dayKey] ? ` (${DAYS[f.dayKey].name})` : '';
+      lines.push(`- ${f.date}${dk} · ${parts.join(' · ') || '(no detail)'}`);
+    }
+  }
+
+  // Weight entries in the window
+  const bw = (state.bodyWeight || []).filter(e => e.date >= cutoff && e.date <= td);
+  if (bw.length) {
+    lines.push('\n## Weight entries in this window');
+    bw.forEach(e => lines.push(`- ${e.date}: ${e.weight} kg`));
+    if (bw.length >= 2) {
+      const delta = bw[bw.length - 1].weight - bw[0].weight;
+      lines.push(`Δ over window: ${delta >= 0 ? '+' : ''}${delta.toFixed(1)} kg.`);
+    }
+  }
+
+  // Sleep in the window
+  const sl = (state.sleep || []).filter(e => e.date >= cutoff && e.date <= td);
+  if (sl.length) {
+    const avg = sl.reduce((s, e) => s + e.hours, 0) / sl.length;
+    lines.push(`\n## Sleep in this window\nAvg ${avg.toFixed(1)}h over ${sl.length} nights · goal ${state.settings.sleepTarget || 8}h.`);
+  }
+
+  return lines.join('\n');
+}
+
+function buildRecentUpdatePrompt() {
+  return `You are MyGym Coach. Write a tight 2-week update for Mustapha based STRICTLY on the data below. Output ONLY a single JSON object (no prose, no markdown fences):
+
+{
+  "summary": "2-3 sentences: where Mustapha is right now, grounded only in the last 2 weeks of data.",
+  "improvements": [ "short bullet, e.g. 'Lat pulldown up from 28kg×10 to 33kg×10'" ],
+  "watchNow": [ "current cautions only — pulled from notes/feel logs that appear in the window" ],
+  "next": [ "1-2 concrete suggestions for the coming week" ]
+}
+
+Hard rules:
+- Use ONLY the data in the supplied window. Do NOT carry forward any older caution, note, or pattern. If something was flagged weeks ago but is not present in this window, omit it.
+- Reference actual numbers, exercise names, and dates from the supplied window.
+- Be terse: each bullet is one short line. summary ≤ 3 sentences.
+- If watchNow has nothing in this window, return an empty array — do not invent concerns.
+- Output ONLY the JSON object.
+
+DATA:
+
+${buildRecentContext(14)}`;
+}
+
+function _recentMostRecentSignalTs() {
+  // Same idea as the briefing's: any finished session start/finish OR new feel log.
+  return _briefingMostRecentSignalTs();
+}
+function shouldRefreshRecentUpdate() {
+  const r = state.recentUpdate;
+  if (!r || !r.json || r.date !== today()) return true;
+  const sig = _recentMostRecentSignalTs();
+  if (sig > (r.generatedAt || 0)) return true;
+  return false;
+}
+async function requestRecentUpdate() {
+  if (!state.settings.anthropicApiKey) throw new Error('Set up your Anthropic API key first');
+  const raw = await callAnthropic({
+    system: buildRecentUpdatePrompt(),
+    messages: [{ role: 'user', content: '2-week update.' }],
+    maxTokens: 900
+  });
+  const cleaned = _stripJsonObjectFence(raw);
+  let parsed;
+  try { parsed = JSON.parse(cleaned); }
+  catch (_) { throw new Error('Coach returned non-JSON: ' + raw.slice(0, 150)); }
+  if (!parsed || typeof parsed !== 'object') throw new Error('Coach returned invalid shape');
+  state.recentUpdate = { date: today(), json: parsed, generatedAt: Date.now() };
+  save();
+  return parsed;
+}
+
+// ---------- Plateau detector — scans the entire history ----------
+
+// Local pre-filter: list exercises whose last 4-6 top sets show no meaningful progress.
+// Returns { name, sets, weights, lastDate, dates } per candidate.
+function findPlateauCandidates() {
+  const out = [];
+  const seenNames = new Set();
+  // Gather all exercises across all program days (incl. customs from refreshDayExercises).
+  const allExercises = [];
+  for (const k of Object.keys(DAYS)) {
+    for (const ex of (DAYS[k].exercises || [])) {
+      if (seenNames.has(ex.name)) continue;
+      seenNames.add(ex.name);
+      allExercises.push(ex);
+    }
+  }
+  const dates = Object.keys(state.workouts || {}).sort((a, b) => b.localeCompare(a));
+  for (const ex of allExercises) {
+    const tops = []; // newest first
+    for (const d of dates) {
+      const w = state.workouts[d];
+      const logs = (w && w.logs && w.logs[ex.id]) || [];
+      const done = logs.filter(s => s.d);
+      if (!done.length) continue;
+      let best = null;
+      for (const s of done) {
+        const wv = parseFloat(s.w) || 0;
+        const rv = parseInt(s.r, 10) || 0;
+        if (rv < 1) continue;
+        const e = (ex.bw ? rv : wv) * (1 + rv / 30);
+        if (!best || e > best.e) best = { w: wv, r: rv, d, e };
+      }
+      if (best) tops.push(best);
+      if (tops.length >= 6) break;
+    }
+    if (tops.length < 4) continue; // need at least 4 sessions to call it a plateau
+    const epleys = tops.map(t => t.e);
+    const mx = Math.max(...epleys);
+    const mn = Math.min(...epleys);
+    // No meaningful gain across the window
+    if (mx - mn <= mx * 0.02) {
+      out.push({
+        name: ex.name,
+        muscles: ex.muscles || [],
+        bw: !!ex.bw,
+        alternatives: ex.alternatives || [],
+        topSets: tops.map(t => {
+          const lbl = ex.bw ? `BW × ${t.r}` : `${t.w}kg × ${t.r}`;
+          return `${lbl} (${t.d})`;
+        })
+      });
+    }
+  }
+  return out;
+}
+
+function buildPlateauPrompt(candidates) {
+  const blocks = candidates.map(c => {
+    const altLine = c.alternatives.length ? ` Listed alternatives: ${c.alternatives.join(', ')}.` : '';
+    return `- ${c.name} (muscles: ${(c.muscles || []).join(', ') || 'n/a'})\n  Last sets (newest first): ${c.topSets.join(' · ')}\n ${altLine}`;
+  }).join('\n');
+  return `You are MyGym Coach. The user has these stalled exercises (no meaningful gain over ≥ 4 sessions). For each, give one tight diagnosis and ONE concrete next move. Output ONLY a JSON object (no prose, no markdown fences):
+
+{
+  "plateaus": [
+    {
+      "name": "Exact exercise name from the list",
+      "lastTopSets": [ "13kg × 8 (date)", "..." ],
+      "diagnosis": "1 sentence on why it stalled",
+      "recommendation": "1 concrete next move — swap to <listed alt>, deload 10% then ramp, add a warm-up set, change tempo, fix a form cue."
+    }
+  ],
+  "summary": "1 line: how many plateaus, overall severity."
+}
+
+Rules:
+- Quote real numbers and dates from below — never invent.
+- Prefer a swap to one of the listed alternatives when the muscle group is fine but the lift is stuck.
+- Be terse — every field reads on a phone.
+- Output ONLY the JSON object.
+
+STALLED EXERCISES:
+
+${blocks}`;
+}
+
+function _plateauMostRecentSessionTs() {
+  let ts = 0;
+  for (const [d, w] of Object.entries(state.workouts || {})) {
+    if (!w) continue;
+    if (typeof w.finished === 'number' && w.finished > ts) ts = w.finished;
+    if (typeof w.started === 'number' && w.started > ts) ts = w.started;
+  }
+  return ts;
+}
+function shouldRefreshPlateauReport() {
+  const r = state.plateauReport;
+  if (!r || !r.json) return true;
+  const sig = _plateauMostRecentSessionTs();
+  if (sig > (r.generatedAt || 0)) return true;
+  // Also bust once per week
+  const ageDays = (Date.now() - (r.generatedAt || 0)) / 86400000;
+  if (ageDays > 7) return true;
+  return false;
+}
+async function requestPlateauReport() {
+  if (!state.settings.anthropicApiKey) throw new Error('Set up your Anthropic API key first');
+  const candidates = findPlateauCandidates();
+  if (!candidates.length) {
+    const empty = { plateaus: [], summary: 'No plateaus detected over the last 4–6 sessions per exercise. Keep going.' };
+    state.plateauReport = { date: today(), json: empty, generatedAt: Date.now() };
+    save();
+    return empty;
+  }
+  const raw = await callAnthropic({
+    system: buildPlateauPrompt(candidates),
+    messages: [{ role: 'user', content: 'Plateau report.' }],
+    maxTokens: 1100
+  });
+  const cleaned = _stripJsonObjectFence(raw);
+  let parsed;
+  try { parsed = JSON.parse(cleaned); }
+  catch (_) { throw new Error('Coach returned non-JSON: ' + raw.slice(0, 200)); }
+  if (!parsed || typeof parsed !== 'object') throw new Error('Coach returned invalid shape');
+  if (!Array.isArray(parsed.plateaus)) parsed.plateaus = [];
+  state.plateauReport = { date: today(), json: parsed, generatedAt: Date.now() };
   save();
   return parsed;
 }
@@ -8174,17 +8602,19 @@ function openAIParseModal() {
       parseBtn.disabled = true;
       parseBtn.style.opacity = '0.5';
       try {
-        const raw = await callAnthropic({
+        const out = await callAnthropicWithTool({
           system: _aiSystemPrompt(),
-          messages: [{ role: 'user', content: text }],
+          userMessage: text,
+          tool: _saveTasksTool(),
           maxTokens: 2048
         });
-        const json = _stripJsonFence(raw);
-        let parsed;
-        try { parsed = JSON.parse(json); }
-        catch (_e) { throw new Error('Claude returned non-JSON: ' + raw.slice(0, 120)); }
-        if (!Array.isArray(parsed)) throw new Error('Expected an array, got ' + typeof parsed);
-        if (!parsed.length) { toast('Nothing parsed'); status.innerHTML = ''; parseBtn.disabled = false; parseBtn.style.opacity = '1'; return; }
+        const parsed = Array.isArray(out && out.tasks) ? out.tasks : [];
+        if (!parsed.length) {
+          status.innerHTML = '<div class="small" style="color:var(--text-muted);">Nothing recognisable in that note. Try adding a verb or a day, e.g. <em>"gym 8"</em> or <em>"call mom tomorrow"</em>.</div>';
+          parseBtn.disabled = false;
+          parseBtn.style.opacity = '1';
+          return;
+        }
         closeModal();
         openAIPreviewModal(parsed);
       } catch (e) {
