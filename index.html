@@ -2116,6 +2116,64 @@ const DAYS = {
       { id: 'sat-5', name: 'Cable biceps curl', sets: 3, repsMin: 10, repsMax: 12, weight: 5, target: 'Biceps', alt: 'Dumbbell biceps curl / EZ bar curl', alternatives: ['Dumbbell biceps curl', 'EZ bar curl'], muscles: ['biceps'] },
       { id: 'sat-6', name: 'Rope triceps pushdown', sets: 3, repsMin: 10, repsMax: 12, weight: 9, target: 'Triceps', alt: 'Straight bar triceps pushdown / Single-arm cable pushdown', alternatives: ['Straight bar triceps pushdown', 'Single-arm cable pushdown'], muscles: ['triceps'] }
     ]
+  },
+  // ---------- Travel plan (bodyweight only, no equipment). Active when settings.travelMode is on. ----------
+  // Cadence mirrors the home split exactly so the user can flip back without re-learning the week:
+  // Mon Push (11) · Tue Pull (12) · Wed rest · Thu Legs (14) · Fri rest · Sat Upper+Arms (16) · Sun rest.
+  11: {
+    name: 'Travel Push',
+    focus: 'Chest · Shoulders · Triceps',
+    note: 'Bodyweight only. Slow tempo (3s down). Stop 1–2 reps before failure.',
+    travel: true,
+    exercises: [
+      { id: 'tv-pu-1', name: 'Push-up', sets: 4, repsMin: 10, repsMax: 20, weight: 0, target: 'Chest, shoulders, triceps', alt: 'Knee push-up / Feet-elevated push-up', alternatives: ['Feet-elevated push-up', 'Slow tempo push-up', 'Knee push-up'], muscles: ['chest','triceps','shoulders'], bw: true },
+      { id: 'tv-pu-2', name: 'Pike push-up', sets: 3, repsMin: 8, repsMax: 12, weight: 0, target: 'Shoulders, upper chest', alt: 'Hands-elevated pike push-up', alternatives: ['Hands-elevated pike push-up', 'Smaller-range pike push-up'], muscles: ['shoulders','triceps'], bw: true },
+      { id: 'tv-pu-3', name: 'Close-grip push-up', sets: 3, repsMin: 8, repsMax: 15, weight: 0, target: 'Triceps, inner chest', alt: 'Knee close-grip push-up', alternatives: ['Knee close-grip push-up'], muscles: ['triceps','chest'], bw: true },
+      { id: 'tv-pu-4', name: 'Bench/bed dip', sets: 3, repsMin: 10, repsMax: 15, weight: 0, target: 'Triceps (skip if shoulders feel off)', alt: 'Triceps push-up', alternatives: ['Triceps push-up'], muscles: ['triceps','shoulders'], bw: true },
+      { id: 'tv-pu-5', name: 'Plank (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Core, anti-extension', alt: 'Knee plank', alternatives: ['Knee plank'], muscles: ['core'], bw: true, timed: true }
+    ]
+  },
+  12: {
+    name: 'Travel Pull',
+    focus: 'Back · Rear delt · Posture',
+    note: 'Light by design — bodyweight without bars/bands can\'t replicate rows/pulldowns. Focus on slow control + scapular squeeze. Add custom exercises if you have a doorframe or backpack.',
+    travel: true,
+    exercises: [
+      { id: 'tv-pl-1', name: 'Reverse snow angel', sets: 3, repsMin: 12, repsMax: 15, weight: 0, target: 'Rear delt, upper back', alt: 'Prone Y raises only', alternatives: ['Prone Y raises'], muscles: ['back','shoulders'], bw: true },
+      { id: 'tv-pl-2', name: 'Prone Y raise', sets: 2, repsMin: 8, repsMax: 8, weight: 0, target: 'Lower trap, scapular control', alt: 'Reverse snow angel', alternatives: ['Reverse snow angel'], muscles: ['back','shoulders'], bw: true },
+      { id: 'tv-pl-3', name: 'Prone T raise', sets: 2, repsMin: 8, repsMax: 8, weight: 0, target: 'Mid-trap, rear delt', alt: 'Reverse snow angel', alternatives: ['Reverse snow angel'], muscles: ['back','shoulders'], bw: true },
+      { id: 'tv-pl-4', name: 'Prone W raise', sets: 2, repsMin: 8, repsMax: 8, weight: 0, target: 'Rotator cuff, scapular retraction', alt: 'Reverse snow angel', alternatives: ['Reverse snow angel'], muscles: ['back','shoulders'], bw: true }
+    ]
+  },
+  14: {
+    name: 'Travel Legs',
+    focus: 'Quads · Hamstrings · Glutes · Calves · Core',
+    note: 'Bodyweight only. Controlled tempo, pause at bottom if it gets too easy.',
+    travel: true,
+    exercises: [
+      { id: 'tv-lg-1', name: 'Tempo squat (3s down)', sets: 4, repsMin: 15, repsMax: 20, weight: 0, target: 'Quads, glutes', alt: 'Regular bodyweight squat', alternatives: ['Bodyweight squat', 'Pause squat'], muscles: ['legs','glutes'], bw: true },
+      { id: 'tv-lg-2', name: 'Stationary split squat (each leg)', sets: 3, repsMin: 10, repsMax: 15, weight: 0, target: 'Quads, glutes — one leg', alt: 'Shorter range / regular squat', alternatives: ['Bodyweight squat', 'Shorter-range split squat'], muscles: ['legs','glutes'], bw: true },
+      { id: 'tv-lg-3', name: 'Single-leg glute bridge (each leg)', sets: 3, repsMin: 12, repsMax: 15, weight: 0, target: 'Glutes, hamstrings — one leg', alt: 'Regular glute bridge', alternatives: ['Glute bridge'], muscles: ['glutes','legs'], bw: true },
+      { id: 'tv-lg-4', name: 'Single-leg RDL (bodyweight, each leg)', sets: 3, repsMin: 10, repsMax: 10, weight: 0, target: 'Hamstrings, glutes, balance', alt: 'Reach-to-floor hinge', alternatives: ['Hip hinge', 'Reach-to-floor hinge'], muscles: ['legs','glutes'], bw: true },
+      { id: 'tv-lg-5', name: 'Wall sit (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Quads endurance', alt: 'Shorter hold', alternatives: ['Shorter wall sit'], muscles: ['legs'], bw: true, timed: true },
+      { id: 'tv-lg-6', name: 'Calf raise', sets: 3, repsMin: 20, repsMax: 25, weight: 0, target: 'Calves', alt: 'Single-leg calf raise', alternatives: ['Single-leg calf raise'], muscles: ['legs'], bw: true },
+      { id: 'tv-lg-7', name: 'Dead bug (each side)', sets: 2, repsMin: 10, repsMax: 10, weight: 0, target: 'Core, anti-extension', alt: 'Slower tempo dead bug', alternatives: ['Slow dead bug'], muscles: ['core'], bw: true },
+      { id: 'tv-lg-8', name: 'Side plank (each side, hold)', sets: 2, repsMin: 20, repsMax: 30, weight: 0, target: 'Obliques, lateral stability', alt: 'Knee side plank', alternatives: ['Knee side plank'], muscles: ['core'], bw: true, timed: true }
+    ]
+  },
+  16: {
+    name: 'Travel Upper + Arms',
+    focus: 'Balanced Push / Pull + Core',
+    note: 'Second stimulus day, not max effort. Mix of push, posture and core — keep it lighter than Mon.',
+    travel: true,
+    exercises: [
+      { id: 'tv-ua-1', name: 'Push-up', sets: 3, repsMin: 12, repsMax: 20, weight: 0, target: 'Chest, shoulders, triceps', alt: 'Feet-elevated / Knee push-up', alternatives: ['Feet-elevated push-up', 'Knee push-up'], muscles: ['chest','triceps','shoulders'], bw: true },
+      { id: 'tv-ua-2', name: 'Pike push-up', sets: 2, repsMin: 8, repsMax: 12, weight: 0, target: 'Shoulders, upper chest', alt: 'Hands-elevated pike push-up', alternatives: ['Hands-elevated pike push-up'], muscles: ['shoulders','triceps'], bw: true },
+      { id: 'tv-ua-3', name: 'Reverse snow angel', sets: 2, repsMin: 15, repsMax: 15, weight: 0, target: 'Rear delt, upper back', alt: 'Prone Y raises', alternatives: ['Prone Y raises'], muscles: ['back','shoulders'], bw: true },
+      { id: 'tv-ua-4', name: 'Mountain climbers (total reps)', sets: 3, repsMin: 20, repsMax: 20, weight: 0, target: 'Core, conditioning', alt: 'Slow mountain climbers', alternatives: ['Slow mountain climbers'], muscles: ['core','legs'], bw: true },
+      { id: 'tv-ua-5', name: 'Hollow hold (hold)', sets: 2, repsMin: 20, repsMax: 30, weight: 0, target: 'Anterior core', alt: 'Tuck hollow hold', alternatives: ['Tuck hollow hold'], muscles: ['core'], bw: true, timed: true },
+      { id: 'tv-ua-6', name: 'Plank (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Core, anti-extension', alt: 'Knee plank', alternatives: ['Knee plank'], muscles: ['core'], bw: true, timed: true }
+    ]
   }
 };
 
@@ -2295,7 +2353,7 @@ const defaultState = {
   plateauReport: null,      // { date, json: {plateaus, summary}, generatedAt } — full-history plateau scan
   photos: [],
   notes: {},
-  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false, anthropicApiKey: '', theme: 'indigo' }
+  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false, anthropicApiKey: '', theme: 'indigo', travelMode: false }
 };
 
 let state;
@@ -3206,7 +3264,31 @@ function effectiveDayKey(dateStr) {
   if (state.plan?.skippedDates?.includes(dateStr)) return null;
   if (state.plan?.overrides && state.plan.overrides[dateStr] != null) return state.plan.overrides[dateStr];
   const dow = new Date(dateStr + 'T00:00:00').getDay();
-  return DAYS[dow] ? dow : null;
+  // Travel mode: mirrors home cadence — Mon Push (11), Tue Pull (12), Thu Legs (14), Sat Upper+Arms (16).
+  // Wed / Fri / Sun stay rest, exactly like the home week — so flipping the toggle off lands you back on
+  // your real plan with no shift.
+  if (state.settings && state.settings.travelMode) {
+    if (dow === 1) return 11;
+    if (dow === 2) return 12;
+    if (dow === 4) return 14;
+    if (dow === 6) return 16;
+    return null;
+  }
+  // Home mode: ignore travel-tagged entries.
+  return (DAYS[dow] && !DAYS[dow].travel) ? dow : null;
+}
+
+// Returns the subset of DAYS that belongs to the currently-active plan (home or travel).
+// Past sessions still resolve their day data via direct DAYS[dayKey] lookups — this helper
+// is only for places that show "the plan" (Plan tab, day switcher, Full plan progress, etc).
+function activePlanDays() {
+  const travel = !!(state.settings && state.settings.travelMode);
+  const out = {};
+  for (const [k, d] of Object.entries(DAYS)) {
+    if (!d) continue;
+    if (!!d.travel === travel) out[k] = d;
+  }
+  return out;
 }
 
 // Skip a date and cascade the displaced session forward day-by-day until it lands on a rest slot.
@@ -4614,7 +4696,7 @@ function renderToday() {
     v.appendChild(el('div', { class: 'card' }, [
       el('div', { class: 'card-title' }, 'Train a different day?'),
       el('div', { class: 'row wrap', style: 'gap:8px;' },
-        Object.entries(DAYS).map(([k, d]) =>
+        Object.entries(activePlanDays()).map(([k, d]) =>
           el('button', { class: 'btn secondary', style: 'flex:1;min-width:42%;', onclick: () => { activeDayKey = +k; expandedExId = null; editingSetKey = null; render(); } }, d.name)
         )
       )
@@ -4660,7 +4742,7 @@ function renderToday() {
 
   // Day switcher
   const sw = el('div', { class: 'row', style: 'gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;' });
-  Object.entries(DAYS).forEach(([k, d]) => {
+  Object.entries(activePlanDays()).forEach(([k, d]) => {
     sw.appendChild(el('button', {
       class: 'chip' + (+k === dayKey ? ' accent' : ''),
       style: 'padding:8px 12px;font-size:12px;flex-shrink:0;',
@@ -6517,8 +6599,8 @@ function _renderFullPlanProgress(parent) {
     planMs ? `${Math.round(planMs / 60000)} min total` : 'log warmup + workout'));
   parent.appendChild(totalsRow);
 
-  // Per-training-day groups
-  Object.entries(DAYS).forEach(([dayKey, day]) => {
+  // Per-training-day groups (active plan only — home shows home, travel shows travel)
+  Object.entries(activePlanDays()).forEach(([dayKey, day]) => {
     if (!day || !day.exercises || !day.exercises.length) return;
     const daySessions = allWorkouts.filter(([d, w]) => String(w.dayKey) === String(dayKey));
 
@@ -7232,6 +7314,29 @@ function renderMore() {
   set.appendChild(el('div', {
     class: 'list-item',
     onclick: () => {
+      const next = !state.settings.travelMode;
+      state.settings.travelMode = next;
+      activeDayKey = null;       // force the Today screen to re-resolve via effectiveDayKey
+      expandedExId = null;
+      editingSetKey = null;
+      save(); render();
+      toast(next ? '✈️ Travel mode ON — bodyweight plan' : 'Travel mode OFF — back to home gym');
+    }
+  }, [
+    el('div', {}, [
+      el('div', {}, 'Travel mode'),
+      el('div', { class: 'small dim', style: 'font-size:11px;margin-top:2px;' },
+        state.settings.travelMode ? 'Bodyweight: Mon Push · Tue Pull · Thu Legs · Sat Upper+Arms' : 'Home gym: Mon Push · Tue Pull · Thu Legs · Sat Upper+Arms')
+    ]),
+    el('div', { class: 'right' }, [
+      el('span', { style: state.settings.travelMode ? 'color:var(--accent);font-weight:700;' : '' },
+        state.settings.travelMode ? '✈️ On' : 'Off'),
+      el('span', {}, '›')
+    ])
+  ]));
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: () => {
       const opts = [180, 240, 300, 360, 420, 480, 600];
       const cur = state.settings.warmupTargetSec || 300;
       const idx = opts.indexOf(cur);
@@ -7284,7 +7389,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.77 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.79 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
@@ -8148,10 +8253,12 @@ async function requestRecentUpdate() {
 function findPlateauCandidates() {
   const out = [];
   const seenNames = new Set();
-  // Gather all exercises across all program days (incl. customs from refreshDayExercises).
+  // Gather exercises from the currently-active plan only (so travel maintenance doesn't trigger
+  // plateau warnings on home lifts, and vice versa).
   const allExercises = [];
-  for (const k of Object.keys(DAYS)) {
-    for (const ex of (DAYS[k].exercises || [])) {
+  const planDays = activePlanDays();
+  for (const k of Object.keys(planDays)) {
+    for (const ex of (planDays[k].exercises || [])) {
       if (seenNames.has(ex.name)) continue;
       seenNames.add(ex.name);
       allExercises.push(ex);
