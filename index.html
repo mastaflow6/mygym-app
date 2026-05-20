@@ -210,6 +210,19 @@
   }
   .coach-expand-btn:hover { background: var(--surface-2); color: var(--text); }
 
+  /* Copy-card icon button — sits in the header of each Coach card */
+  .coach-copy-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; flex-shrink: 0;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-muted); border-radius: 8px; cursor: pointer;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+  }
+  .coach-copy-btn:hover { background: var(--surface-2); color: var(--text); }
+  .coach-copy-btn:active { transform: scale(0.9); }
+  .coach-copy-btn svg { width: 14px; height: 14px; }
+  .coach-copy-btn.copied { background: var(--accent); border-color: var(--accent); color: #fff; }
+
   /* Phase timer (lab) */
   .lab-timer {
     background: var(--surface); border: 1px solid var(--border);
@@ -6358,24 +6371,15 @@ function _renderExerciseTips(parent, j) {
 
 function _renderRecentUpdate(parent, j) {
   if (!j) return;
-  if (j.summary) parent.appendChild(el('div', { class: 'ru-summary' }, String(j.summary).trim()));
-  if (Array.isArray(j.improvements) && j.improvements.length) {
-    parent.appendChild(el('div', { class: 'ru-section-lbl' }, 'Improvements'));
-    const ul = el('ul', { class: 'ru-list' });
-    j.improvements.forEach(it => ul.appendChild(el('li', {}, String(it).trim())));
-    parent.appendChild(ul);
+  if (j.headline) {
+    parent.appendChild(el('div', {
+      style: 'font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px;line-height:1.4;'
+    }, String(j.headline).trim()));
   }
-  if (Array.isArray(j.watchNow) && j.watchNow.length) {
-    parent.appendChild(el('div', { class: 'ru-section-lbl' }, 'Watch now'));
-    const ul = el('ul', { class: 'ru-list warn' });
-    j.watchNow.forEach(it => ul.appendChild(el('li', {}, String(it).trim())));
-    parent.appendChild(ul);
-  }
-  if (Array.isArray(j.next) && j.next.length) {
-    parent.appendChild(el('div', { class: 'ru-section-lbl' }, 'Next'));
-    const ul = el('ul', { class: 'ru-list' });
-    j.next.forEach(it => ul.appendChild(el('li', {}, String(it).trim())));
-    parent.appendChild(ul);
+  if (j.summary) {
+    parent.appendChild(el('div', {
+      style: 'font-size:13.5px;line-height:1.65;color:var(--text);white-space:pre-wrap;'
+    }, String(j.summary).trim()));
   }
 }
 
@@ -6447,6 +6451,7 @@ function _coachCardShell(title, opts) {
       onclick: opts.onRefresh
     }, '↻ Refresh');
     headRight.appendChild(refresh);
+    headRight.appendChild(_makeCoachCopyBtn(() => body));
   }
   head.appendChild(headRight);
   return { card, body };
@@ -6465,6 +6470,186 @@ function _coachFirstRunBlock(body, blurb, label, generator) {
     style: 'width:100%;background:linear-gradient(135deg, var(--accent), var(--accent-strong));',
     onclick: function() { generator(body, this); }
   }, label));
+}
+
+function _renderFullPlanProgress(parent) {
+  const today_s = today();
+  const td = new Date(today_s + 'T00:00:00');
+
+  const allWorkouts = Object.entries(state.workouts || {})
+    .filter(([d, w]) => w && w.finished && d <= today_s)
+    .sort((a, b) => a[0].localeCompare(b[0]));
+
+  if (!allWorkouts.length) {
+    parent.appendChild(el('div', { class: 'small dim', style: 'padding:14px 0;text-align:center;' },
+      'No finished sessions yet — your full-plan numbers will fill in as you log workouts.'));
+    return;
+  }
+
+  // Plan-wide totals row
+  let planSessions = 0, planVolume = 0, planSets = 0, planMs = 0;
+  allWorkouts.forEach(([d, w]) => {
+    planSessions++;
+    planMs += (w.timers?.warmup || 0) + (w.timers?.workout || 0);
+    for (const arr of Object.values(w.logs || {})) {
+      (arr || []).forEach(s => {
+        if (!s || !s.d) return;
+        planSets++;
+        planVolume += (parseFloat(s.w) || 0) * (parseFloat(s.r) || 0);
+      });
+    }
+  });
+  const totalsRow = el('div', {
+    style: 'display:grid;grid-template-columns:repeat(2, 1fr);gap:8px;margin-bottom:14px;'
+  });
+  const _st = (lbl, val, sub) => el('div', {
+    style: 'padding:10px 12px;background:var(--surface-2);border-radius:10px;'
+  }, [
+    el('div', { style: 'font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted);' }, lbl),
+    el('div', { style: 'font-size:18px;font-weight:700;color:var(--text);margin-top:2px;' }, val),
+    el('div', { style: 'font-size:11px;color:var(--text-muted);margin-top:2px;' }, sub)
+  ]);
+  totalsRow.appendChild(_st('All sessions', String(planSessions), 'since program start'));
+  totalsRow.appendChild(_st('All sets', String(planSets), `~${Math.round(planSets / planSessions)}/session`));
+  totalsRow.appendChild(_st('All volume',
+    planVolume >= 1000 ? `${(planVolume / 1000).toFixed(1)} t` : `${Math.round(planVolume)} kg`, 'kg × reps'));
+  totalsRow.appendChild(_st('Time under bar', planMs ? `${Math.round(planMs / 3600000 * 10) / 10} h` : '—',
+    planMs ? `${Math.round(planMs / 60000)} min total` : 'log warmup + workout'));
+  parent.appendChild(totalsRow);
+
+  // Per-training-day groups
+  Object.entries(DAYS).forEach(([dayKey, day]) => {
+    if (!day || !day.exercises || !day.exercises.length) return;
+    const daySessions = allWorkouts.filter(([d, w]) => String(w.dayKey) === String(dayKey));
+
+    const section = el('div', { style: 'margin-bottom:16px;' });
+    const dayHead = el('div', {
+      style: 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--surface-2);'
+    });
+    const dayHeadLeft = el('div', {});
+    dayHeadLeft.appendChild(el('span', { style: 'font-size:13px;font-weight:700;color:var(--text);' }, day.name));
+    if (day.focus) dayHeadLeft.appendChild(el('span', {
+      style: 'font-size:11px;color:var(--text-muted);margin-left:6px;'
+    }, day.focus));
+    dayHead.appendChild(dayHeadLeft);
+    dayHead.appendChild(el('span', {
+      style: 'font-size:11px;color:var(--text-muted);font-weight:600;'
+    }, `${daySessions.length} session${daySessions.length === 1 ? '' : 's'}`));
+    section.appendChild(dayHead);
+
+    day.exercises.forEach(ex => {
+      const topPerDate = {};
+      const allLogged = [];
+      allWorkouts.forEach(([d, w]) => {
+        const arr = (w.logs || {})[ex.id] || [];
+        arr.forEach(s => {
+          if (!s || !s.d) return;
+          const wgt = parseFloat(s.w) || 0;
+          const rps = parseFloat(s.r) || 0;
+          if (!rps || (!wgt && !ex.bw)) return;
+          const e = epley(wgt, rps);
+          allLogged.push({ date: d, w: wgt, r: rps, e });
+          if (!topPerDate[d] || e > topPerDate[d].e) topPerDate[d] = { date: d, w: wgt, r: rps, e };
+        });
+      });
+
+      const row = el('div', {
+        style: 'padding:10px 12px;background:var(--surface-2);border-radius:10px;margin-bottom:6px;'
+      });
+      const headLine = el('div', {
+        style: 'display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px;'
+      });
+      headLine.appendChild(el('span', { style: 'font-size:13px;font-weight:600;color:var(--text);' }, ex.name));
+      const targetLbl = `${ex.sets}×${ex.repsMin}${ex.repsMax !== ex.repsMin ? '-' + ex.repsMax : ''} target`;
+      headLine.appendChild(el('span', {
+        style: 'font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap;'
+      }, targetLbl));
+      row.appendChild(headLine);
+
+      if (!allLogged.length) {
+        row.appendChild(el('div', {
+          style: 'font-size:11px;color:var(--text-muted);'
+        }, 'Not logged yet'));
+        section.appendChild(row);
+        return;
+      }
+
+      const sessionsArr = Object.values(topPerDate).sort((a, b) => a.date.localeCompare(b.date));
+      const lastTop = sessionsArr[sessionsArr.length - 1];
+      const pr = allLogged.reduce((b, s) => !b || s.e > b.e ? s : b, null);
+      const ld = new Date(lastTop.date + 'T00:00:00');
+      const daysAgo = Math.round((td - ld) / 86400000);
+      const agoLbl = daysAgo === 0 ? 'today' : daysAgo === 1 ? 'yesterday' : `${daysAgo}d ago`;
+      const isPRLatest = pr.date === lastTop.date && pr.w === lastTop.w && pr.r === lastTop.r;
+
+      const stats = el('div', {
+        style: 'display:flex;gap:10px;font-size:11.5px;color:var(--text-muted);margin-bottom:6px;flex-wrap:wrap;'
+      });
+      stats.appendChild(el('span', {
+        html: `Last: <b style="color:var(--text);">${lastTop.w}kg × ${lastTop.r}</b> · ${agoLbl}`
+      }));
+      stats.appendChild(el('span', {
+        html: `PR: <b style="color:${isPRLatest ? 'var(--accent)' : 'var(--text)'};">${pr.w}kg × ${pr.r}</b>${isPRLatest ? ' ⭐' : ''}`
+      }));
+      stats.appendChild(el('span', {}, `${sessionsArr.length} session${sessionsArr.length === 1 ? '' : 's'}`));
+      row.appendChild(stats);
+
+      if (sessionsArr.length >= 2) {
+        const recent = sessionsArr.slice(-6);
+        const maxE = Math.max(...recent.map(s => s.e));
+        const minE = Math.min(...recent.map(s => s.e));
+        const span = (maxE - minE) || 1;
+        const chart = el('div', { style: 'display:flex;gap:3px;align-items:flex-end;height:22px;' });
+        recent.forEach(s => {
+          const h = 4 + Math.round(((s.e - minE) / span) * 18);
+          chart.appendChild(el('div', {
+            style: `width:8px;height:${h}px;background:var(--accent);opacity:0.75;border-radius:2px;`,
+            title: `${s.date}: ${s.w}kg × ${s.r}`
+          }));
+        });
+        const first = recent[0];
+        const last = recent[recent.length - 1];
+        const dE = last.e - first.e;
+        const verdictTxt = dE > 0.5 ? '↗ improving' : dE < -0.5 ? '↘ down' : '→ stable';
+        const verdictColor = dE > 0.5 ? 'var(--success)' : dE < -0.5 ? 'var(--warn)' : 'var(--text-muted)';
+        const trendRow = el('div', { style: 'display:flex;gap:10px;align-items:center;font-size:11px;' });
+        trendRow.appendChild(chart);
+        trendRow.appendChild(el('span', { style: `color:${verdictColor};font-weight:600;` }, verdictTxt));
+        trendRow.appendChild(el('span', { style: 'color:var(--text-muted);font-size:10px;' },
+          `last ${recent.length}`));
+        row.appendChild(trendRow);
+      }
+
+      section.appendChild(row);
+    });
+
+    parent.appendChild(section);
+  });
+}
+
+function _makeCoachCopyBtn(getBody) {
+  // Small clipboard-icon button. On tap: copy the card body's text to clipboard with a toast.
+  const btn = el('button', {
+    class: 'coach-copy-btn',
+    title: 'Copy text',
+    'aria-label': 'Copy card text',
+    onclick: async (e) => {
+      e.stopPropagation();
+      const body = typeof getBody === 'function' ? getBody() : getBody;
+      const text = ((body && body.innerText) || '').trim();
+      if (!text) { toast('Nothing to copy yet'); return; }
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 900);
+        toast('Copied');
+      } catch (_e) {
+        toast('Copy failed');
+      }
+    },
+    html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'
+  });
+  return btn;
 }
 
 function _applyCoachClamp(root) {
@@ -6519,8 +6704,11 @@ function renderCoach() {
   // --- 2. Cautions (only when present) ---
   if (haveBriefing && Array.isArray(br.json.cautions) && br.json.cautions.length) {
     const card = el('div', { class: 'card briefing-section', style: 'margin-top:14px;' });
-    card.appendChild(el('div', { class: 'b-head' }, [el('span', {}, '⚠️ Cautions')]));
+    const head = el('div', { class: 'b-head' });
+    head.appendChild(el('span', {}, '⚠️ Cautions'));
     const body = el('div', { class: 'coach-body' });
+    head.appendChild(_makeCoachCopyBtn(() => body));
+    card.appendChild(head);
     _renderCautions(body, br.json);
     card.appendChild(body);
     v.appendChild(card);
@@ -6529,19 +6717,22 @@ function renderCoach() {
   // --- 3. Today's exercise tips ---
   if (haveBriefing && Array.isArray(br.json.exerciseSuggestions) && br.json.exerciseSuggestions.length) {
     const card = el('div', { class: 'card briefing-section', style: 'margin-top:14px;' });
-    card.appendChild(el('div', { class: 'b-head' }, [el('span', {}, "🎯 Today's exercise tips")]));
+    const head = el('div', { class: 'b-head' });
+    head.appendChild(el('span', {}, "🎯 Today's exercise tips"));
     const body = el('div', { class: 'coach-body' });
+    head.appendChild(_makeCoachCopyBtn(() => body));
+    card.appendChild(head);
     _renderExerciseTips(body, br.json);
     card.appendChild(body);
     v.appendChild(card);
   }
 
-  // --- 4. This 2 weeks (NEW · strict 14-day cutoff) ---
+  // --- 4. Last 2 weeks (AI content summary over the full last-14-days workout data) ---
   {
     const ru = state.recentUpdate;
     const ruStale = shouldRefreshRecentUpdate();
     const haveRu = ru && ru.json;
-    const { card, body } = _coachCardShell('📅 This 2 weeks', {
+    const { card, body } = _coachCardShell('📅 Last 2 weeks', {
       stale: ruStale,
       generatedAt: haveRu ? ru.generatedAt : 0,
       onRefresh: haveRu ? (() => _generateRecentUpdateInline(body, null)) : null
@@ -6553,10 +6744,23 @@ function renderCoach() {
       _renderRecentUpdate(body, ru.json);
     } else {
       _coachFirstRunBlock(body,
-        'Claude reads ONLY the last 14 days of sessions, notes and feel logs — so older cautions stop surfacing. Gives a short update + concrete next moves.',
-        '✨ Generate 2-week update',
+        'Claude reads every set, every note and every feel log from the last 14 days, and writes a short prose summary of where you are right now.',
+        '✨ Generate 2-week summary',
         _generateRecentUpdateInline);
     }
+    v.appendChild(card);
+  }
+
+  // --- 4b. Full plan progress (every exercise, grouped by training day) ---
+  {
+    const card = el('div', { class: 'card briefing-section ru-card', style: 'margin-top:14px;' });
+    const head = el('div', { class: 'b-head' });
+    head.appendChild(el('span', {}, '📊 Full plan progress'));
+    const body = el('div', { class: 'coach-body' });
+    head.appendChild(_makeCoachCopyBtn(() => body));
+    card.appendChild(head);
+    _renderFullPlanProgress(body);
+    card.appendChild(body);
     v.appendChild(card);
   }
 
@@ -7080,7 +7284,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.73 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.77 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
@@ -7817,23 +8021,18 @@ function buildRecentContext(daysBack) {
           const logs = w.logs[ex.id] || [];
           const done = logs.filter(s => s.d);
           if (!done.length) continue;
-          // top set by Epley
-          let best = null;
-          for (const s of done) {
+          const variant = w.variants && w.variants[ex.id];
+          const vtag = variant ? ` [variant: "${variant}"]` : '';
+          const exNote = w.notes && w.notes[ex.id];
+          const ntag = (exNote && String(exNote).trim()) ? ` · note: "${String(exNote).trim()}"` : '';
+          lines.push(`    · ${ex.name}${vtag}${ntag}`);
+          done.forEach((s, idx) => {
             const wv = parseFloat(s.w) || 0;
             const rv = parseInt(s.r, 10) || 0;
-            if (rv < 1) continue;
-            const e = (ex.bw ? rv : wv) * (1 + rv / 30);
-            if (!best || e > best.e) best = { w: wv, r: rv, e };
-          }
-          if (best) {
-            const wlbl = ex.bw ? `BW × ${best.r}${ex.timed ? 's' : ''}` : `${best.w}kg × ${best.r}${ex.timed ? 's' : ''}`;
-            const variant = w.variants && w.variants[ex.id];
-            const vtag = variant ? ` [variant: "${variant}"]` : '';
-            const exNote = w.notes && w.notes[ex.id];
-            const ntag = (exNote && String(exNote).trim()) ? ` · note: "${String(exNote).trim()}"` : '';
-            lines.push(`    · ${ex.name}: top ${wlbl}${vtag}${ntag}`);
-          }
+            if (rv < 1) return;
+            const lbl = ex.bw ? `BW × ${rv}${ex.timed ? 's' : ''}` : `${wv}kg × ${rv}${ex.timed ? 's' : ''}`;
+            lines.push(`        set ${idx + 1}: ${lbl}`);
+          });
         }
       }
     }
@@ -7878,22 +8077,37 @@ function buildRecentContext(daysBack) {
   return lines.join('\n');
 }
 
-function buildRecentUpdatePrompt() {
-  return `You are MyGym Coach. Write a tight 2-week update for Mustapha based STRICTLY on the data below. Output ONLY a single JSON object (no prose, no markdown fences):
-
-{
-  "summary": "2-3 sentences: where Mustapha is right now, grounded only in the last 2 weeks of data.",
-  "improvements": [ "short bullet, e.g. 'Lat pulldown up from 28kg×10 to 33kg×10'" ],
-  "watchNow": [ "current cautions only — pulled from notes/feel logs that appear in the window" ],
-  "next": [ "1-2 concrete suggestions for the coming week" ]
+function _recentUpdateTool() {
+  return {
+    name: 'last_2_weeks_summary',
+    description: 'Save a content summary of the last 14 days of Mustapha\'s training, grounded strictly in the supplied data.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        headline: {
+          type: 'string',
+          description: 'One short line (max ~80 chars) capturing the dominant story of the last 2 weeks. Plain text, no quotes.'
+        },
+        summary: {
+          type: 'string',
+          description: '3 to 6 short sentences (1–2 paragraphs) of plain prose. Cover: training consistency, the most important progressions or regressions (cite real numbers, exercise names, dates), body-weight / sleep / energy context if present, and the single most important focus for the next session. Ground EVERY claim in the supplied data — do not invent. No bullets, no markdown, no asterisks. Use blank lines (\\n\\n) between paragraphs.'
+        }
+      },
+      required: ['headline', 'summary']
+    }
+  };
 }
 
-Hard rules:
-- Use ONLY the data in the supplied window. Do NOT carry forward any older caution, note, or pattern. If something was flagged weeks ago but is not present in this window, omit it.
-- Reference actual numbers, exercise names, and dates from the supplied window.
-- Be terse: each bullet is one short line. summary ≤ 3 sentences.
-- If watchNow has nothing in this window, return an empty array — do not invent concerns.
-- Output ONLY the JSON object.
+function buildRecentUpdatePrompt() {
+  return `You are MyGym Coach. Read Mustapha's full last-14-days training data below and call the last_2_weeks_summary tool with a tight content summary.
+
+Style:
+- Plain prose paragraphs only. NO bullets. NO markdown. NO asterisks.
+- Talk directly to Mustapha ("you bumped …", "your sleep averaged …").
+- Ground every sentence in real numbers, exercise names, or dates from the data. If the data does not show something, do not invent it.
+- Be specific about what changed in the window — call out progressions (weight or reps), regressions, missed days, recurring notes, body-weight movement, sleep / energy patterns.
+- End with one concrete focus for the next session, also data-grounded.
+- Do not carry forward older notes / cautions that are not in this 14-day window.
 
 DATA:
 
@@ -7913,19 +8127,18 @@ function shouldRefreshRecentUpdate() {
 }
 async function requestRecentUpdate() {
   if (!state.settings.anthropicApiKey) throw new Error('Set up your Anthropic API key first');
-  const raw = await callAnthropic({
+  const out = await callAnthropicWithTool({
     system: buildRecentUpdatePrompt(),
-    messages: [{ role: 'user', content: '2-week update.' }],
-    maxTokens: 900
+    userMessage: '2-week summary.',
+    tool: _recentUpdateTool(),
+    maxTokens: 1200
   });
-  const cleaned = _stripJsonObjectFence(raw);
-  let parsed;
-  try { parsed = JSON.parse(cleaned); }
-  catch (_) { throw new Error('Coach returned non-JSON: ' + raw.slice(0, 150)); }
-  if (!parsed || typeof parsed !== 'object') throw new Error('Coach returned invalid shape');
-  state.recentUpdate = { date: today(), json: parsed, generatedAt: Date.now() };
+  if (!out || typeof out !== 'object' || !out.summary) {
+    throw new Error('Coach returned an empty summary.');
+  }
+  state.recentUpdate = { date: today(), json: out, generatedAt: Date.now() };
   save();
-  return parsed;
+  return out;
 }
 
 // ---------- Plateau detector — scans the entire history ----------
