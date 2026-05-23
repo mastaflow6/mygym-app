@@ -2097,9 +2097,9 @@ const DAYS = {
     focus: 'Quads · Hamstrings · Glutes · Calves · Core',
     note: 'Brace through every rep. Drive through the heel on presses, control the negative on leg curls.',
     exercises: [
-      { id: 'thu-1', name: 'Leg press', sets: 3, repsMin: 8, repsMax: 10, weight: 60, target: 'Quads, glutes', alt: 'Hack squat machine / Goblet squat', alternatives: ['Hack squat machine', 'Goblet squat'], muscles: ['legs','glutes'] },
+      { id: 'thu-1', name: 'Leg press', sets: 3, repsMin: 8, repsMax: 10, weight: 60, target: 'Quads, glutes', alt: 'Barbell back squat / Hack squat machine / Goblet squat', alternatives: ['Barbell back squat', 'Hack squat machine', 'Goblet squat'], muscles: ['legs','glutes'] },
       { id: 'thu-2', name: 'Romanian deadlift', sets: 3, repsMin: 8, repsMax: 10, weight: 10, target: 'Hamstrings, glutes', alt: 'Dumbbell Romanian deadlift / Smith machine RDL', alternatives: ['Dumbbell Romanian deadlift', 'Smith machine RDL'], muscles: ['legs','glutes'], barbell: true },
-      { id: 'thu-3', name: 'Stationary split squat', sets: 3, repsMin: 10, repsMax: 10, weight: 0, target: 'Quads, glutes (each leg)', alt: 'Walking lunges / Bulgarian split squat', alternatives: ['Walking lunges', 'Bulgarian split squat'], bw: true, muscles: ['legs','glutes'] },
+      { id: 'thu-3', name: 'Dumbbell split squat', sets: 3, repsMin: 10, repsMax: 10, weight: 10, target: 'Quads, glutes (each leg)', alt: 'Bulgarian split squat / Dumbbell walking lunge', alternatives: ['Bulgarian split squat', 'Dumbbell walking lunge', 'Goblet squat'], muscles: ['legs','glutes'] },
       { id: 'thu-4', name: 'Leg curl', sets: 3, repsMin: 10, repsMax: 12, weight: 15, target: 'Hamstrings', alt: 'Seated leg curl machine / Single-leg lying curl', alternatives: ['Seated leg curl machine', 'Single-leg lying curl'], muscles: ['legs'] },
       { id: 'thu-5', name: 'Standing calf raise', sets: 3, repsMin: 12, repsMax: 15, weight: 10, target: 'Gastrocnemius', alt: 'Seated calf raise / Leg press calf raise', alternatives: ['Seated calf raise', 'Leg press calf raise'], muscles: ['legs'] }
     ]
@@ -2117,62 +2117,70 @@ const DAYS = {
       { id: 'sat-6', name: 'Rope triceps pushdown', sets: 3, repsMin: 10, repsMax: 12, weight: 9, target: 'Triceps', alt: 'Straight bar triceps pushdown / Single-arm cable pushdown', alternatives: ['Straight bar triceps pushdown', 'Single-arm cable pushdown'], muscles: ['triceps'] }
     ]
   },
-  // ---------- Travel plan (bodyweight only, no equipment). Active when settings.travelMode is on. ----------
-  // Cadence mirrors the home split exactly so the user can flip back without re-learning the week:
+  // ---------- Travel plan v2 — resistance bands (10 / 20 / 30 kg) + minimal bodyweight. ----------
+  // Active when settings.travelMode is on. Cadence mirrors home split:
   // Mon Push (11) · Tue Pull (12) · Wed rest · Thu Legs (14) · Fri rest · Sat Upper+Arms (16) · Sun rest.
+  // Band rule: pick the band that keeps you close to target reps with good form. Combine bands if needed.
   11: {
     name: 'Travel Push',
     focus: 'Chest · Shoulders · Triceps',
-    note: 'Bodyweight only. Slow tempo (3s down). Stop 1–2 reps before failure.',
+    note: 'Bands 10 / 20 / 30 kg. Incline press = press slightly upward. No anchor? Sub the push-up alternative.',
     travel: true,
     exercises: [
-      { id: 'tv-pu-1', name: 'Push-up', sets: 4, repsMin: 10, repsMax: 20, weight: 0, target: 'Chest, shoulders, triceps', alt: 'Knee push-up / Feet-elevated push-up', alternatives: ['Feet-elevated push-up', 'Slow tempo push-up', 'Knee push-up'], muscles: ['chest','triceps','shoulders'], bw: true },
-      { id: 'tv-pu-2', name: 'Pike push-up', sets: 3, repsMin: 8, repsMax: 12, weight: 0, target: 'Shoulders, upper chest', alt: 'Hands-elevated pike push-up', alternatives: ['Hands-elevated pike push-up', 'Smaller-range pike push-up'], muscles: ['shoulders','triceps'], bw: true },
-      { id: 'tv-pu-3', name: 'Close-grip push-up', sets: 3, repsMin: 8, repsMax: 15, weight: 0, target: 'Triceps, inner chest', alt: 'Knee close-grip push-up', alternatives: ['Knee close-grip push-up'], muscles: ['triceps','chest'], bw: true },
-      { id: 'tv-pu-4', name: 'Bench/bed dip', sets: 3, repsMin: 10, repsMax: 15, weight: 0, target: 'Triceps (skip if shoulders feel off)', alt: 'Triceps push-up', alternatives: ['Triceps push-up'], muscles: ['triceps','shoulders'], bw: true },
-      { id: 'tv-pu-5', name: 'Plank (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Core, anti-extension', alt: 'Knee plank', alternatives: ['Knee plank'], muscles: ['core'], bw: true, timed: true }
+      { id: 'tv2-pu-1', name: 'Banded incline press', sets: 3, repsMin: 8, repsMax: 12, weight: 20, target: 'Upper chest, front delt', alt: 'Push-up / Banded chest press', alternatives: ['Push-up', 'Banded chest press', 'Feet-elevated push-up'], muscles: ['chest','shoulders','triceps'] },
+      { id: 'tv2-pu-2', name: 'Banded chest press', sets: 3, repsMin: 8, repsMax: 12, weight: 20, target: 'Chest, triceps', alt: 'Push-up', alternatives: ['Push-up', 'Close-grip push-up'], muscles: ['chest','triceps'] },
+      { id: 'tv2-pu-3', name: 'Banded shoulder press', sets: 3, repsMin: 8, repsMax: 12, weight: 10, target: 'Front + side delt', alt: 'Pike push-up', alternatives: ['Pike push-up', 'Hands-elevated pike push-up'], muscles: ['shoulders','triceps'] },
+      { id: 'tv2-pu-4', name: 'Banded lateral raise', sets: 3, repsMin: 12, repsMax: 15, weight: 10, target: 'Side delt', alt: 'Slow tempo lateral raise', alternatives: ['Slow tempo lateral raise'], muscles: ['shoulders'] },
+      { id: 'tv2-pu-5', name: 'Banded triceps pushdown', sets: 3, repsMin: 10, repsMax: 15, weight: 10, target: 'Triceps', alt: 'Close-grip push-up', alternatives: ['Close-grip push-up'], muscles: ['triceps'] },
+      { id: 'tv2-pu-6', name: 'Banded overhead triceps extension', sets: 3, repsMin: 10, repsMax: 15, weight: 10, target: 'Triceps long head', alt: 'Close-grip push-up', alternatives: ['Close-grip push-up'], muscles: ['triceps'] },
+      { id: 'tv2-pu-7', name: 'Plank (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Core, anti-extension', alt: 'Knee plank', alternatives: ['Knee plank'], muscles: ['core'], bw: true, timed: true }
     ]
   },
   12: {
     name: 'Travel Pull',
-    focus: 'Back · Rear delt · Posture',
-    note: 'Light by design — bodyweight without bars/bands can\'t replicate rows/pulldowns. Focus on slow control + scapular squeeze. Add custom exercises if you have a doorframe or backpack.',
+    focus: 'Back · Biceps · Rear delt',
+    note: 'Bands turn this into a real pull day. No high anchor for pulldown? Sub banded row + band pull-apart.',
     travel: true,
     exercises: [
-      { id: 'tv-pl-1', name: 'Reverse snow angel', sets: 3, repsMin: 12, repsMax: 15, weight: 0, target: 'Rear delt, upper back', alt: 'Prone Y raises only', alternatives: ['Prone Y raises'], muscles: ['back','shoulders'], bw: true },
-      { id: 'tv-pl-2', name: 'Prone Y raise', sets: 2, repsMin: 8, repsMax: 8, weight: 0, target: 'Lower trap, scapular control', alt: 'Reverse snow angel', alternatives: ['Reverse snow angel'], muscles: ['back','shoulders'], bw: true },
-      { id: 'tv-pl-3', name: 'Prone T raise', sets: 2, repsMin: 8, repsMax: 8, weight: 0, target: 'Mid-trap, rear delt', alt: 'Reverse snow angel', alternatives: ['Reverse snow angel'], muscles: ['back','shoulders'], bw: true },
-      { id: 'tv-pl-4', name: 'Prone W raise', sets: 2, repsMin: 8, repsMax: 8, weight: 0, target: 'Rotator cuff, scapular retraction', alt: 'Reverse snow angel', alternatives: ['Reverse snow angel'], muscles: ['back','shoulders'], bw: true }
+      { id: 'tv2-pl-1', name: 'Banded lat pulldown', sets: 3, repsMin: 8, repsMax: 12, weight: 20, target: 'Lats, biceps', alt: 'Banded row + Band pull-apart', alternatives: ['Banded row', 'Band pull-apart'], muscles: ['back','biceps'] },
+      { id: 'tv2-pl-2', name: 'Banded one-arm row (each side)', sets: 3, repsMin: 8, repsMax: 12, weight: 20, target: 'Mid-back, lats — one side', alt: 'Banded double-arm row', alternatives: ['Banded double-arm row'], muscles: ['back'] },
+      { id: 'tv2-pl-3', name: 'Banded seated row', sets: 3, repsMin: 8, repsMax: 12, weight: 20, target: 'Lats, mid-back', alt: 'Banded standing row', alternatives: ['Banded standing row'], muscles: ['back'] },
+      { id: 'tv2-pl-4', name: 'Band face pull', sets: 3, repsMin: 12, repsMax: 15, weight: 10, target: 'Rear delt, rotators', alt: 'Band pull-apart', alternatives: ['Band pull-apart'], muscles: ['shoulders','back'] },
+      { id: 'tv2-pl-5', name: 'Band rear delt fly', sets: 3, repsMin: 12, repsMax: 15, weight: 10, target: 'Rear delt, mid-trap', alt: 'Band pull-apart', alternatives: ['Band pull-apart'], muscles: ['shoulders','back'] },
+      { id: 'tv2-pl-6', name: 'Banded biceps curl', sets: 3, repsMin: 10, repsMax: 15, weight: 10, target: 'Biceps', alt: 'Slow biceps curl', alternatives: ['Slow biceps curl'], muscles: ['biceps'] },
+      { id: 'tv2-pl-7', name: 'Banded incline-style curl', sets: 3, repsMin: 10, repsMax: 15, weight: 10, target: 'Biceps long head', alt: 'Slow tempo curl', alternatives: ['Slow tempo curl'], muscles: ['biceps'] },
+      { id: 'tv2-pl-8', name: 'Plank (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Core, anti-extension', alt: 'Knee plank', alternatives: ['Knee plank'], muscles: ['core'], bw: true, timed: true }
     ]
   },
   14: {
     name: 'Travel Legs',
     focus: 'Quads · Hamstrings · Glutes · Calves · Core',
-    note: 'Bodyweight only. Controlled tempo, pause at bottom if it gets too easy.',
+    note: 'Squat: stand on the band, hold the top ends. RDL: stand on the band, hinge slowly. Combine bands if too easy.',
     travel: true,
     exercises: [
-      { id: 'tv-lg-1', name: 'Tempo squat (3s down)', sets: 4, repsMin: 15, repsMax: 20, weight: 0, target: 'Quads, glutes', alt: 'Regular bodyweight squat', alternatives: ['Bodyweight squat', 'Pause squat'], muscles: ['legs','glutes'], bw: true },
-      { id: 'tv-lg-2', name: 'Stationary split squat (each leg)', sets: 3, repsMin: 10, repsMax: 15, weight: 0, target: 'Quads, glutes — one leg', alt: 'Shorter range / regular squat', alternatives: ['Bodyweight squat', 'Shorter-range split squat'], muscles: ['legs','glutes'], bw: true },
-      { id: 'tv-lg-3', name: 'Single-leg glute bridge (each leg)', sets: 3, repsMin: 12, repsMax: 15, weight: 0, target: 'Glutes, hamstrings — one leg', alt: 'Regular glute bridge', alternatives: ['Glute bridge'], muscles: ['glutes','legs'], bw: true },
-      { id: 'tv-lg-4', name: 'Single-leg RDL (bodyweight, each leg)', sets: 3, repsMin: 10, repsMax: 10, weight: 0, target: 'Hamstrings, glutes, balance', alt: 'Reach-to-floor hinge', alternatives: ['Hip hinge', 'Reach-to-floor hinge'], muscles: ['legs','glutes'], bw: true },
-      { id: 'tv-lg-5', name: 'Wall sit (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Quads endurance', alt: 'Shorter hold', alternatives: ['Shorter wall sit'], muscles: ['legs'], bw: true, timed: true },
-      { id: 'tv-lg-6', name: 'Calf raise', sets: 3, repsMin: 20, repsMax: 25, weight: 0, target: 'Calves', alt: 'Single-leg calf raise', alternatives: ['Single-leg calf raise'], muscles: ['legs'], bw: true },
-      { id: 'tv-lg-7', name: 'Dead bug (each side)', sets: 2, repsMin: 10, repsMax: 10, weight: 0, target: 'Core, anti-extension', alt: 'Slower tempo dead bug', alternatives: ['Slow dead bug'], muscles: ['core'], bw: true },
-      { id: 'tv-lg-8', name: 'Side plank (each side, hold)', sets: 2, repsMin: 20, repsMax: 30, weight: 0, target: 'Obliques, lateral stability', alt: 'Knee side plank', alternatives: ['Knee side plank'], muscles: ['core'], bw: true, timed: true }
+      { id: 'tv2-lg-1', name: 'Banded squat', sets: 4, repsMin: 12, repsMax: 20, weight: 20, target: 'Quads, glutes', alt: 'Tempo bodyweight squat', alternatives: ['Tempo bodyweight squat', 'Pause squat'], muscles: ['legs','glutes'] },
+      { id: 'tv2-lg-2', name: 'Stationary split squat (each leg)', sets: 3, repsMin: 10, repsMax: 15, weight: 0, target: 'Quads, glutes — one leg', alt: 'Shorter range / bodyweight squat', alternatives: ['Bodyweight squat', 'Shorter-range split squat'], muscles: ['legs','glutes'], bw: true },
+      { id: 'tv2-lg-3', name: 'Banded Romanian deadlift', sets: 3, repsMin: 10, repsMax: 15, weight: 20, target: 'Hamstrings, glutes', alt: 'Slower-tempo banded RDL', alternatives: ['Slower-tempo banded RDL', 'Bodyweight hip hinge'], muscles: ['legs','glutes'] },
+      { id: 'tv2-lg-4', name: 'Single-leg glute bridge (each leg)', sets: 3, repsMin: 12, repsMax: 15, weight: 0, target: 'Glutes, hamstrings — one leg', alt: 'Regular glute bridge', alternatives: ['Glute bridge'], muscles: ['glutes','legs'], bw: true },
+      { id: 'tv2-lg-5', name: 'Wall sit (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Quads endurance', alt: 'Shorter hold', alternatives: ['Shorter wall sit'], muscles: ['legs'], bw: true, timed: true },
+      { id: 'tv2-lg-6', name: 'Standing calf raise', sets: 3, repsMin: 20, repsMax: 25, weight: 0, target: 'Calves', alt: 'Single-leg calf raise', alternatives: ['Single-leg calf raise'], muscles: ['legs'], bw: true },
+      { id: 'tv2-lg-7', name: 'Dead bug (each side)', sets: 2, repsMin: 10, repsMax: 10, weight: 0, target: 'Core, anti-extension', alt: 'Slower tempo dead bug', alternatives: ['Slow dead bug'], muscles: ['core'], bw: true },
+      { id: 'tv2-lg-8', name: 'Side plank (each side, hold)', sets: 2, repsMin: 20, repsMax: 30, weight: 0, target: 'Obliques, lateral stability', alt: 'Knee side plank', alternatives: ['Knee side plank'], muscles: ['core'], bw: true, timed: true }
     ]
   },
   16: {
     name: 'Travel Upper + Arms',
-    focus: 'Balanced Push / Pull + Core',
-    note: 'Second stimulus day, not max effort. Mix of push, posture and core — keep it lighter than Mon.',
+    focus: 'Balanced Push / Pull + Arms',
+    note: 'Second stimulus day. Now matches your normal Upper+Arms much better thanks to bands.',
     travel: true,
     exercises: [
-      { id: 'tv-ua-1', name: 'Push-up', sets: 3, repsMin: 12, repsMax: 20, weight: 0, target: 'Chest, shoulders, triceps', alt: 'Feet-elevated / Knee push-up', alternatives: ['Feet-elevated push-up', 'Knee push-up'], muscles: ['chest','triceps','shoulders'], bw: true },
-      { id: 'tv-ua-2', name: 'Pike push-up', sets: 2, repsMin: 8, repsMax: 12, weight: 0, target: 'Shoulders, upper chest', alt: 'Hands-elevated pike push-up', alternatives: ['Hands-elevated pike push-up'], muscles: ['shoulders','triceps'], bw: true },
-      { id: 'tv-ua-3', name: 'Reverse snow angel', sets: 2, repsMin: 15, repsMax: 15, weight: 0, target: 'Rear delt, upper back', alt: 'Prone Y raises', alternatives: ['Prone Y raises'], muscles: ['back','shoulders'], bw: true },
-      { id: 'tv-ua-4', name: 'Mountain climbers (total reps)', sets: 3, repsMin: 20, repsMax: 20, weight: 0, target: 'Core, conditioning', alt: 'Slow mountain climbers', alternatives: ['Slow mountain climbers'], muscles: ['core','legs'], bw: true },
-      { id: 'tv-ua-5', name: 'Hollow hold (hold)', sets: 2, repsMin: 20, repsMax: 30, weight: 0, target: 'Anterior core', alt: 'Tuck hollow hold', alternatives: ['Tuck hollow hold'], muscles: ['core'], bw: true, timed: true },
-      { id: 'tv-ua-6', name: 'Plank (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Core, anti-extension', alt: 'Knee plank', alternatives: ['Knee plank'], muscles: ['core'], bw: true, timed: true }
+      { id: 'tv2-ua-1', name: 'Banded chest press', sets: 3, repsMin: 10, repsMax: 15, weight: 20, target: 'Chest, triceps', alt: 'Push-up', alternatives: ['Push-up'], muscles: ['chest','triceps'] },
+      { id: 'tv2-ua-2', name: 'Banded lat pulldown', sets: 3, repsMin: 10, repsMax: 15, weight: 20, target: 'Lats, biceps', alt: 'Banded row', alternatives: ['Banded row', 'Band pull-apart'], muscles: ['back','biceps'] },
+      { id: 'tv2-ua-3', name: 'Banded row', sets: 3, repsMin: 10, repsMax: 15, weight: 20, target: 'Mid-back, lats', alt: 'Banded one-arm row', alternatives: ['Banded one-arm row'], muscles: ['back'] },
+      { id: 'tv2-ua-4', name: 'Banded lateral raise', sets: 3, repsMin: 12, repsMax: 20, weight: 10, target: 'Side delt', alt: 'Slow tempo lateral raise', alternatives: ['Slow tempo lateral raise'], muscles: ['shoulders'] },
+      { id: 'tv2-ua-5', name: 'Banded biceps curl', sets: 3, repsMin: 10, repsMax: 15, weight: 10, target: 'Biceps', alt: 'Slow biceps curl', alternatives: ['Slow biceps curl'], muscles: ['biceps'] },
+      { id: 'tv2-ua-6', name: 'Banded triceps pushdown', sets: 3, repsMin: 10, repsMax: 15, weight: 10, target: 'Triceps', alt: 'Banded overhead triceps extension / Close-grip push-up', alternatives: ['Banded overhead triceps extension', 'Close-grip push-up'], muscles: ['triceps'] },
+      { id: 'tv2-ua-7', name: 'Plank (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Core, anti-extension', alt: 'Knee plank', alternatives: ['Knee plank'], muscles: ['core'], bw: true, timed: true }
     ]
   }
 };
@@ -7389,7 +7397,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.79 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.82 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
