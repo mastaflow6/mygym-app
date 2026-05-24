@@ -510,6 +510,43 @@
   .checklist li.bag-row .text { font-size: 15px; align-self: center; }
   .checklist li.bag-row.done .text { color: var(--text-muted); text-decoration: line-through; }
 
+  /* Supplement reminder states */
+  .checklist li.due,
+  .checklist li.overdue { padding-left: 8px; padding-right: 8px; border-radius: 8px; }
+  .checklist li.due { background: rgba(245, 158, 11, 0.08); }
+  .checklist li.overdue { background: rgba(239, 68, 68, 0.08); }
+  .checklist li.due .box { border-color: #f59e0b; animation: suppPulse 1.6s ease-in-out infinite; }
+  .checklist li.overdue .box { border-color: var(--danger); }
+  .checklist .pill-time {
+    display: inline-block; font-size: 11px; padding: 2px 6px; border-radius: 4px;
+    background: var(--surface-3); color: var(--text-muted);
+    margin-right: 6px; font-variant-numeric: tabular-nums; font-weight: 600;
+  }
+  .checklist li.due .pill-time { background: rgba(245, 158, 11, 0.22); color: #f59e0b; }
+  .checklist li.overdue .pill-time { background: var(--danger-soft); color: var(--danger); }
+  .checklist .status-tag {
+    font-size: 10px; font-weight: 700; margin-left: 6px;
+    padding: 1px 6px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .checklist li.due .status-tag { background: #f59e0b; color: #1a1300; }
+  .checklist li.overdue .status-tag { background: var(--danger); color: #fff; }
+  .card-badge {
+    display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 999px; background: #f59e0b; color: #1a1300;
+    vertical-align: middle;
+  }
+  .card-badge.overdue { background: var(--danger); color: #fff; }
+  .supp-enable-btn {
+    margin-top: 10px; padding: 8px 12px; font-size: 12px; font-weight: 600;
+    background: var(--surface-3); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer; width: 100%;
+  }
+  .supp-enable-btn:hover { background: var(--surface-2); }
+  @keyframes suppPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45); }
+    50% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+  }
+
   /* Skip workout button */
   .skip-cta {
     width: 100%; padding: 14px 16px; margin: 16px 0 20px;
@@ -2124,16 +2161,16 @@ const DAYS = {
   11: {
     name: 'Travel Push',
     focus: 'Chest · Shoulders · Triceps',
-    note: 'Bands 10 / 20 / 30 kg. Incline press = press slightly upward. No anchor? Sub the push-up alternative.',
+    note: 'Bodyweight first. Bands only where bodyweight is weak (lateral raise, triceps iso). Swipe any slot to swap to a band variant if it gets too easy.',
     travel: true,
     exercises: [
-      { id: 'tv2-pu-1', name: 'Banded incline press', sets: 3, repsMin: 8, repsMax: 12, weight: 20, target: 'Upper chest, front delt', alt: 'Push-up / Banded chest press', alternatives: ['Push-up', 'Banded chest press', 'Feet-elevated push-up'], muscles: ['chest','shoulders','triceps'] },
-      { id: 'tv2-pu-2', name: 'Banded chest press', sets: 3, repsMin: 8, repsMax: 12, weight: 20, target: 'Chest, triceps', alt: 'Push-up', alternatives: ['Push-up', 'Close-grip push-up'], muscles: ['chest','triceps'] },
-      { id: 'tv2-pu-3', name: 'Banded shoulder press', sets: 3, repsMin: 8, repsMax: 12, weight: 10, target: 'Front + side delt', alt: 'Pike push-up', alternatives: ['Pike push-up', 'Hands-elevated pike push-up'], muscles: ['shoulders','triceps'] },
-      { id: 'tv2-pu-4', name: 'Banded lateral raise', sets: 3, repsMin: 12, repsMax: 15, weight: 10, target: 'Side delt', alt: 'Slow tempo lateral raise', alternatives: ['Slow tempo lateral raise'], muscles: ['shoulders'] },
-      { id: 'tv2-pu-5', name: 'Banded triceps pushdown', sets: 3, repsMin: 10, repsMax: 15, weight: 10, target: 'Triceps', alt: 'Close-grip push-up', alternatives: ['Close-grip push-up'], muscles: ['triceps'] },
-      { id: 'tv2-pu-6', name: 'Banded overhead triceps extension', sets: 3, repsMin: 10, repsMax: 15, weight: 10, target: 'Triceps long head', alt: 'Close-grip push-up', alternatives: ['Close-grip push-up'], muscles: ['triceps'] },
-      { id: 'tv2-pu-7', name: 'Plank (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Core, anti-extension', alt: 'Knee plank', alternatives: ['Knee plank'], muscles: ['core'], bw: true, timed: true }
+      { id: 'tv2-pu-1', name: 'Push-up', sets: 4, repsMin: 8, repsMax: 15, weight: 0, target: 'Chest, triceps, front delt', alt: 'Banded chest press / Feet-elevated push-up', alternatives: ['Banded chest press', 'Banded incline press', 'Feet-elevated push-up'], muscles: ['chest','shoulders','triceps'], bw: true },
+      { id: 'tv2-pu-2', name: 'Pike push-up', sets: 3, repsMin: 6, repsMax: 12, weight: 0, target: 'Front + side delt', alt: 'Banded shoulder press / Hands-elevated pike', alternatives: ['Banded shoulder press', 'Hands-elevated pike push-up'], muscles: ['shoulders','triceps'], bw: true },
+      { id: 'tv2-pu-3', name: 'Close-grip push-up', sets: 3, repsMin: 8, repsMax: 15, weight: 0, target: 'Triceps, inner chest', alt: 'Banded triceps pushdown', alternatives: ['Banded triceps pushdown', 'Banded overhead triceps extension'], muscles: ['triceps','chest'], bw: true },
+      { id: 'tv2-pu-4', name: 'Bench / bed dip (if safe)', sets: 3, repsMin: 8, repsMax: 15, weight: 0, target: 'Triceps, lower chest', alt: 'Close-grip push-up', alternatives: ['Close-grip push-up', 'Banded triceps pushdown'], muscles: ['triceps','chest'], bw: true },
+      { id: 'tv2-pu-5', name: 'Plank (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Core, anti-extension', alt: 'Knee plank', alternatives: ['Knee plank'], muscles: ['core'], bw: true, timed: true },
+      { id: 'tv2-pu-6', name: 'Banded lateral raise', sets: 3, repsMin: 12, repsMax: 15, weight: 10, target: 'Side delt', alt: 'Slow tempo lateral raise', alternatives: ['Slow tempo lateral raise'], muscles: ['shoulders'] },
+      { id: 'tv2-pu-7', name: 'Banded overhead triceps extension', sets: 3, repsMin: 10, repsMax: 15, weight: 10, target: 'Triceps long head', alt: 'Close-grip push-up', alternatives: ['Close-grip push-up', 'Banded triceps pushdown'], muscles: ['triceps'] }
     ]
   },
   12: {
@@ -2155,13 +2192,13 @@ const DAYS = {
   14: {
     name: 'Travel Legs',
     focus: 'Quads · Hamstrings · Glutes · Calves · Core',
-    note: 'Squat: stand on the band, hold the top ends. RDL: stand on the band, hinge slowly. Combine bands if too easy.',
+    note: 'Bodyweight first. Swipe squat or RDL to the banded version if bodyweight gets too easy.',
     travel: true,
     exercises: [
-      { id: 'tv2-lg-1', name: 'Banded squat', sets: 4, repsMin: 12, repsMax: 20, weight: 20, target: 'Quads, glutes', alt: 'Tempo bodyweight squat', alternatives: ['Tempo bodyweight squat', 'Pause squat'], muscles: ['legs','glutes'] },
-      { id: 'tv2-lg-2', name: 'Stationary split squat (each leg)', sets: 3, repsMin: 10, repsMax: 15, weight: 0, target: 'Quads, glutes — one leg', alt: 'Shorter range / bodyweight squat', alternatives: ['Bodyweight squat', 'Shorter-range split squat'], muscles: ['legs','glutes'], bw: true },
-      { id: 'tv2-lg-3', name: 'Banded Romanian deadlift', sets: 3, repsMin: 10, repsMax: 15, weight: 20, target: 'Hamstrings, glutes', alt: 'Slower-tempo banded RDL', alternatives: ['Slower-tempo banded RDL', 'Bodyweight hip hinge'], muscles: ['legs','glutes'] },
-      { id: 'tv2-lg-4', name: 'Single-leg glute bridge (each leg)', sets: 3, repsMin: 12, repsMax: 15, weight: 0, target: 'Glutes, hamstrings — one leg', alt: 'Regular glute bridge', alternatives: ['Glute bridge'], muscles: ['glutes','legs'], bw: true },
+      { id: 'tv2-lg-1', name: 'Tempo bodyweight squat', sets: 4, repsMin: 12, repsMax: 20, weight: 0, target: 'Quads, glutes', alt: 'Banded squat / Pause squat', alternatives: ['Banded squat', 'Pause squat', 'Single-leg squat'], muscles: ['legs','glutes'], bw: true },
+      { id: 'tv2-lg-2', name: 'Stationary split squat (each leg)', sets: 3, repsMin: 10, repsMax: 15, weight: 0, target: 'Quads, glutes — one leg', alt: 'Banded split squat / shorter range', alternatives: ['Banded split squat', 'Bodyweight squat', 'Shorter-range split squat'], muscles: ['legs','glutes'], bw: true },
+      { id: 'tv2-lg-3', name: 'Single-leg RDL (each leg)', sets: 3, repsMin: 8, repsMax: 12, weight: 0, target: 'Hamstrings, glutes — one leg', alt: 'Banded Romanian deadlift', alternatives: ['Banded Romanian deadlift', 'Bodyweight hip hinge'], muscles: ['legs','glutes'], bw: true },
+      { id: 'tv2-lg-4', name: 'Single-leg glute bridge (each leg)', sets: 3, repsMin: 12, repsMax: 15, weight: 0, target: 'Glutes, hamstrings — one leg', alt: 'Regular glute bridge / banded', alternatives: ['Glute bridge', 'Banded glute bridge'], muscles: ['glutes','legs'], bw: true },
       { id: 'tv2-lg-5', name: 'Wall sit (hold)', sets: 2, repsMin: 30, repsMax: 45, weight: 0, target: 'Quads endurance', alt: 'Shorter hold', alternatives: ['Shorter wall sit'], muscles: ['legs'], bw: true, timed: true },
       { id: 'tv2-lg-6', name: 'Standing calf raise', sets: 3, repsMin: 20, repsMax: 25, weight: 0, target: 'Calves', alt: 'Single-leg calf raise', alternatives: ['Single-leg calf raise'], muscles: ['legs'], bw: true },
       { id: 'tv2-lg-7', name: 'Dead bug (each side)', sets: 2, repsMin: 10, repsMax: 10, weight: 0, target: 'Core, anti-extension', alt: 'Slower tempo dead bug', alternatives: ['Slow dead bug'], muscles: ['core'], bw: true },
@@ -2171,10 +2208,10 @@ const DAYS = {
   16: {
     name: 'Travel Upper + Arms',
     focus: 'Balanced Push / Pull + Arms',
-    note: 'Second stimulus day. Now matches your normal Upper+Arms much better thanks to bands.',
+    note: 'Hybrid: bodyweight push for chest, bands for pull and arm iso (where bodyweight is weak). Swipe any slot to swap.',
     travel: true,
     exercises: [
-      { id: 'tv2-ua-1', name: 'Banded chest press', sets: 3, repsMin: 10, repsMax: 15, weight: 20, target: 'Chest, triceps', alt: 'Push-up', alternatives: ['Push-up'], muscles: ['chest','triceps'] },
+      { id: 'tv2-ua-1', name: 'Push-up', sets: 3, repsMin: 8, repsMax: 15, weight: 0, target: 'Chest, triceps, front delt', alt: 'Banded chest press', alternatives: ['Banded chest press', 'Feet-elevated push-up'], muscles: ['chest','triceps'], bw: true },
       { id: 'tv2-ua-2', name: 'Banded lat pulldown', sets: 3, repsMin: 10, repsMax: 15, weight: 20, target: 'Lats, biceps', alt: 'Banded row', alternatives: ['Banded row', 'Band pull-apart'], muscles: ['back','biceps'] },
       { id: 'tv2-ua-3', name: 'Banded row', sets: 3, repsMin: 10, repsMax: 15, weight: 20, target: 'Mid-back, lats', alt: 'Banded one-arm row', alternatives: ['Banded one-arm row'], muscles: ['back'] },
       { id: 'tv2-ua-4', name: 'Banded lateral raise', sets: 3, repsMin: 12, repsMax: 20, weight: 10, target: 'Side delt', alt: 'Slow tempo lateral raise', alternatives: ['Slow tempo lateral raise'], muscles: ['shoulders'] },
@@ -2197,10 +2234,11 @@ const PHASES = [
 const NUTRITION = { calories: 2250, protein: 140, carbs: 275, fat: 65 };
 
 const SUPPLEMENTS = [
-  { id: 'd3', name: 'Vitamin D3 + K2', dose: '1 cap (every other day)', when: 'Morning + breakfast' },
-  { id: 'omega', name: 'Omega 3', dose: '2–3 caps', when: 'With any meal' },
-  { id: 'mag', name: 'Magnesium Bisglycinate', dose: '3 tabs (~300mg)', when: '30 min before bed' }
+  { id: 'omega',    name: 'Omega 800',              dose: '1 softgel',     when: 'Breakfast',           time: '07:30' },
+  { id: 'creatine', name: 'Creatine Monohydrate',   dose: '5 g (1 scoop)', when: 'Lunch / post-gym',    time: '13:30' },
+  { id: 'mag',      name: 'Magnesium Bisglycinate', dose: '2 capsules',    when: 'Dinner / before bed', time: '21:30' }
 ];
+const SUPPLEMENT_START_DATE = '2026-06-02';
 
 const BAG_ITEMS = [
   { id: 'water-bottle', label: 'Water bottle' },
@@ -2220,8 +2258,8 @@ const BAG_ITEMS = [
 
 const ROUTINE = [
   { time: '07:00', what: 'Wake up · water · open window · 5 min light movement' },
-  { time: '07:15', what: 'Breakfast + D3 + Omega 3' },
-  { time: '13:00', what: 'Pre-workout meal — rice/oats + chicken + fruit' },
+  { time: '07:15', what: 'Breakfast + Omega 800' },
+  { time: '13:00', what: 'Pre-workout meal + Creatine — rice/oats + chicken + fruit' },
   { time: '15:00', what: 'Gym — peak performance window' },
   { time: '17:00', what: 'Post-workout — chicken + sweet potato' },
   { time: '20:00', what: 'Light dinner' },
@@ -3704,6 +3742,124 @@ function checkBedtimeReminder() {
 }
 checkBedtimeReminder();
 setInterval(checkBedtimeReminder, 60 * 1000);
+
+/* === Supplement reminders === */
+function supplementStatus(s, checks, now) {
+  if (checks[s.id]) return 'taken';
+  if (!s.time) return 'pending';
+  const [h, m] = s.time.split(':').map(Number);
+  const due = new Date(now);
+  due.setHours(h, m, 0, 0);
+  const diffMin = (now.getTime() - due.getTime()) / 60000;
+  if (diffMin < -30) return 'pending';
+  if (diffMin <= 30) return 'due';
+  return 'overdue';
+}
+function checkSupplementReminders() {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  if (today() < SUPPLEMENT_START_DATE) return;
+  const now = new Date();
+  const date = today();
+  if (!state.supplements[date]) state.supplements[date] = {};
+  const checks = state.supplements[date];
+  state.settings.lastSuppNotif = state.settings.lastSuppNotif || {};
+  // garbage-collect old keys (keep only today's)
+  Object.keys(state.settings.lastSuppNotif).forEach(k => {
+    if (!k.startsWith(date + ':')) delete state.settings.lastSuppNotif[k];
+  });
+  let touched = false;
+  SUPPLEMENTS.forEach(s => {
+    if (!s.time || checks[s.id]) return;
+    const key = date + ':' + s.id;
+    if (state.settings.lastSuppNotif[key]) return;
+    const [h, m] = s.time.split(':').map(Number);
+    const due = new Date(now);
+    due.setHours(h, m, 0, 0);
+    const diffMin = (now.getTime() - due.getTime()) / 60000;
+    if (diffMin >= 0 && diffMin <= 30) {
+      try { new Notification('Time for ' + s.name, { body: s.dose + ' · ' + s.when, tag: 'mygym-supp-' + s.id }); } catch (e) {}
+      state.settings.lastSuppNotif[key] = Date.now();
+      touched = true;
+    }
+  });
+  if (touched) save({ skipCloud: true });
+}
+checkSupplementReminders();
+setInterval(checkSupplementReminders, 60 * 1000);
+// Live-refresh Home each minute so supplement states (due / overdue) update
+setInterval(() => { if (activeTab === 'home') render(); }, 60 * 1000);
+
+function buildSupplementsCard() {
+  const sc = el('div', { class: 'card' });
+  const date = today();
+  // Pre-launch state: scheduled to start on SUPPLEMENT_START_DATE
+  if (date < SUPPLEMENT_START_DATE) {
+    const daysLeft = Math.max(0, Math.round((new Date(SUPPLEMENT_START_DATE) - new Date(date)) / 86400000));
+    const niceStart = new Date(SUPPLEMENT_START_DATE).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const title = el('div', { class: 'card-title' }, 'Supplements');
+    title.appendChild(el('span', { class: 'card-badge', style: 'background:var(--surface-3);color:var(--text-muted);' },
+      daysLeft === 0 ? 'Starts today' : `Starts ${niceStart} · ${daysLeft}d`));
+    sc.appendChild(title);
+    sc.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:8px;' },
+      `Scheduled to start ${niceStart}. Reminders and check-offs activate then.`));
+    const ul = el('ul', { class: 'checklist' });
+    SUPPLEMENTS.forEach(s => {
+      const li = el('li', { style: 'opacity:0.6;cursor:default;' });
+      const timePill = s.time ? `<span class="pill-time">${escapeHtml(s.time)}</span>` : '';
+      li.innerHTML = `
+        <span class="box"></span>
+        <span class="text"><b>${escapeHtml(s.name)}</b><span class="meta">${timePill}${escapeHtml(s.dose)} · ${escapeHtml(s.when)}</span></span>`;
+      ul.appendChild(li);
+    });
+    sc.appendChild(ul);
+    return sc;
+  }
+  if (!state.supplements[date]) state.supplements[date] = {};
+  const checks = state.supplements[date];
+  const now = new Date();
+  const statuses = SUPPLEMENTS.map(s => ({ s, status: supplementStatus(s, checks, now) }));
+  const dueCount = statuses.filter(x => x.status === 'due').length;
+  const overdueCount = statuses.filter(x => x.status === 'overdue').length;
+  const title = el('div', { class: 'card-title' }, 'Today’s supplements');
+  if (overdueCount) title.appendChild(el('span', { class: 'card-badge overdue' }, overdueCount + ' overdue'));
+  else if (dueCount) title.appendChild(el('span', { class: 'card-badge' }, dueCount + ' due'));
+  sc.appendChild(title);
+  const ul = el('ul', { class: 'checklist' });
+  statuses.forEach(({ s, status }) => {
+    const classes = [];
+    if (status === 'taken') classes.push('done');
+    else if (status === 'due') classes.push('due');
+    else if (status === 'overdue') classes.push('overdue');
+    const li = el('li', {
+      class: classes.join(' '),
+      onclick: () => { checks[s.id] = !checks[s.id]; save(); render(); }
+    });
+    const timePill = s.time ? `<span class="pill-time">${escapeHtml(s.time)}</span>` : '';
+    const statusTag = status === 'due' ? '<span class="status-tag">Due now</span>'
+                    : status === 'overdue' ? '<span class="status-tag">Overdue</span>'
+                    : '';
+    li.innerHTML = `
+      <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 12 10 18 20 6"/></svg></span>
+      <span class="text"><b>${escapeHtml(s.name)}${statusTag}</b><span class="meta">${timePill}${escapeHtml(s.dose)} · ${escapeHtml(s.when)}</span></span>`;
+    ul.appendChild(li);
+  });
+  sc.appendChild(ul);
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    sc.appendChild(el('button', {
+      class: 'supp-enable-btn',
+      onclick: () => {
+        Notification.requestPermission().then(p => {
+          if (p === 'granted') { checkSupplementReminders(); render(); }
+          else render();
+        });
+      }
+    }, '🔔 Enable supplement reminders'));
+  } else if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+    sc.appendChild(el('div', { class: 'small muted', style: 'margin-top:8px;' },
+      'Notifications blocked. Enable them in your browser settings to get desktop reminders.'));
+  }
+  return sc;
+}
 $('restSkip').onclick = stopRest;
 $('restAdd').onclick = () => { restEndAt += 15000; updateRest(); };
 
@@ -4514,12 +4670,8 @@ function renderHome() {
     v.appendChild(tcard);
   }
 
-  // Quick log
-  const ql = el('div', { class: 'quick-log' });
-  ql.appendChild(makeQuickBtn('Weight', '⚖️', openWeightModal));
-  ql.appendChild(makeQuickBtn('Sleep', '😴', openSleepModal));
-  ql.appendChild(makeQuickBtn('Meal', '🍽', openAddMealModal));
-  v.appendChild(ql);
+  // Supplements (after Today's tasks)
+  v.appendChild(buildSupplementsCard());
 
   // Recent wins
   {
@@ -7127,26 +7279,6 @@ function renderMore() {
   wc.appendChild(el('div', { class: 'small muted' }, '~500ml each (1 bottle). Tap to mark filled.'));
   v.appendChild(wc);
 
-  // Supplements
-  const sc = el('div', { class: 'card' });
-  sc.appendChild(el('div', { class: 'card-title' }, 'Today’s supplements'));
-  const date = today();
-  if (!state.supplements[date]) state.supplements[date] = {};
-  const checks = state.supplements[date];
-  const ul = el('ul', { class: 'checklist' });
-  SUPPLEMENTS.forEach(s => {
-    const li = el('li', {
-      class: checks[s.id] ? 'done' : '',
-      onclick: () => { checks[s.id] = !checks[s.id]; save(); render(); }
-    });
-    li.innerHTML = `
-      <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="4 12 10 18 20 6"/></svg></span>
-      <span class="text"><b>${escapeHtml(s.name)}</b><span class="meta">${escapeHtml(s.dose)} · ${escapeHtml(s.when)}</span></span>`;
-    ul.appendChild(li);
-  });
-  sc.appendChild(ul);
-  v.appendChild(sc);
-
   // Sleep
   const slc = el('div', { class: 'card' });
   slc.appendChild(el('div', { class: 'row between', style: 'margin-bottom:6px;gap:6px;' }, [
@@ -7397,7 +7529,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.82 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.87 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
