@@ -3787,6 +3787,7 @@ function applyTheme(name) {
 
 let activeDayKey = null;
 let expandedExId = null;     // null = auto-expand first incomplete; 'none' = all collapsed; ex.id = manual
+let _coachShowLast = false;  // Coach "Today's session" card — toggled by "Show last session" button
 let editingSetKey = null;    // `${exId}-${setIdx}` while inline-editing a set
 let homeFocusExited = false; // user dismissed focus takeover on Home; reset on next phase change or Home tab tap
 let restTimer = null;
@@ -7140,6 +7141,26 @@ function renderCoach() {
       body.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:8px;' },
         `${_tdDay.name} · ${_tdDay.focus || ''}`));
       const w = state.workouts[_td];
+
+      // Find most recent prior session with the same dayKey (any session with at least one logged set,
+      // preferring finished). Excludes today.
+      let lastSession = null;
+      {
+        const cands = [];
+        for (const [d, ws] of Object.entries(state.workouts || {})) {
+          if (d === _td) continue;
+          if (!ws || ws.dayKey !== _tdDayKey) continue;
+          const anyDone = ws.logs && Object.values(ws.logs).some(arr => Array.isArray(arr) && arr.some(s => s && s.d));
+          if (!ws.finished && !anyDone) continue;
+          cands.push({ date: d, w: ws });
+        }
+        cands.sort((a, b) => b.date.localeCompare(a.date));
+        lastSession = cands[0] || null;
+      }
+      const lastLabel = lastSession
+        ? new Date(lastSession.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+        : null;
+
       const list = el('ol', { style: 'list-style:decimal;padding-left:20px;margin:0;font-size:13px;line-height:1.7;' });
       let totalSets = 0;
       (_tdDay.exercises || []).forEach(ex => {
@@ -7157,18 +7178,46 @@ function renderCoach() {
           : '';
         const li = el('li', { style: 'margin-bottom:2px;' });
         li.innerHTML = `<b>${escapeHtml(ex.name)}</b> — ${ex.sets} × ${escapeHtml(repRange)} <span style="color:var(--text-muted);">(${escapeHtml(weightPart)})</span>${loggedTag}`;
+
+        // Last-session sub-line (only when toggle is on)
+        if (_coachShowLast && lastSession) {
+          const prevLogs = (lastSession.w.logs && Array.isArray(lastSession.w.logs[ex.id])) ? lastSession.w.logs[ex.id] : [];
+          if (prevLogs.length === 0 || !prevLogs.some(s => s && s.d)) {
+            li.innerHTML += `<div class="small" style="color:var(--text-dim);margin-top:2px;">↳ Last: <em>not logged</em></div>`;
+          } else {
+            const summary = prevLogs.map((s, i) => {
+              if (!s || !s.d) return `S${i+1}: —`;
+              if (isTimed) return `S${i+1}: ${s.reps}s`;
+              return `S${i+1}: ${s.reps}r${s.weight && !isBw ? '·' + s.weight + 'kg' : ''}`;
+            }).join(' · ');
+            li.innerHTML += `<div class="small" style="color:var(--info, var(--accent));margin-top:2px;font-variant-numeric:tabular-nums;">↳ Last: ${escapeHtml(summary)}</div>`;
+          }
+        }
         list.appendChild(li);
       });
       body.appendChild(list);
       body.appendChild(el('div', { class: 'small muted', style: 'margin-top:8px;' },
         `${_tdDay.exercises.length} exercises · ~${totalSets} sets`));
 
+      // Show / Hide last-session button
+      const lastBtnLabel = !lastSession
+        ? `📊 No previous ${_tdDay.name} yet`
+        : _coachShowLast
+          ? `Hide last session (${lastLabel})`
+          : `📊 Show last session (${lastLabel})`;
+      body.appendChild(el('button', {
+        class: 'btn secondary',
+        style: 'width:100%;margin-top:10px;' + (!lastSession ? 'opacity:0.55;cursor:not-allowed;' : ''),
+        disabled: !lastSession,
+        onclick: () => { if (lastSession) { _coachShowLast = !_coachShowLast; render(); } }
+      }, lastBtnLabel));
+
       const ctaLabel = w && w.finished ? '✓ Session finished'
                       : w && ((w.timers?.warmup || 0) > 0 || (w.timers?.workout || 0) > 0) ? 'Continue session →'
                       : 'Start workout →';
       body.appendChild(el('button', {
         class: 'btn',
-        style: 'width:100%;margin-top:10px;' + (w && w.finished ? 'background:var(--surface-3);color:var(--text-muted);' : ''),
+        style: 'width:100%;margin-top:8px;' + (w && w.finished ? 'background:var(--surface-3);color:var(--text-muted);' : ''),
         onclick: () => { activeTab = 'today'; activeDayKey = _tdDayKey; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
       }, ctaLabel));
     }
@@ -7762,7 +7811,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.91 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.92 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
