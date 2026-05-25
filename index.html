@@ -1990,10 +1990,12 @@
 <body>
 <div id="lockScreen" class="lock-screen" style="display:none;">
   <div class="lock-title">MyGym</div>
-  <div class="lock-sub">Enter password</div>
-  <input id="lockPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Password" maxlength="16" />
+  <div id="lockSub" class="lock-sub">Enter password</div>
+  <input id="lockPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Password" maxlength="64" />
+  <input id="lockPinConfirm" type="password" inputmode="numeric" autocomplete="new-password" placeholder="Confirm password" maxlength="64" style="display:none;" />
   <button id="lockUnlock">Unlock</button>
   <div id="lockError" class="lock-error"></div>
+  <button id="lockReset" type="button" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;margin-top:8px;text-decoration:underline;">Forgot password? Reset (wipes data)</button>
 </div>
 <div class="app">
   <header class="topbar">
@@ -2047,17 +2049,83 @@
 <script>
 "use strict";
 
-/* =========== LOCK GATE =========== */
-const APP_PASSWORD = '8420';
+/* =========== LOCK GATE — PBKDF2 verify + AES-GCM data encryption ===========
+   LOCK_RECORD stores: { salt, iters, hash, verify? }
+     - hash:   PBKDF2 of password+salt (legacy v3.88 verification)
+     - verify: { iv, ct } AES-GCM(KNOWN_PLAINTEXT) using key derived from password (v3.89+)
+   Stored state lives at STORAGE_KEY_ENC ('mygym-enc-v1') as { iv, ct }, encrypted with the AES key.
+   The AES key only exists in memory after unlock — never persisted. Lose your password = lose your data.
+*/
 const PIN_FLAG = 'mygym-unlocked-v1';
+const LOCK_RECORD = 'mygym-lock-v2';
+const STORAGE_KEY_ENC = 'mygym-enc-v1';
+const PBKDF2_ITERS = 250000;
+const VERIFY_PLAINTEXT = 'mygym-ok';
+let _aesKey = null;  // CryptoKey held in memory after unlock — never persisted
+
+function _hexToBytes(hex) { return new Uint8Array(hex.match(/.{2}/g).map(b => parseInt(b, 16))); }
+function _bytesToHex(bytes) { return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(''); }
+function _randomSaltHex(n) { return _bytesToHex(crypto.getRandomValues(new Uint8Array(n || 16))); }
+async function _derivePinHash(pin, saltHex, iters) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: _hexToBytes(saltHex), iterations: iters, hash: 'SHA-256' },
+    key, 256
+  );
+  return _bytesToHex(new Uint8Array(bits));
+}
+async function _deriveAesKey(pin, saltHex, iters) {
+  const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: _hexToBytes(saltHex), iterations: iters, hash: 'SHA-256' },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,  // not extractable
+    ['encrypt', 'decrypt']
+  );
+}
+async function _aesEncrypt(key, plaintext) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plaintext));
+  return { iv: _bytesToHex(iv), ct: _bytesToHex(new Uint8Array(ct)) };
+}
+async function _aesDecrypt(key, blob) {
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: _hexToBytes(blob.iv) }, key, _hexToBytes(blob.ct));
+  return new TextDecoder().decode(pt);
+}
+function _constTimeEq(a, b) {
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+function _getLockRecord() {
+  try { return JSON.parse(localStorage.getItem(LOCK_RECORD) || 'null'); } catch (e) { return null; }
+}
+function _setLockRecord(rec) { localStorage.setItem(LOCK_RECORD, JSON.stringify(rec)); }
 
 function _showLock() {
   document.body.classList.add('locked');
   const el = document.getElementById('lockScreen');
-  if (el) {
-    el.style.display = 'flex';
-    setTimeout(() => document.getElementById('lockPin')?.focus(), 50);
+  if (!el) return;
+  const hasRecord = !!_getLockRecord();
+  const sub = document.getElementById('lockSub');
+  const confirm = document.getElementById('lockPinConfirm');
+  const btn = document.getElementById('lockUnlock');
+  const reset = document.getElementById('lockReset');
+  if (hasRecord) {
+    if (sub) sub.textContent = 'Enter password';
+    if (confirm) confirm.style.display = 'none';
+    if (btn) btn.textContent = 'Unlock';
+    if (reset) reset.style.display = '';
+  } else {
+    if (sub) sub.textContent = 'Set a new password';
+    if (confirm) confirm.style.display = '';
+    if (btn) btn.textContent = 'Set password';
+    if (reset) reset.style.display = 'none';
   }
+  el.style.display = 'flex';
+  setTimeout(() => document.getElementById('lockPin')?.focus(), 50);
 }
 
 function _hideLock() {
@@ -2066,36 +2134,101 @@ function _hideLock() {
   if (el) el.style.display = 'none';
 }
 
-function _tryUnlock(pwd) {
+async function _trySetup(pwd, confirmPwd) {
+  const errEl = document.getElementById('lockError');
+  if (errEl) errEl.textContent = '';
+  const p = (pwd || '').trim();
+  const c = (confirmPwd || '').trim();
+  if (p.length < 4) { if (errEl) errEl.textContent = 'Password must be at least 4 characters'; return; }
+  if (p !== c) { if (errEl) errEl.textContent = "Passwords don't match"; return; }
+  const salt = _randomSaltHex(16);
+  const iters = PBKDF2_ITERS;
+  _aesKey = await _deriveAesKey(p, salt, iters);
+  const verify = await _aesEncrypt(_aesKey, VERIFY_PLAINTEXT);
+  const hash = await _derivePinHash(p, salt, iters);  // kept for back-compat readers
+  _setLockRecord({ salt, iters, hash, verify });
+  localStorage.setItem(PIN_FLAG, 'yes');
+  await _loadStateAfterUnlock();   // first run = nothing to load, but harmless
+  if (typeof applyTheme === 'function') applyTheme(state.settings.theme || 'indigo');
+  if (typeof render === 'function') render();
+  _hideLock();
+}
+
+async function _tryUnlock(pwd) {
   const errEl = document.getElementById('lockError');
   if (errEl) errEl.textContent = '';
   const p = (pwd || '').trim();
   if (!p) return;
-  if (p === APP_PASSWORD) {
-    localStorage.setItem(PIN_FLAG, 'yes');
-    _hideLock();
-  } else {
+  const rec = _getLockRecord();
+  if (!rec) { _showLock(); return; }
+  const iters = rec.iters || PBKDF2_ITERS;
+  // Derive AES key from the typed password. If it's wrong, AES-GCM auth will fail on decrypt.
+  let candidateKey;
+  try { candidateKey = await _deriveAesKey(p, rec.salt, iters); }
+  catch (e) { if (errEl) errEl.textContent = 'Crypto error'; return; }
+
+  let ok = false;
+  if (rec.verify) {
+    // v3.89+ — verify via AES-GCM authenticated decryption (preferred, single source of truth)
+    try {
+      const pt = await _aesDecrypt(candidateKey, rec.verify);
+      ok = (pt === VERIFY_PLAINTEXT);
+    } catch (e) { ok = false; }
+  } else if (rec.hash) {
+    // v3.88 legacy — hash compare, then upgrade record to include AES verify blob
+    const hash = await _derivePinHash(p, rec.salt, iters);
+    ok = _constTimeEq(hash, rec.hash);
+    if (ok) {
+      const verify = await _aesEncrypt(candidateKey, VERIFY_PLAINTEXT);
+      _setLockRecord({ ...rec, iters, verify });
+    }
+  }
+
+  if (!ok) {
     if (errEl) errEl.textContent = 'Wrong password';
     const inp = document.getElementById('lockPin');
     if (inp) { inp.value = ''; inp.focus(); }
+    return;
   }
+
+  _aesKey = candidateKey;
+  localStorage.setItem(PIN_FLAG, 'yes');
+  await _loadStateAfterUnlock();   // decrypt blob OR migrate plaintext, populate state
+  if (typeof applyTheme === 'function') applyTheme(state.settings.theme || 'indigo');
+  if (typeof render === 'function') render();
+  _hideLock();
+}
+
+function _resetLock() {
+  if (!confirm('Reset password? This WIPES all your gym data on this device. Continue?')) return;
+  // Clear app data so a stranger can't keep your history under a new password they set.
+  Object.keys(localStorage).filter(k => k.startsWith('mygym')).forEach(k => localStorage.removeItem(k));
+  location.reload();
 }
 
 function _initLockUI() {
   const btn = document.getElementById('lockUnlock');
   const pinEl = document.getElementById('lockPin');
-  const submit = () => _tryUnlock(pinEl?.value || '');
+  const confirmEl = document.getElementById('lockPinConfirm');
+  const resetEl = document.getElementById('lockReset');
+  const submit = () => {
+    const hasRecord = !!_getLockRecord();
+    if (hasRecord) _tryUnlock(pinEl?.value || '');
+    else _trySetup(pinEl?.value || '', confirmEl?.value || '');
+  };
   if (btn) btn.addEventListener('click', submit);
   if (pinEl) pinEl.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+  if (confirmEl) confirmEl.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+  if (resetEl) resetEl.addEventListener('click', _resetLock);
 }
 
-if (localStorage.getItem(PIN_FLAG) !== 'yes') {
-  _showLock();
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _initLockUI);
-  } else {
-    _initLockUI();
-  }
+// Always prompt: encrypted storage needs the password each session to derive the AES key.
+// (No more sticky PIN_FLAG bypass — the encrypted data is only decryptable with the key in memory.)
+_showLock();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _initLockUI);
+} else {
+  _initLockUI();
 }
 
 /* =========== PROGRAM DATA =========== */
@@ -2402,28 +2535,68 @@ const defaultState = {
   settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false, anthropicApiKey: '', theme: 'indigo', travelMode: false }
 };
 
-let state;
-try {
-  const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
-  if (raw) {
-    state = raw;
-    for (const k of Object.keys(defaultState)) if (state[k] === undefined) state[k] = defaultState[k];
-    for (const k of Object.keys(defaultState.settings)) if (state.settings[k] === undefined) state.settings[k] = defaultState.settings[k];
-  } else {
-    // Migrate from v1 if exists
-    const v1 = JSON.parse(localStorage.getItem('mygym-v1'));
-    if (v1) {
-      state = { ...structuredClone(defaultState), ...v1, settings: { ...defaultState.settings, ...(v1.settings || {}) } };
-    } else {
-      state = structuredClone(defaultState);
+// `state` starts at defaults; the real data is loaded after unlock via _loadStateAfterUnlock(),
+// which decrypts mygym-enc-v1 (or migrates legacy plaintext mygym-v2 / mygym-v1 into encrypted form).
+let state = structuredClone(defaultState);
+
+function _mergeIntoState(raw) {
+  if (!raw || typeof raw !== 'object') return;
+  for (const k of Object.keys(defaultState)) {
+    if (k === 'settings') continue;
+    state[k] = raw[k] !== undefined ? raw[k] : defaultState[k];
+  }
+  state.settings = { ...defaultState.settings, ...(raw.settings || {}) };
+}
+
+async function _loadStateAfterUnlock() {
+  if (!_aesKey) return;
+  // 1) Encrypted blob is the source of truth once it exists.
+  const enc = localStorage.getItem(STORAGE_KEY_ENC);
+  if (enc) {
+    try {
+      const blob = JSON.parse(enc);
+      const json = await _aesDecrypt(_aesKey, blob);
+      _mergeIntoState(JSON.parse(json));
+      return;
+    } catch (e) {
+      console.warn('Decrypt failed for mygym-enc-v1; falling back to legacy', e);
     }
   }
-} catch (e) {
-  state = structuredClone(defaultState);
+  // 2) Migrate from legacy plaintext mygym-v2 (one-time)
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (raw) {
+      _mergeIntoState(raw);
+      await _encryptAndWriteSnapshot(JSON.stringify(state));
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+  } catch (e) {}
+  // 3) Migrate from even-older mygym-v1
+  try {
+    const v1 = JSON.parse(localStorage.getItem('mygym-v1'));
+    if (v1) {
+      _mergeIntoState({ ...structuredClone(defaultState), ...v1, settings: { ...defaultState.settings, ...(v1.settings || {}) } });
+      await _encryptAndWriteSnapshot(JSON.stringify(state));
+      localStorage.removeItem('mygym-v1');
+      return;
+    }
+  } catch (e) {}
+  // 4) No prior data — state stays at defaults.
+}
+
+let _saveChain = Promise.resolve();
+async function _encryptAndWriteSnapshot(jsonStr) {
+  if (!_aesKey) return;  // pre-unlock save attempts are dropped
+  const blob = await _aesEncrypt(_aesKey, jsonStr);
+  localStorage.setItem(STORAGE_KEY_ENC, JSON.stringify(blob));
 }
 function save(opts) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // Serialize NOW so concurrent mutations don't bleed into the next write.
+  const snapshot = JSON.stringify(state);
+  _saveChain = _saveChain.then(() => _encryptAndWriteSnapshot(snapshot)).catch(e => console.warn('save failed', e));
   if (!opts || !opts.skipCloud) scheduleCloudPush();
+  return _saveChain;
 }
 
 /* =========== CLOUD BACKUP (GitHub Gist) =========== */
@@ -6922,9 +7095,17 @@ function renderCoach() {
   const briefingStale = shouldRefreshBriefing();
   const haveBriefing = br && br.json;
 
+  // Today context — used in both the coach line title and the session card below
+  const _td = today();
+  const _tdDate = new Date(_td + 'T00:00:00');
+  const _tdLabel = _tdDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const _tdDayKey = effectiveDayKey(_td);
+  const _tdDay = _tdDayKey != null ? DAYS[_tdDayKey] : null;
+  const _tdSessionName = _tdDay ? _tdDay.name : 'Rest day';
+
   // --- 1. Coach line ---
   {
-    const { card, body } = _coachCardShell("🤖 Today's coach line", {
+    const { card, body } = _coachCardShell(`🤖 Today's coach · ${_tdLabel} · ${_tdSessionName}`, {
       stale: briefingStale,
       generatedAt: haveBriefing ? br.generatedAt : 0,
       onRefresh: haveBriefing ? (() => _generateBriefingInline(body, null)) : null
@@ -6940,6 +7121,58 @@ function renderCoach() {
         "✨ Generate today's briefing",
         _generateBriefingInline);
     }
+    v.appendChild(card);
+  }
+
+  // --- 1b. Today's session — full per-exercise breakdown (planned reps, weights, logged so far) ---
+  {
+    const card = el('div', { class: 'card briefing-section', style: 'margin-top:14px;' });
+    const head = el('div', { class: 'b-head' });
+    head.appendChild(el('span', {}, `📋 Today's session — ${_tdLabel}`));
+    card.appendChild(head);
+
+    const body = el('div', { class: 'coach-body' });
+    head.appendChild(_makeCoachCopyBtn(() => body));
+
+    if (!_tdDay) {
+      body.appendChild(el('div', { class: 'small muted' }, 'Rest day — nothing planned. Sleep, walk, hydrate.'));
+    } else {
+      body.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:8px;' },
+        `${_tdDay.name} · ${_tdDay.focus || ''}`));
+      const w = state.workouts[_td];
+      const list = el('ol', { style: 'list-style:decimal;padding-left:20px;margin:0;font-size:13px;line-height:1.7;' });
+      let totalSets = 0;
+      (_tdDay.exercises || []).forEach(ex => {
+        totalSets += ex.sets || 0;
+        const isTimed = !!ex.timed;
+        const isBw = !!ex.bw || ex.weight === 0;
+        const repRange = ex.repsMin === ex.repsMax
+          ? `${ex.repsMin}${isTimed ? 's' : ''}`
+          : `${ex.repsMin}–${ex.repsMax}${isTimed ? 's' : ''}`;
+        const weightPart = isBw ? 'bw' : `@ ${ex.weight} kg`;
+        const logsForEx = w && w.logs && Array.isArray(w.logs[ex.id]) ? w.logs[ex.id] : [];
+        const doneSets = logsForEx.filter(s => s && s.d).length;
+        const loggedTag = doneSets > 0
+          ? ` · <span style="color:var(--success);font-weight:600;">${doneSets}/${ex.sets} logged</span>`
+          : '';
+        const li = el('li', { style: 'margin-bottom:2px;' });
+        li.innerHTML = `<b>${escapeHtml(ex.name)}</b> — ${ex.sets} × ${escapeHtml(repRange)} <span style="color:var(--text-muted);">(${escapeHtml(weightPart)})</span>${loggedTag}`;
+        list.appendChild(li);
+      });
+      body.appendChild(list);
+      body.appendChild(el('div', { class: 'small muted', style: 'margin-top:8px;' },
+        `${_tdDay.exercises.length} exercises · ~${totalSets} sets`));
+
+      const ctaLabel = w && w.finished ? '✓ Session finished'
+                      : w && ((w.timers?.warmup || 0) > 0 || (w.timers?.workout || 0) > 0) ? 'Continue session →'
+                      : 'Start workout →';
+      body.appendChild(el('button', {
+        class: 'btn',
+        style: 'width:100%;margin-top:10px;' + (w && w.finished ? 'background:var(--surface-3);color:var(--text-muted);' : ''),
+        onclick: () => { activeTab = 'today'; activeDayKey = _tdDayKey; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      }, ctaLabel));
+    }
+    card.appendChild(body);
     v.appendChild(card);
   }
 
@@ -7529,7 +7762,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.87 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.91 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
