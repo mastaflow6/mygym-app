@@ -5511,7 +5511,10 @@ function renderSetRow(ex, date, dayKey, logs, i, lastSession) {
     if (!s.r) s.r = String(lastSet?.r ?? getSetTargets(ex)[i] ?? ex.repsMin);
 
     if (!ex.bw && !ex.timed) {
-      if (ex.barbell) {
+      const isBands = DAYS[dayKey] && DAYS[dayKey].travel && ex.weight > 0;
+      if (isBands) {
+        body.appendChild(makeBandPickerRow(s.w, val => { logs[i].w = val; save(); render(); }));
+      } else if (ex.barbell) {
         body.appendChild(makeStepperRow('kg', s.w, 2.5, val => { logs[i].w = val; save(); render(); }));
       } else {
         body.appendChild(makeWeightPickerRow(s.w, val => { logs[i].w = val; save(); render(); }));
@@ -5657,6 +5660,37 @@ function makeStepperRow(label, value, step, onChange) {
       }
     }, '+')
   ]);
+}
+
+// Band picker for Travel mode — fixed 10 / 20 / 30 kg chips with a custom fallback
+// ("…" lets you type combos like 10+20 = 30, or any other value).
+function makeBandPickerRow(currentVal, onChange) {
+  const opts = [10, 20, 30];
+  const curNum = parseFloat(currentVal) || 0;
+  const row = el('div', { class: 'stepper-row', style: 'gap:4px;flex-wrap:wrap;' });
+  row.appendChild(el('span', { class: 'stepper-label' }, 'band'));
+  opts.forEach(w => {
+    const selected = Math.abs(curNum - w) < 0.001;
+    row.appendChild(el('button', {
+      class: 'stepper-btn',
+      style: 'flex:1;min-width:54px;padding:8px 6px;font-size:13px;font-weight:700;'
+           + (selected ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : ''),
+      onclick: e => { e.stopPropagation(); onChange(String(w)); }
+    }, `${w}kg`));
+  });
+  row.appendChild(el('button', {
+    class: 'stepper-btn',
+    style: 'padding:8px 10px;font-size:13px;',
+    title: 'Custom weight (e.g. 10+20 = 30)',
+    onclick: e => {
+      e.stopPropagation();
+      const input = prompt('Band combo (kg):', String(curNum));
+      if (input == null) return;
+      const v = parseFloat(input);
+      if (!isNaN(v) && v >= 0) onChange(String(+v.toFixed(2)));
+    }
+  }, '…'));
+  return row;
 }
 
 function makeWeightPickerRow(currentVal, onChange) {
@@ -7909,7 +7943,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.97 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.98 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
