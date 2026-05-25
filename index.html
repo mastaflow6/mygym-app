@@ -2104,6 +2104,57 @@ function _getLockRecord() {
 }
 function _setLockRecord(rec) { localStorage.setItem(LOCK_RECORD, JSON.stringify(rec)); }
 
+/* Persist the non-extractable AES CryptoKey in IndexedDB so the user only types
+   the password once per device. Anyone with access to this browser profile can
+   open the app without the password. */
+const KEY_DB_NAME = 'mygym-keys';
+const KEY_DB_STORE = 'aes';
+const KEY_DB_ID = 'app-key';
+function _openKeyDB() {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') { reject(new Error('no idb')); return; }
+    const req = indexedDB.open(KEY_DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(KEY_DB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function _persistKey(key) {
+  try {
+    const db = await _openKeyDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(KEY_DB_STORE, 'readwrite');
+      tx.objectStore(KEY_DB_STORE).put(key, KEY_DB_ID);
+      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  } catch (e) { console.warn('persistKey failed', e); }
+}
+async function _loadPersistedKey() {
+  try {
+    const db = await _openKeyDB();
+    const key = await new Promise((resolve) => {
+      const tx = db.transaction(KEY_DB_STORE, 'readonly');
+      const req = tx.objectStore(KEY_DB_STORE).get(KEY_DB_ID);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+    db.close();
+    return key;
+  } catch (e) { return null; }
+}
+async function _clearPersistedKey() {
+  try {
+    const db = await _openKeyDB();
+    await new Promise((resolve) => {
+      const tx = db.transaction(KEY_DB_STORE, 'readwrite');
+      tx.objectStore(KEY_DB_STORE).delete(KEY_DB_ID);
+      tx.oncomplete = resolve; tx.onerror = resolve;
+    });
+    db.close();
+  } catch (e) {}
+}
+
 function _showLock() {
   document.body.classList.add('locked');
   const el = document.getElementById('lockScreen');
@@ -2148,6 +2199,7 @@ async function _trySetup(pwd, confirmPwd) {
   const hash = await _derivePinHash(p, salt, iters);  // kept for back-compat readers
   _setLockRecord({ salt, iters, hash, verify });
   localStorage.setItem(PIN_FLAG, 'yes');
+  _persistKey(_aesKey);  // remember on this device — no prompt next time
   await _loadStateAfterUnlock();   // first run = nothing to load, but harmless
   if (typeof applyTheme === 'function') applyTheme(state.settings.theme || 'indigo');
   if (typeof render === 'function') render();
@@ -2193,16 +2245,18 @@ async function _tryUnlock(pwd) {
 
   _aesKey = candidateKey;
   localStorage.setItem(PIN_FLAG, 'yes');
+  _persistKey(_aesKey);  // remember on this device — no prompt next time
   await _loadStateAfterUnlock();   // decrypt blob OR migrate plaintext, populate state
   if (typeof applyTheme === 'function') applyTheme(state.settings.theme || 'indigo');
   if (typeof render === 'function') render();
   _hideLock();
 }
 
-function _resetLock() {
+async function _resetLock() {
   if (!confirm('Reset password? This WIPES all your gym data on this device. Continue?')) return;
   // Clear app data so a stranger can't keep your history under a new password they set.
   Object.keys(localStorage).filter(k => k.startsWith('mygym')).forEach(k => localStorage.removeItem(k));
+  await _clearPersistedKey();
   location.reload();
 }
 
@@ -2222,14 +2276,34 @@ function _initLockUI() {
   if (resetEl) resetEl.addEventListener('click', _resetLock);
 }
 
-// Always prompt: encrypted storage needs the password each session to derive the AES key.
-// (No more sticky PIN_FLAG bypass — the encrypted data is only decryptable with the key in memory.)
-_showLock();
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _initLockUI);
-} else {
-  _initLockUI();
-}
+// Hide UI immediately while we decide whether to auto-unlock or prompt.
+document.body.classList.add('locked');
+// Try to auto-unlock from a CryptoKey persisted in IndexedDB (one-time-prompt UX).
+// Fall back to showing the lock screen if no key is persisted or it fails to decrypt.
+(async function _bootLock() {
+  try {
+    const persisted = await _loadPersistedKey();
+    const rec = _getLockRecord();
+    if (persisted && rec && rec.verify) {
+      const pt = await _aesDecrypt(persisted, rec.verify).catch(() => null);
+      if (pt === VERIFY_PLAINTEXT) {
+        _aesKey = persisted;
+        localStorage.setItem(PIN_FLAG, 'yes');
+        await _loadStateAfterUnlock();
+        if (typeof applyTheme === 'function') applyTheme(state.settings.theme || 'indigo');
+        if (typeof render === 'function') render();
+        _hideLock();
+        return;
+      }
+    }
+  } catch (e) { /* fall through to manual unlock */ }
+  _showLock();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initLockUI);
+  } else {
+    _initLockUI();
+  }
+})();
 
 /* =========== PROGRAM DATA =========== */
 const PROGRAM_START = '2026-04-07';
@@ -7811,7 +7885,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.92 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.93 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
