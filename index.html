@@ -7260,8 +7260,10 @@ function renderCoach() {
         if (doneSets > 0) {
           const todaySummary = logsForEx.map((s, i) => {
             if (!s || !s.d) return `S${i+1}: —`;
-            if (isTimed) return `S${i+1}: ${s.reps}s`;
-            return `S${i+1}: ${s.reps}r${s.weight && !isBw ? '·' + s.weight + 'kg' : ''}`;
+            const r = (s.r === '' || s.r == null) ? '?' : s.r;
+            if (isTimed) return `S${i+1}: ${r}s`;
+            const wt = s.w;
+            return `S${i+1}: ${r}r${wt && !isBw && wt !== '0' ? '·' + wt + 'kg' : ''}`;
           }).join(' · ');
           li.innerHTML += `<div class="small" style="color:var(--success);margin-top:2px;font-variant-numeric:tabular-nums;font-weight:600;">↳ Today: ${escapeHtml(todaySummary)}</div>`;
         }
@@ -7274,8 +7276,10 @@ function renderCoach() {
           } else {
             const summary = prevLogs.map((s, i) => {
               if (!s || !s.d) return `S${i+1}: —`;
-              if (isTimed) return `S${i+1}: ${s.reps}s`;
-              return `S${i+1}: ${s.reps}r${s.weight && !isBw ? '·' + s.weight + 'kg' : ''}`;
+              const r = (s.r === '' || s.r == null) ? '?' : s.r;
+              if (isTimed) return `S${i+1}: ${r}s`;
+              const wt = s.w;
+              return `S${i+1}: ${r}r${wt && !isBw && wt !== '0' ? '·' + wt + 'kg' : ''}`;
             }).join(' · ');
             li.innerHTML += `<div class="small" style="color:var(--info, var(--accent));margin-top:2px;font-variant-numeric:tabular-nums;">↳ Last: ${escapeHtml(summary)}</div>`;
           }
@@ -7898,7 +7902,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.95 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.96 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
