@@ -7253,8 +7253,18 @@ function renderCoach() {
         const loggedTag = doneSets > 0
           ? ` · <span style="color:var(--success);font-weight:600;">${doneSets}/${ex.sets} logged</span>`
           : '';
-        const li = el('li', { style: 'margin-bottom:2px;' });
+        const li = el('li', { style: 'margin-bottom:4px;' });
         li.innerHTML = `<b>${escapeHtml(ex.name)}</b> — ${ex.sets} × ${escapeHtml(repRange)} <span style="color:var(--text-muted);">(${escapeHtml(weightPart)})</span>${loggedTag}`;
+
+        // Today's actuals — show what was actually logged for this exercise today
+        if (doneSets > 0) {
+          const todaySummary = logsForEx.map((s, i) => {
+            if (!s || !s.d) return `S${i+1}: —`;
+            if (isTimed) return `S${i+1}: ${s.reps}s`;
+            return `S${i+1}: ${s.reps}r${s.weight && !isBw ? '·' + s.weight + 'kg' : ''}`;
+          }).join(' · ');
+          li.innerHTML += `<div class="small" style="color:var(--success);margin-top:2px;font-variant-numeric:tabular-nums;font-weight:600;">↳ Today: ${escapeHtml(todaySummary)}</div>`;
+        }
 
         // Last-session sub-line (only when toggle is on)
         if (_coachShowLast && lastSession) {
@@ -7888,7 +7898,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.94 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.95 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
