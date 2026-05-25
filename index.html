@@ -872,6 +872,25 @@
     font-variant-numeric: tabular-nums; color: var(--text);
   }
 
+  /* Band picker (Travel mode) — fixed 3-chip row, label aligned with stepper labels */
+  .band-picker-row {
+    display: grid;
+    grid-template-columns: 56px 1fr 1fr 1fr;
+    gap: 6px; align-items: center;
+  }
+  .band-chip {
+    height: 38px; border-radius: 10px;
+    background: var(--surface-2); color: var(--text);
+    font-size: 13px; font-weight: 700;
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-variant-numeric: tabular-nums; cursor: pointer;
+  }
+  .band-chip:active { transform: scale(0.94); border-color: var(--accent); }
+  .band-chip.selected {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+
   .swap-option {
     width: 100%; background: var(--surface-2);
     border: 1px solid var(--border); border-radius: 14px;
@@ -5662,34 +5681,19 @@ function makeStepperRow(label, value, step, onChange) {
   ]);
 }
 
-// Band picker for Travel mode — fixed 10 / 20 / 30 kg chips with a custom fallback
-// ("…" lets you type combos like 10+20 = 30, or any other value).
+// Band picker for Travel mode — fixed 10 / 20 / 30 kg chips, equal width, single row.
 function makeBandPickerRow(currentVal, onChange) {
   const opts = [10, 20, 30];
   const curNum = parseFloat(currentVal) || 0;
-  const row = el('div', { class: 'stepper-row', style: 'gap:4px;flex-wrap:wrap;' });
+  const row = el('div', { class: 'band-picker-row' });
   row.appendChild(el('span', { class: 'stepper-label' }, 'band'));
   opts.forEach(w => {
     const selected = Math.abs(curNum - w) < 0.001;
     row.appendChild(el('button', {
-      class: 'stepper-btn',
-      style: 'flex:1;min-width:54px;padding:8px 6px;font-size:13px;font-weight:700;'
-           + (selected ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : ''),
+      class: 'band-chip' + (selected ? ' selected' : ''),
       onclick: e => { e.stopPropagation(); onChange(String(w)); }
-    }, `${w}kg`));
+    }, w + 'kg'));
   });
-  row.appendChild(el('button', {
-    class: 'stepper-btn',
-    style: 'padding:8px 10px;font-size:13px;',
-    title: 'Custom weight (e.g. 10+20 = 30)',
-    onclick: e => {
-      e.stopPropagation();
-      const input = prompt('Band combo (kg):', String(curNum));
-      if (input == null) return;
-      const v = parseFloat(input);
-      if (!isNaN(v) && v >= 0) onChange(String(+v.toFixed(2)));
-    }
-  }, '…'));
   return row;
 }
 
@@ -7943,7 +7947,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.98 · Started ${PROGRAM_START}`));
+  }, `MyGym · v3.99 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
