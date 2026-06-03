@@ -384,6 +384,28 @@
   .chart .axis-text { fill: var(--text-dim); font-size: 10px; }
   .empty { color: var(--text-dim); text-align: center; padding: 24px; font-size: 13px; }
 
+  /* Consistency heatmap (trained vs missed days) */
+  .heat-wrap { display: flex; gap: 8px; align-items: flex-start; overflow-x: auto; padding: 4px 0 2px; -webkit-overflow-scrolling: touch; }
+  .heat-days { display: grid; grid-template-rows: repeat(7, 1fr); gap: 4px; padding-top: 16px; }
+  .heat-days .d { font-size: 9px; color: var(--text-dim); height: 14px; line-height: 14px; }
+  .heat-week { display: grid; grid-template-rows: repeat(7, 1fr); gap: 4px; }
+  .heat-week .wk { font-size: 9px; color: var(--text-dim); height: 12px; text-align: center; }
+  .heat-cell { width: 14px; height: 14px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); }
+  .heat-cell.done { background: var(--success); border-color: var(--success); }
+  .heat-cell.missed { background: var(--danger-soft); border-color: var(--danger); }
+  .heat-cell.pending { background: transparent; border-style: dashed; border-color: var(--warn); }
+  .heat-cell.rest { background: var(--surface-2); border-color: var(--border); opacity: 0.5; }
+  .heat-cell.future { background: transparent; border-color: transparent; }
+  .heat-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: 11px; color: var(--text-muted); }
+  .heat-legend .lg { display: flex; align-items: center; gap: 5px; }
+  .heat-legend .sw { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border); display: inline-block; }
+
+  /* Supplement schedule editor (Settings modal) */
+  .supp-edit { padding: 14px 0; border-top: 1px solid var(--border); }
+  .supp-edit:first-of-type { border-top: none; padding-top: 4px; }
+  .supp-edit .supp-status { margin-top: 6px; font-size: 11px; font-weight: 600; }
+  .supp-edit input[type=date] { margin-top: 10px; }
+
   /* Bars */
   .bar-row {
     display: grid; grid-template-columns: 88px 1fr 36px;
@@ -2469,6 +2491,28 @@ const SUPPLEMENTS = [
 ];
 const SUPPLEMENT_START_DATE = '2026-06-02';
 
+// Per-supplement schedule. SUPPLEMENTS above is the catalog (what each one is);
+// this decides when each goes live. Saved overrides live in state.settings.suppConfig.
+// Omega + Magnesium started 2 Jun; Creatine is off until you schedule it in Settings.
+const SUPPLEMENT_DEFAULTS = {
+  omega:    { enabled: true,  startDate: '2026-06-02' },
+  creatine: { enabled: false, startDate: '' },
+  mag:      { enabled: true,  startDate: '2026-06-02' }
+};
+function getSuppConfig(id) {
+  const saved = (state.settings && state.settings.suppConfig) || {};
+  const base = SUPPLEMENT_DEFAULTS[id] || { enabled: false, startDate: '' };
+  return { ...base, ...(saved[id] || {}) };
+}
+// Active = enabled AND has a start date that has already arrived.
+function suppActiveOn(id, dateStr) {
+  const c = getSuppConfig(id);
+  return !!(c.enabled && c.startDate && dateStr >= c.startDate);
+}
+function activeSupplements(dateStr) {
+  return SUPPLEMENTS.filter(s => suppActiveOn(s.id, dateStr));
+}
+
 const BAG_ITEMS = [
   { id: 'water-bottle', label: 'Water bottle' },
   { id: 'airpods', label: 'AirPods' },
@@ -2628,7 +2672,7 @@ const defaultState = {
   plateauReport: null,      // { date, json: {plateaus, summary}, generatedAt } — full-history plateau scan
   photos: [],
   notes: {},
-  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false, anthropicApiKey: '', theme: 'indigo', travelMode: false }
+  settings: { restSec: 90, units: 'kg', sleepTarget: 8, waterTarget: 4, notifications: false, restSound: true, dumbbellWeights: [5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30], bedtime: '23:00', lastBedtimeNotifDate: '', warmupTargetSec: 300, cloudGistToken: '', cloudGistId: '', cloudLastSyncAt: 0, bagCollapsed: false, anthropicApiKey: '', theme: 'indigo', travelMode: false, suppConfig: {} }
 };
 
 // `state` starts at defaults; the real data is loaded after unlock via _loadStateAfterUnlock(),
@@ -4027,9 +4071,10 @@ function supplementStatus(s, checks, now) {
 }
 function checkSupplementReminders() {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-  if (today() < SUPPLEMENT_START_DATE) return;
   const now = new Date();
   const date = today();
+  const active = activeSupplements(date);
+  if (!active.length) return;
   if (!state.supplements[date]) state.supplements[date] = {};
   const checks = state.supplements[date];
   state.settings.lastSuppNotif = state.settings.lastSuppNotif || {};
@@ -4038,7 +4083,7 @@ function checkSupplementReminders() {
     if (!k.startsWith(date + ':')) delete state.settings.lastSuppNotif[k];
   });
   let touched = false;
-  SUPPLEMENTS.forEach(s => {
+  active.forEach(s => {
     if (!s.time || checks[s.id]) return;
     const key = date + ':' + s.id;
     if (state.settings.lastSuppNotif[key]) return;
@@ -4059,35 +4104,107 @@ setInterval(checkSupplementReminders, 60 * 1000);
 // Live-refresh Home each minute so supplement states (due / overdue) update
 setInterval(() => { if (activeTab === 'home') render(); }, 60 * 1000);
 
+// Settings → Supplements: per-item on/off + start date. Edits a draft, commits on Save.
+function openSupplementsModal() {
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Supplement schedule'));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:14px;' },
+    'Turn each one on and set the day you start. Only active supplements (on, with a start date that has arrived) appear on your dashboard with daily check-offs.'));
+
+  const todayStr = today();
+  const draft = {};
+  SUPPLEMENTS.forEach(s => { draft[s.id] = { ...getSuppConfig(s.id) }; });
+
+  const niceDate = ds => new Date(ds + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+  SUPPLEMENTS.forEach(s => {
+    const d = draft[s.id];
+    const row = el('div', { class: 'supp-edit' });
+
+    const statusChip = el('div', { class: 'supp-status' });
+    const dateInp = el('input', { type: 'date', value: d.startDate || '' });
+    const toggle = el('button', { type: 'button', class: 'btn small' });
+
+    function refresh() {
+      const activeNow = d.enabled && d.startDate && todayStr >= d.startDate;
+      const scheduled = d.enabled && d.startDate && d.startDate > todayStr;
+      toggle.textContent = d.enabled ? 'On' : 'Off';
+      toggle.className = 'btn small' + (d.enabled ? '' : ' secondary');
+      dateInp.style.display = d.enabled ? '' : 'none';
+      statusChip.textContent = !d.enabled ? 'Off'
+        : !d.startDate ? 'Pick a start date'
+        : activeNow ? '● Active — showing on dashboard'
+        : `Starts ${niceDate(d.startDate)}`;
+      statusChip.style.color = activeNow ? 'var(--success)' : scheduled ? 'var(--accent)' : 'var(--text-dim)';
+    }
+    toggle.onclick = () => {
+      d.enabled = !d.enabled;
+      if (d.enabled && !d.startDate) d.startDate = todayStr; // default: start today
+      refresh();
+    };
+    dateInp.onchange = () => { d.startDate = dateInp.value; refresh(); };
+
+    row.appendChild(el('div', { class: 'row between', style: 'align-items:flex-start;gap:10px;' }, [
+      el('div', {}, [
+        el('div', { style: 'font-weight:600;' }, s.name),
+        el('div', { class: 'small muted' }, `${s.dose} · ${s.when}${s.time ? ' · ' + s.time : ''}`),
+        statusChip
+      ]),
+      toggle
+    ]));
+    row.appendChild(dateInp);
+    refresh();
+    m.appendChild(row);
+  });
+
+  m.appendChild(el('button', {
+    class: 'btn', style: 'margin-top:16px;width:100%;',
+    onclick: () => {
+      state.settings.suppConfig = state.settings.suppConfig || {};
+      SUPPLEMENTS.forEach(s => {
+        state.settings.suppConfig[s.id] = { enabled: !!draft[s.id].enabled, startDate: draft[s.id].startDate || '' };
+      });
+      save(); closeModal(); render();
+      toast('Supplement schedule saved');
+    }
+  }, 'Save schedule'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;width:100%;', onclick: closeModal }, 'Cancel'));
+
+  openModal(m);
+}
+
 function buildSupplementsCard() {
   const sc = el('div', { class: 'card' });
   const date = today();
-  // Pre-launch state: scheduled to start on SUPPLEMENT_START_DATE
-  if (date < SUPPLEMENT_START_DATE) {
-    const daysLeft = Math.max(0, Math.round((new Date(SUPPLEMENT_START_DATE) - new Date(date)) / 86400000));
-    const niceStart = new Date(SUPPLEMENT_START_DATE).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const active = activeSupplements(date);
+  // Enabled but not started yet — scheduled for a future date.
+  const upcoming = SUPPLEMENTS
+    .map(s => ({ s, c: getSuppConfig(s.id) }))
+    .filter(x => x.c.enabled && x.c.startDate && x.c.startDate > date)
+    .sort((a, b) => a.c.startDate < b.c.startDate ? -1 : 1);
+
+  // Nothing active and nothing scheduled → keep the dashboard clean.
+  if (!active.length && !upcoming.length) return null;
+
+  // Only future-scheduled supplements: show a compact "starts on" teaser.
+  if (!active.length) {
+    const next = upcoming[0];
+    const niceStart = new Date(next.c.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const daysLeft = Math.max(0, Math.round((new Date(next.c.startDate) - new Date(date)) / 86400000));
     const title = el('div', { class: 'card-title' }, 'Supplements');
     title.appendChild(el('span', { class: 'card-badge', style: 'background:var(--surface-3);color:var(--text-muted);' },
       daysLeft === 0 ? 'Starts today' : `Starts ${niceStart} · ${daysLeft}d`));
     sc.appendChild(title);
-    sc.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:8px;' },
-      `Scheduled to start ${niceStart}. Reminders and check-offs activate then.`));
-    const ul = el('ul', { class: 'checklist' });
-    SUPPLEMENTS.forEach(s => {
-      const li = el('li', { style: 'opacity:0.6;cursor:default;' });
-      const timePill = s.time ? `<span class="pill-time">${escapeHtml(s.time)}</span>` : '';
-      li.innerHTML = `
-        <span class="box"></span>
-        <span class="text"><b>${escapeHtml(s.name)}</b><span class="meta">${timePill}${escapeHtml(s.dose)} · ${escapeHtml(s.when)}</span></span>`;
-      ul.appendChild(li);
-    });
-    sc.appendChild(ul);
+    sc.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:2px;' },
+      `${next.s.name} scheduled for ${niceStart}. Check-offs and reminders activate then.`));
+    sc.appendChild(el('div', { class: 'small dim', style: 'font-size:11px;' }, 'Manage in More → Settings → Supplements.'));
     return sc;
   }
+
   if (!state.supplements[date]) state.supplements[date] = {};
   const checks = state.supplements[date];
   const now = new Date();
-  const statuses = SUPPLEMENTS.map(s => ({ s, status: supplementStatus(s, checks, now) }));
+  const statuses = active.map(s => ({ s, status: supplementStatus(s, checks, now) }));
   const dueCount = statuses.filter(x => x.status === 'due').length;
   const overdueCount = statuses.filter(x => x.status === 'overdue').length;
   const title = el('div', { class: 'card-title' }, 'Today’s supplements');
@@ -4940,8 +5057,9 @@ function renderHome() {
     v.appendChild(tcard);
   }
 
-  // Supplements (after Today's tasks)
-  v.appendChild(buildSupplementsCard());
+  // Supplements (after Today's tasks) — card is null when nothing is active or scheduled
+  const suppCard = buildSupplementsCard();
+  if (suppCard) v.appendChild(suppCard);
 
   // Recent wins
   {
@@ -7503,6 +7621,9 @@ function renderProgress() {
   ]));
   v.appendChild(grid);
 
+  // Consistency — trained vs missed days (surfaces skipped workouts)
+  v.appendChild(buildConsistencyCard());
+
   // Monthly progress
   const monthCard = el('div', { class: 'card' });
   monthCard.appendChild(el('div', { class: 'card-title' }, 'Sessions per month'));
@@ -7593,6 +7714,93 @@ function renderProgress() {
     });
   }
   v.appendChild(recentCard);
+}
+
+// Day-by-day adherence over the last `weeks` weeks (Mon-aligned grid).
+// Classifies each date: done (trained) / missed (planned, past, not trained) /
+// pending (planned, today, not yet trained) / rest (no session planned) / future.
+// "missed" is the key signal — it surfaces skipped workouts at a glance.
+function getConsistency(weeks = 9) {
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const todayStr = today();
+  const t = new Date(todayStr + 'T00:00:00');
+  const dow = t.getDay() || 7;                     // 1..7, Mon=1
+  const thisMon = new Date(t); thisMon.setDate(t.getDate() - (dow - 1));
+  const start = new Date(thisMon); start.setDate(thisMon.getDate() - (weeks - 1) * 7);
+
+  const cols = [];
+  let missedTotal = 0, doneTotal = 0, plannedPast = 0, donePast = 0;
+  for (let w = 0; w < weeks; w++) {
+    const cells = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + w * 7 + i);
+      const ds = dateToLocal(d);
+      let cls;
+      if (ds > todayStr || ds < PROGRAM_START) {
+        cls = 'future';
+      } else {
+        const planned = effectiveDayKey(ds) != null;
+        const trained = isRealSession(state.workouts[ds]);
+        if (trained) { cls = 'done'; doneTotal++; }
+        else if (planned) { cls = (ds === todayStr) ? 'pending' : 'missed'; if (cls === 'missed') missedTotal++; }
+        else cls = 'rest';
+        if (planned && ds < todayStr) { plannedPast++; if (trained) donePast++; }
+      }
+      cells.push({ date: ds, cls });
+    }
+    cols.push({ cells, month: MON[new Date(cells[0].date + 'T00:00:00').getMonth()] });
+  }
+
+  let daysSince = null, lastDate = null;
+  const done = Object.keys(state.workouts).filter(k => isRealSession(state.workouts[k])).sort();
+  if (done.length) { lastDate = done[done.length - 1]; daysSince = diffDays(lastDate, todayStr); }
+
+  return { cols, missedTotal, doneTotal, plannedPast, donePast, daysSince, lastDate };
+}
+
+function buildConsistencyCard() {
+  const c = getConsistency(9);
+  const card = el('div', { class: 'card' });
+
+  const adh = c.plannedPast > 0 ? Math.round(c.donePast / c.plannedPast * 100) : null;
+  card.appendChild(el('div', { class: 'row between', style: 'margin-bottom:6px;gap:8px;' }, [
+    el('div', { class: 'card-title', style: 'margin:0;' }, 'Consistency'),
+    adh != null ? el('span', { class: 'chip ' + (adh >= 70 ? 'success' : 'accent') }, `${adh}% on plan`) : null
+  ]));
+
+  let head, danger = false;
+  if (c.daysSince == null) head = 'No workouts logged yet.';
+  else if (c.daysSince === 0) head = 'Trained today 💪';
+  else { head = `${c.daysSince} day${c.daysSince === 1 ? '' : 's'} since last workout`; danger = c.daysSince >= 4; }
+  card.appendChild(el('div', { class: 'small', style: `margin-bottom:2px;font-weight:600;color:${danger ? 'var(--danger)' : 'var(--text)'};` }, head));
+  card.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' },
+    `${c.doneTotal} trained · ${c.missedTotal} missed (last 9 weeks)`));
+
+  const wrap = el('div', { class: 'heat-wrap' });
+  const dayCol = el('div', { class: 'heat-days' });
+  ['M', 'T', 'W', 'T', 'F', 'S', 'S'].forEach(d => dayCol.appendChild(el('div', { class: 'd' }, d)));
+  wrap.appendChild(dayCol);
+  let prevMonth = null;
+  c.cols.forEach(col => {
+    const wk = el('div', { class: 'heat-week' });
+    wk.appendChild(el('div', { class: 'wk' }, col.month !== prevMonth ? col.month : ''));
+    prevMonth = col.month;
+    col.cells.forEach(cell => wk.appendChild(el('div', { class: 'heat-cell ' + cell.cls, title: cell.date })));
+    wrap.appendChild(wk);
+  });
+  card.appendChild(wrap);
+
+  const legend = el('div', { class: 'heat-legend' });
+  [['var(--success)', 'var(--success)', 'Trained'],
+   ['var(--danger-soft)', 'var(--danger)', 'Missed'],
+   ['transparent', 'var(--warn)', 'Today'],
+   ['var(--surface-2)', 'var(--border)', 'Rest']].forEach(([bg, bd, label]) => {
+    legend.appendChild(el('div', { class: 'lg' }, [
+      el('span', { class: 'sw', style: `background:${bg};border-color:${bd};` }), label
+    ]));
+  });
+  card.appendChild(legend);
+  return card;
 }
 
 function buildMonthlyChart() {
@@ -7857,6 +8065,18 @@ function renderMore() {
       el('span', {}, '›')
     ])
   ]));
+  // Supplements — per-item schedule (start date + on/off); active ones show on the dashboard.
+  const activeSuppCount = activeSupplements(today()).length;
+  set.appendChild(el('div', {
+    class: 'list-item',
+    onclick: openSupplementsModal
+  }, [
+    el('div', {}, 'Supplements'),
+    el('div', { class: 'right' }, [
+      el('span', { class: 'small dim' }, activeSuppCount ? `${activeSuppCount} active` : 'none active'),
+      el('span', {}, '›')
+    ])
+  ]));
   set.appendChild(el('div', {
     class: 'list-item',
     onclick: () => {
@@ -7947,7 +8167,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v3.99 · Started ${PROGRAM_START}`));
+  }, `MyGym · v4.01 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
