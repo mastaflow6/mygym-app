@@ -2529,6 +2529,37 @@ const BAG_ITEMS = [
   { id: 'jacket', label: 'Zip jacket' }
 ];
 
+// Weekly health targets — shown on the Dashboard and in the active plan summary.
+// These sit alongside the lifting split (which is unchanged) as cardio/NEAT goals.
+const HEALTH_TARGETS = [
+  { icon: '👟', label: 'Daily steps', value: '8,000–10,000+', cadence: 'every day' },
+  { icon: '🫀', label: 'Cardio', value: '2 sessions', cadence: 'per week' }
+];
+
+// Builds the "Weekly health targets" card used on Home + Plan tabs.
+function buildHealthTargetsCard() {
+  const card = el('div', { class: 'card' });
+  card.appendChild(el('div', { class: 'row between', style: 'margin-bottom:10px;align-items:center;' }, [
+    el('div', { class: 'card-title', style: 'margin:0;' }, 'Weekly health targets'),
+    el('span', { class: 'chip' }, 'Goals')
+  ]));
+  const list = el('div', { style: 'display:flex;flex-direction:column;gap:8px;' });
+  HEALTH_TARGETS.forEach(t => {
+    list.appendChild(el('div', {
+      style: 'display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface-2);border-radius:10px;'
+    }, [
+      el('span', { style: 'font-size:20px;line-height:1;flex-shrink:0;' }, t.icon),
+      el('div', { style: 'flex:1;min-width:0;' }, [
+        el('div', { style: 'font-size:13px;color:var(--text-muted);' }, t.label),
+        el('div', { style: 'font-size:15px;font-weight:700;color:var(--text);' }, t.value)
+      ]),
+      el('span', { class: 'chip' }, t.cadence)
+    ]));
+  });
+  card.appendChild(list);
+  return card;
+}
+
 const ROUTINE = [
   { time: '07:00', what: 'Wake up · water · open window · 5 min light movement' },
   { time: '07:15', what: 'Breakfast + Omega 800' },
@@ -3416,15 +3447,26 @@ function getSetLogs(date, dayKey, ex) {
   return w.logs[ex.id];
 }
 
-function getLastSession(exId, beforeDate) {
+// Last completed session for this exercise slot. When a swap is active, only
+// match past days that ran the SAME variant — so a swapped exercise loads its
+// own last-used weight instead of the default exercise's. Pass swapIdx = the
+// currently-displayed swap (0 = main). Omit it to ignore variants entirely.
+function getLastSession(exId, beforeDate, swapIdx) {
   const dates = Object.keys(state.workouts)
     .filter(d => d < beforeDate && (state.workouts[d].logs[exId] || []).some(s => s.d))
     .sort()
     .reverse();
-  if (!dates.length) return null;
-  const date = dates[0];
-  const sets = (state.workouts[date].logs[exId] || []).filter(s => s.d);
-  return { date, sets };
+  for (const date of dates) {
+    let sets = (state.workouts[date].logs[exId] || []).filter(s => s.d);
+    if (swapIdx !== undefined) {
+      const daySwap = state.workouts[date]?.swaps?.[exId] || 0;
+      // Per-set variant tag (s.sw) wins; older logs without it fall back to the day-level swap.
+      sets = sets.filter(s => (s.sw ?? daySwap) === swapIdx);
+      if (!sets.length) continue; // this variant didn't run that day
+    }
+    return { date, sets };
+  }
+  return null;
 }
 
 function epley(w, r) {
@@ -4979,6 +5021,9 @@ function renderHome() {
   ]));
   v.appendChild(grid);
 
+  // Weekly health targets — steps + cardio goals alongside the lifting split
+  v.appendChild(buildHealthTargetsCard());
+
   // Today's tasks — slim daily reminder, AI paste-able. Tap to clear (recurring tasks come back next matching day).
   {
     const tlist = getTasks();
@@ -5409,7 +5454,7 @@ function buildLabTimer(date, w) {
 function renderExercise(ex, date, dayKey) {
   const logs = getSetLogs(date, dayKey, ex);
   const allDone = logs.every(s => s.d);
-  const lastSession = getLastSession(ex.id, date);
+  const lastSession = getLastSession(ex.id, date, getDisplaySwap(ex, date));
   const w = ensureWorkout(date, dayKey);
   const note = w.notes[ex.id] || '';
   const hasPRThisSession = logs.some(s => isCurrentSetPR(ex.id, date, s));
@@ -5665,6 +5710,7 @@ function renderSetRow(ex, date, dayKey, logs, i, lastSession) {
         e.stopPropagation();
         const prevPR = getPR(ex.id, date);
         logs[i].d = true;
+        logs[i].sw = getDisplaySwap(ex, date); // tag the set with the variant it was logged under
         editingSetKey = null;
         if (!w.started) w.started = Date.now();
         // Promote the active swap to the global default once the user logs a set with it.
@@ -5870,6 +5916,12 @@ function openSwapModal(ex, date) {
         const w = ensureWorkout(date, activeDayKey ?? effectiveDayKey(date) ?? todayDow());
         if (!w.swaps) w.swaps = {};
         if (!state.exerciseSwaps) state.exerciseSwaps = {};
+        if (i !== cur) {
+          // Clear un-logged entries so the new variant prefills from ITS OWN last session,
+          // not the weights pre-filled for the variant we're leaving. Done sets keep their
+          // per-set variant tag (s.sw) so history stays attributed correctly.
+          (w.logs?.[ex.id] || []).forEach(s => { if (!s.d) { s.w = ''; s.r = ''; } });
+        }
         if (i === 0) {
           delete w.swaps[ex.id];
           delete state.exerciseSwaps[ex.id]; // also clear the global default
@@ -6253,6 +6305,9 @@ function renderPlan() {
         ? `Plan shifted by ${skips} skip${skips > 1 ? 's' : ''}`
         : '4 training days · 3 rest days · ~60 min sessions')
   ]));
+
+  // Weekly health targets — part of the active plan summary (cardio/NEAT alongside the split)
+  v.appendChild(buildHealthTargetsCard());
 
   const sessions = upcomingSessions(t, 7);
   sessions.forEach(({ date, dayKey }, i) => {
@@ -8167,7 +8222,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v4.01 · Started ${PROGRAM_START}`));
+  }, `MyGym · v4.04 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
