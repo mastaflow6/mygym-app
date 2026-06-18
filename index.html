@@ -2532,7 +2532,7 @@ const BAG_ITEMS = [
 // Weekly health targets — shown on the Dashboard and in the active plan summary.
 // These sit alongside the lifting split (which is unchanged) as cardio/NEAT goals.
 const HEALTH_TARGETS = [
-  { icon: '👟', label: 'Daily steps', value: '8,000–10,000+', cadence: 'every day' },
+  { icon: '👟', label: 'Daily steps', value: '10,000', cadence: 'every day' },
   { icon: '🫀', label: 'Cardio', value: '2 sessions', cadence: 'per week' }
 ];
 
@@ -2683,6 +2683,8 @@ const BAR_WEIGHT = 20;
 const STORAGE_KEY = 'mygym-v2';
 const defaultState = {
   workouts: {},
+  cardio: {},               // { 'YYYY-MM-DD': { id, date, label, activity, started, finished, durationSec, active } } — cardio/walk sessions, fully separate from lifting
+  steps: {},                // { 'YYYY-MM-DD': true } — presence means the 10k daily-steps goal was marked done
   bodyWeight: [{ date: PROGRAM_START, weight: 70 }],
   measurements: [],
   sleep: [],
@@ -3989,6 +3991,194 @@ function releaseWakeLock() {
   try { wakeLockSentinel.release(); } catch (e) {}
   wakeLockSentinel = null;
 }
+
+/* =========== CARDIO SESSIONS (fully separate from lifting) =========== */
+// Cardio lives in state.cardio[date] and NEVER touches state.workouts / DAYS — so the
+// lifting plan, its timers, PR/swap logic and the consistency heatmap are untouched.
+let cardioTickInterval = null;
+
+const CARDIO_ACTIVITIES = [
+  { key: 'walk', label: 'Walk' },
+  { key: 'incline', label: 'Incline walk' },
+  { key: 'bike', label: 'Easy bike' },
+  { key: 'swim', label: 'Swimming' }
+];
+
+// Suggested label + duration hint by day of week. Wed = Cardio 1, Sun = Cardio 2,
+// Fri = optional walk, anything else = a plain logged walk.
+function cardioPlanForDow(dow) {
+  if (dow === 3) return { label: 'Cardio 1', hint: '25–35 min brisk / incline walk or easy bike', activity: 'incline' };
+  if (dow === 0) return { label: 'Cardio 2', hint: '30–45 min walk / incline walk / easy bike', activity: 'walk' };
+  if (dow === 5) return { label: 'Optional walk', hint: 'Easy recovery-pace walk', activity: 'walk' };
+  return { label: 'Walk', hint: 'Easy-pace walk or cardio', activity: 'walk' };
+}
+
+function ensureCardio(date) {
+  if (!state.cardio) state.cardio = {};
+  return state.cardio[date] || null;
+}
+
+function startCardioSession(date, label, activity) {
+  if (!state.cardio) state.cardio = {};
+  const now = Date.now();
+  state.cardio[date] = {
+    id: 'cardio-' + now,
+    date,
+    label: label || 'Walk',
+    activity: activity || 'walk',
+    started: now,
+    finished: null,
+    durationSec: 0,
+    active: true
+  };
+  save();
+  requestWakeLock();
+  startCardioTick();
+  render();
+  if (navigator.vibrate) navigator.vibrate(20);
+}
+
+function stopCardioSession(date) {
+  const c = state.cardio && state.cardio[date];
+  if (!c || !c.active) return;
+  const now = Date.now();
+  c.finished = now;
+  c.durationSec = Math.max(0, Math.round((now - c.started) / 1000));
+  c.active = false;
+  if (cardioTickInterval) { clearInterval(cardioTickInterval); cardioTickInterval = null; }
+  releaseWakeLock();
+  save();
+  render();
+  if (navigator.vibrate) navigator.vibrate([60, 40, 100]);
+  toast('✓ Cardio saved · ' + fmtTime(c.durationSec * 1000), 'celebrate');
+}
+
+// Re-render the live cardio timer every 500ms while a session is active.
+function startCardioTick() {
+  if (cardioTickInterval) clearInterval(cardioTickInterval);
+  cardioTickInterval = setInterval(() => {
+    const c = state.cardio && state.cardio[today()];
+    if (!c || !c.active) { clearInterval(cardioTickInterval); cardioTickInterval = null; return; }
+    const node = document.getElementById('cardioLiveTimer');
+    if (node) node.textContent = fmtTime(Date.now() - c.started);
+  }, 500);
+}
+
+// Card shown on cardio/rest days (Wed/Sun/Fri) and via the anytime "Start cardio" entry.
+function buildCardioCard(date, opts) {
+  opts = opts || {};
+  const dow = new Date(date + 'T00:00:00').getDay();
+  const plan = cardioPlanForDow(dow);
+  const c = state.cardio && state.cardio[date];
+  const card = el('div', { class: 'card' });
+
+  card.appendChild(el('div', { class: 'row between', style: 'align-items:center;margin-bottom:6px;' }, [
+    el('div', { class: 'card-title', style: 'margin:0;' }, opts.title || (plan.label + ' · cardio')),
+    el('span', { class: 'chip' }, '🫀 Cardio')
+  ]));
+
+  // Finished today → summary + "log another"
+  if (c && c.finished) {
+    const actLabel = (CARDIO_ACTIVITIES.find(a => a.key === c.activity) || {}).label || c.activity;
+    card.appendChild(el('div', { style: 'display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface-2);border-radius:10px;' }, [
+      el('span', { style: 'font-size:22px;line-height:1;' }, '✓'),
+      el('div', { style: 'flex:1;min-width:0;' }, [
+        el('div', { style: 'font-size:15px;font-weight:700;color:var(--text);' }, `${c.label} done · ${fmtTime(c.durationSec * 1000)}`),
+        el('div', { class: 'small muted' }, actLabel)
+      ])
+    ]));
+    card.appendChild(el('button', {
+      class: 'btn secondary', style: 'margin-top:10px;width:100%;',
+      onclick: () => startCardioSession(date, plan.label, c.activity)
+    }, 'Log another session'));
+    return card;
+  }
+
+  // Active session → live timer + Stop
+  if (c && c.active) {
+    card.appendChild(el('div', { style: 'text-align:center;padding:10px 0 4px;' }, [
+      el('div', { id: 'cardioLiveTimer', style: 'font-size:44px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;' }, fmtTime(Date.now() - c.started)),
+      el('div', { class: 'small muted', style: 'margin-top:2px;' }, `${c.label} · ${(CARDIO_ACTIVITIES.find(a => a.key === c.activity) || {}).label || c.activity}`)
+    ]));
+    card.appendChild(el('button', {
+      class: 'btn', style: 'margin-top:8px;width:100%;background:var(--danger,#dc2626);',
+      onclick: () => stopCardioSession(date)
+    }, '■ Stop & save'));
+    return card;
+  }
+
+  // Idle → activity picker + Start
+  card.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:10px;' }, plan.hint));
+  let pickedActivity = plan.activity;
+  const picker = el('div', { class: 'row', style: 'gap:6px;margin-bottom:10px;' });
+  function paintPicker() {
+    picker.innerHTML = '';
+    CARDIO_ACTIVITIES.forEach(a => {
+      picker.appendChild(el('button', {
+        class: 'btn ' + (a.key === pickedActivity ? '' : 'secondary'),
+        style: 'flex:1;padding:9px 4px;font-size:12px;',
+        onclick: () => { pickedActivity = a.key; paintPicker(); }
+      }, a.label));
+    });
+  }
+  paintPicker();
+  card.appendChild(picker);
+  card.appendChild(el('button', {
+    class: 'btn', style: 'width:100%;',
+    onclick: () => startCardioSession(date, plan.label, pickedActivity)
+  }, '▶ Start cardio'));
+  return card;
+}
+
+function openCardioDetail(date) {
+  const c = state.cardio && state.cardio[date];
+  if (!c) { toast('No cardio that day'); return; }
+  const actLabel = (CARDIO_ACTIVITIES.find(a => a.key === c.activity) || {}).label || c.activity;
+  const fmtClock = ts => ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+  const m = el('div');
+  m.appendChild(el('h3', {}, `${c.label} · ${date}`));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:14px;' }, `🫀 ${actLabel}`));
+  const rows = [
+    ['Duration', c.active ? 'In progress…' : fmtTime((c.durationSec || 0) * 1000)],
+    ['Started', fmtClock(c.started)],
+    ['Stopped', c.active ? '—' : fmtClock(c.finished)]
+  ];
+  rows.forEach(([k, val]) => {
+    m.appendChild(el('div', { class: 'row between', style: 'padding:8px 0;border-bottom:1px solid var(--border);' }, [
+      el('span', { class: 'muted' }, k),
+      el('span', { class: 'bold' }, val)
+    ]));
+  });
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:14px;', onclick: closeModal }, 'Close'));
+  openModal(m);
+}
+
+// Home card: daily 10k steps as a single Done toggle (presence in state.steps = done).
+function buildStepsCard() {
+  const date = today();
+  const done = !!(state.steps && state.steps[date]);
+  const card = el('div', { class: 'card' });
+  card.appendChild(el('div', { class: 'row between', style: 'align-items:center;margin-bottom:10px;' }, [
+    el('div', { class: 'card-title', style: 'margin:0;' }, 'Daily steps · 10,000'),
+    el('span', { class: 'chip' + (done ? ' success' : '') }, done ? '✓ Done' : 'Goal')
+  ]));
+  card.appendChild(el('button', {
+    class: 'btn' + (done ? ' secondary' : ''),
+    style: 'width:100%;display:flex;align-items:center;justify-content:center;gap:8px;',
+    onclick: () => {
+      if (!state.steps) state.steps = {};
+      if (state.steps[date]) delete state.steps[date];
+      else state.steps[date] = true;
+      save();
+      if (navigator.vibrate) navigator.vibrate(15);
+      render();
+    }
+  }, [
+    el('span', { style: 'font-size:18px;line-height:1;' }, done ? '✓' : '👟'),
+    el('span', {}, done ? '10k done today — tap to undo' : 'Mark 10k steps done')
+  ]));
+  return card;
+}
 async function ensureNotificationPermission() {
   if (!('Notification' in window)) return false;
   if (Notification.permission === 'granted') {
@@ -4429,6 +4619,9 @@ function render() {
   });
   $('topPhase').textContent = `Phase ${currentPhase().num}`;
   $('topTitle').textContent = ({ home: 'Dashboard', today: 'Workout', plan: 'Plan', progress: 'Progress', food: 'Food', coach: 'Coach', more: 'More' })[activeTab];
+
+  // Resume the cardio live timer if a session is mid-flight (e.g. after a reload).
+  if (state.cardio && state.cardio[today()] && state.cardio[today()].active && !cardioTickInterval) startCardioTick();
 }
 
 // Inline SVG icon helpers — match the rest of the app's stroke style.
@@ -4976,53 +5169,11 @@ function renderHome() {
     el('div', { class: 'sub' }, _streak > 0 ? 'consecutive weeks (4+/wk)' : 'hit 4 to start')
   ]));
 
-  // Slot 3: Energy / How I feel — latest feel-log
-  const _feelLogs = (Array.isArray(state.coachLogs) ? state.coachLogs : [])
-    .filter(l => l && l.kind === 'feel')
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-  const _latestFeel = _feelLogs[0] || null;
-  const _feelHasData = _latestFeel && (_latestFeel.energy != null || _latestFeel.soreness != null);
-  let _feelVal = '—';
-  let _feelSub = 'Tap to log how you feel';
-  if (_feelHasData) {
-    const e = _latestFeel.energy != null ? `E ${_latestFeel.energy}` : '—';
-    const s = _latestFeel.soreness != null ? `S ${_latestFeel.soreness}` : '—';
-    _feelVal = `${e} · ${s}`;
-    _feelSub = _latestFeel.date === today() ? 'today · energy / soreness'
-      : (_latestFeel.date ? `${_agoLabel(_latestFeel.date)} · E / S` : 'energy / soreness');
-  }
-  // Positive if energy is good (4-5) and soreness is low (1-2) — i.e. ready to train
-  const _feelPositive = _feelHasData
-    && (_latestFeel.energy != null && _latestFeel.energy >= 4)
-    && (_latestFeel.soreness != null ? _latestFeel.soreness <= 2 : true);
-  grid.appendChild(el('div', {
-    class: 'stat' + (_feelPositive ? ' positive' : ''),
-    style: 'cursor:pointer;',
-    onclick: () => {
-      if (typeof openFeelLogModal === 'function') openFeelLogModal();
-      else { activeTab = 'coach'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-    }
-  }, [
-    el('div', { class: 'label' }, 'How I feel'),
-    el('div', { class: 'value', style: 'font-size:20px;' }, _feelVal),
-    el('div', { class: 'sub' }, _feelSub)
-  ]));
-
-  // Slot 4: Last sleep
-  const ls = lastSleep();
-  grid.appendChild(el('div', {
-    class: 'stat' + (ls && ls.hours >= (state.settings.sleepTarget || 8) - 0.5 ? ' positive' : ''),
-    onclick: openSleepModal,
-    style: 'cursor:pointer;'
-  }, [
-    el('div', { class: 'label' }, 'Last sleep'),
-    el('div', { class: 'value' }, ls ? `${ls.hours.toFixed(1)} h` : '—'),
-    el('div', { class: 'sub' }, ls ? `${(ls.hours - state.settings.sleepTarget) >= 0 ? '+' : ''}${(ls.hours - state.settings.sleepTarget).toFixed(1)}h vs target` : 'Tap to log')
-  ]));
   v.appendChild(grid);
 
-  // Weekly health targets — steps + cardio goals alongside the lifting split
-  v.appendChild(buildHealthTargetsCard());
+  // Cardio — show the live/finished session if there's one today, plus an always-available
+  // entry so a walk/cardio can be started on any day (covers Friday's optional walk).
+  v.appendChild(buildCardioCard(today(), { title: 'Cardio session' }));
 
   // Today's tasks — slim daily reminder, AI paste-able. Tap to clear (recurring tasks come back next matching day).
   {
@@ -5105,7 +5256,11 @@ function renderHome() {
   // Supplements (after Today's tasks) — card is null when nothing is active or scheduled
   const suppCard = buildSupplementsCard();
   if (suppCard) v.appendChild(suppCard);
+}
 
+// Recent wins + Reminders — moved off the Home dashboard, now shown on the Progress tab.
+// Self-contained: uses only global helpers plus the passed-in view container `v`.
+function buildWinsAndReminders(v) {
   // Recent wins
   {
     const ph = currentPhase();
@@ -5285,6 +5440,9 @@ function renderToday() {
     if (dl !== null && dl >= 0 && dl <= 7) {
       v.appendChild(makePhaseAlert());
     }
+
+    // Cardio session for this rest day (Wed = Cardio 1, Sun = Cardio 2, Fri = optional walk).
+    v.appendChild(buildCardioCard(date));
 
     v.appendChild(el('div', { class: 'card' }, [
       el('div', { class: 'card-title' }, 'Train a different day?'),
@@ -6305,9 +6463,6 @@ function renderPlan() {
         ? `Plan shifted by ${skips} skip${skips > 1 ? 's' : ''}`
         : '4 training days · 3 rest days · ~60 min sessions')
   ]));
-
-  // Weekly health targets — part of the active plan summary (cardio/NEAT alongside the split)
-  v.appendChild(buildHealthTargetsCard());
 
   const sessions = upcomingSessions(t, 7);
   sessions.forEach(({ date, dayKey }, i) => {
@@ -7644,6 +7799,9 @@ function renderProgress() {
     onclick: () => { activeTab = 'today'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   }, '← Workout'));
 
+  // Recent wins + Reminders (relocated from the Home dashboard)
+  buildWinsAndReminders(v);
+
   const sessionsThis = sessionsThisWeek();
   const total = totalSessions();
   const bw = lastBodyWeight();
@@ -7749,13 +7907,35 @@ function renderProgress() {
   // Recent sessions
   const recentCard = el('div', { class: 'card' });
   recentCard.appendChild(el('div', { class: 'card-title' }, 'Recent sessions'));
-  const finished = Object.entries(state.workouts)
+  // Merge lifting sessions (state.workouts) and cardio sessions (state.cardio) into one
+  // date-sorted log. Cardio rows are a separate branch that never reads DAYS/workoutProgress,
+  // so they can't throw on a session that has no exercises.
+  const liftRows = Object.entries(state.workouts)
     .filter(([_, w]) => isRealSession(w))
-    .sort((a, b) => b[0].localeCompare(a[0])).slice(0, 8);
-  if (!finished.length) {
+    .map(([date, w]) => ({ kind: 'lift', date, w }));
+  const cardioRows = Object.entries(state.cardio || {})
+    .filter(([_, c]) => c && c.started)
+    .map(([date, c]) => ({ kind: 'cardio', date, c }));
+  const recent = [...liftRows, ...cardioRows]
+    .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
+  if (!recent.length) {
     recentCard.appendChild(el('div', { class: 'empty' }, 'Finish a workout to see it here.'));
   } else {
-    finished.forEach(([date, w]) => {
+    recent.forEach(item => {
+      if (item.kind === 'cardio') {
+        const c = item.c;
+        const actLabel = (CARDIO_ACTIVITIES.find(a => a.key === c.activity) || {}).label || c.activity;
+        const durTxt = c.active ? 'in progress' : fmtTime((c.durationSec || 0) * 1000);
+        recentCard.appendChild(el('div', { class: 'list-item', onclick: () => openCardioDetail(item.date) }, [
+          el('div', {}, [
+            el('div', { class: 'bold' }, '🫀 ' + c.label),
+            el('div', { class: 'small muted' }, `${item.date} · ${durTxt}`)
+          ]),
+          el('div', { class: 'right' }, [el('span', { class: 'chip' }, actLabel), el('span', {}, '›')])
+        ]));
+        return;
+      }
+      const date = item.date, w = item.w;
       const day = DAYS[w.dayKey];
       const prog = workoutProgress(date, w.dayKey);
       const totalMs = (w.timers?.warmup || 0) + (w.timers?.workout || 0);
@@ -8222,7 +8402,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v4.04 · Started ${PROGRAM_START}`));
+  }, `MyGym · v4.10 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
