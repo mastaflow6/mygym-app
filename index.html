@@ -4127,7 +4127,68 @@ function buildCardioCard(date, opts) {
     class: 'btn', style: 'width:100%;',
     onclick: () => startCardioSession(date, plan.label, pickedActivity)
   }, '▶ Start cardio'));
+  // Manual entry — log a session you already did without using the timer.
+  card.appendChild(el('button', {
+    class: 'btn secondary', style: 'width:100%;margin-top:8px;',
+    onclick: () => openCardioManualLog(date, plan.label, pickedActivity)
+  }, '✎ Log manually'));
   return card;
+}
+
+// Log a cardio session after the fact — enter the duration in minutes, no live timer.
+function openCardioManualLog(date, presetLabel, presetActivity) {
+  let pickedActivity = presetActivity || 'walk';
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Log cardio manually'));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;' }, 'For a session you already did without the timer.'));
+
+  m.appendChild(el('label', { style: 'display:block;margin-bottom:6px;' }, 'Activity'));
+  const picker = el('div', { class: 'row', style: 'gap:6px;margin-bottom:14px;flex-wrap:wrap;' });
+  function paint() {
+    picker.innerHTML = '';
+    CARDIO_ACTIVITIES.forEach(a => {
+      picker.appendChild(el('button', {
+        class: 'btn ' + (a.key === pickedActivity ? '' : 'secondary'),
+        style: 'flex:1;min-width:42%;padding:9px 4px;font-size:12px;',
+        onclick: () => { pickedActivity = a.key; paint(); }
+      }, a.label));
+    });
+  }
+  paint();
+  m.appendChild(picker);
+
+  m.appendChild(el('label', { style: 'display:block;margin-bottom:6px;' }, 'Duration (minutes)'));
+  const minInput = el('input', { type: 'number', inputmode: 'numeric', min: '1', max: '600', placeholder: 'e.g. 30', value: '30', style: 'width:100%;margin-bottom:16px;' });
+  m.appendChild(minInput);
+
+  m.appendChild(el('button', {
+    class: 'btn', style: 'width:100%;',
+    onclick: () => {
+      const mins = Math.round(parseFloat(minInput.value) || 0);
+      if (mins <= 0) { toast('Enter how many minutes'); return; }
+      if (!state.cardio) state.cardio = {};
+      const now = Date.now();
+      const durMs = mins * 60000;
+      state.cardio[date] = {
+        id: 'cardio-' + now,
+        date,
+        label: presetLabel || 'Walk',
+        activity: pickedActivity,
+        started: now - durMs,
+        finished: now,
+        durationSec: mins * 60,
+        active: false,
+        manual: true
+      };
+      save();
+      closeModal();
+      render();
+      if (navigator.vibrate) navigator.vibrate([60, 40, 100]);
+      toast('✓ Cardio logged · ' + fmtTime(durMs), 'celebrate');
+    }
+  }, 'Save session'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;width:100%;', onclick: closeModal }, 'Cancel'));
+  openModal(m);
 }
 
 function openCardioDetail(date) {
@@ -5175,6 +5236,10 @@ function renderHome() {
   // entry so a walk/cardio can be started on any day (covers Friday's optional walk).
   v.appendChild(buildCardioCard(today(), { title: 'Cardio session' }));
 
+  // Supplements — placed above Today's tasks; card is null when nothing is active or scheduled
+  const suppCard = buildSupplementsCard();
+  if (suppCard) v.appendChild(suppCard);
+
   // Today's tasks — slim daily reminder, AI paste-able. Tap to clear (recurring tasks come back next matching day).
   {
     const tlist = getTasks();
@@ -5252,10 +5317,6 @@ function renderHome() {
     }
     v.appendChild(tcard);
   }
-
-  // Supplements (after Today's tasks) — card is null when nothing is active or scheduled
-  const suppCard = buildSupplementsCard();
-  if (suppCard) v.appendChild(suppCard);
 }
 
 // Recent wins + Reminders — moved off the Home dashboard, now shown on the Progress tab.
@@ -8402,7 +8463,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v4.10 · Started ${PROGRAM_START}`));
+  }, `MyGym · v4.11 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
