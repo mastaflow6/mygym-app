@@ -3694,6 +3694,70 @@ function activePlanDays() {
   return out;
 }
 
+// Day-of-week → dayKey, ignoring skippedDates/overrides. Mirrors effectiveDayKey's natural branch.
+function naturalDayKey(dateStr) {
+  const dow = new Date(dateStr + 'T00:00:00').getDay();
+  if (state.settings && state.settings.travelMode) {
+    return ({ 1: 11, 2: 12, 4: 14, 6: 16 })[dow] ?? null;
+  }
+  return (DAYS[dow] && !DAYS[dow].travel) ? dow : null;
+}
+
+// The ONLY writer of "what session runs on this date". pickKey = a lifting dayKey, or null for rest/cardio.
+function setSessionForDate(dateStr, pickKey) {
+  if (!state.plan) state.plan = { skippedDates: [], overrides: {} };
+  const sk = state.plan.skippedDates || (state.plan.skippedDates = []);
+  const ov = state.plan.overrides || (state.plan.overrides = {});
+  // Clear any prior decision for this date first.
+  const i = sk.indexOf(dateStr); if (i >= 0) sk.splice(i, 1);
+  delete ov[dateStr];
+  if (pickKey == null) {
+    sk.push(dateStr);                  // rest/cardio — effectiveDayKey ignores overrides[null], so use skippedDates
+  } else if (pickKey !== naturalDayKey(dateStr)) {
+    ov[dateStr] = pickKey;             // non-natural session — explicit override
+  }
+  // pickKey === natural → leave cleared (reset-to-natural, no redundant override)
+}
+
+// Place a displaced session on the next genuinely-free rest day (targeted, no cascade). Returns that date or null.
+function reinsertOnNextRest(fromDate, displacedKey) {
+  if (displacedKey == null) return null;
+  if (!state.plan) state.plan = { skippedDates: [], overrides: {} };
+  let d = nextDateStr(fromDate);
+  for (let i = 0; i < 10; i++) {
+    if (effectiveDayKey(d) == null && !state.plan.skippedDates.includes(d)) {
+      state.plan.overrides[d] = displacedKey;
+      return d;
+    }
+    d = nextDateStr(d);
+  }
+  return null; // no free rest slot within 10 days
+}
+
+// Commit a session pick for `date`. reinsert=true sends the displaced session to the next rest day.
+function applySessionPick(date, pickKey, reinsert) {
+  const displacedKey = effectiveDayKey(date); // BEFORE mutating
+  const pickChangesDay = pickKey !== displacedKey;
+  // Logs belong to the OLD session — drop the workout entry when the day changes so the new one starts clean.
+  if (pickChangesDay && state.workouts[date]) delete state.workouts[date];
+  setSessionForDate(date, pickKey);
+  let landedOn = null;
+  if (reinsert && displacedKey != null && displacedKey !== pickKey) {
+    landedOn = reinsertOnNextRest(date, displacedKey);
+  }
+  activeDayKey = null;
+  save();
+  render();
+  const pickName = pickKey == null ? 'Rest' : (DAYS[pickKey] ? DAYS[pickKey].name : 'Session');
+  if (landedOn) {
+    const ldow = new Date(landedOn + 'T00:00:00').getDay();
+    const dName = DAYS[displacedKey] ? DAYS[displacedKey].name : 'Session';
+    toast(`${pickName} today · ${dName} → ${DAY_LABELS[ldow]}`);
+  } else {
+    toast(`Today set to ${pickName}`);
+  }
+}
+
 // Skip a date and cascade the displaced session forward day-by-day until it lands on a rest slot.
 // Example: today is Tue (Pull). Skip → Tue=rest, Wed (was rest) absorbs Pull. Thu=Legs unchanged.
 // Example: skip Mon (Push) → Tue (was Pull) becomes Push, Wed (was rest) absorbs Pull, Thu=Legs unchanged.
@@ -5082,6 +5146,15 @@ function renderHome() {
   }
   v.appendChild(cta);
 
+  // Change today's session — persistent picker (Push/Pull/Legs/Upper/Cardio/Rest). Available any day.
+  v.appendChild(el('button', {
+    class: 'skip-cta',
+    onclick: () => openSessionPickerModal(today())
+  }, [
+    el('span', { class: 'skip-icon', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M7 4v16M17 20V4M3 8l4-4 4 4M21 16l-4 4-4-4"/></svg>' }),
+    el('span', {}, 'Change today\'s session')
+  ]));
+
   // Start warmup (focus mode) — only on workout days, not finished, no active phase
   if (day && !state.workouts[date]?.finished && !state.workouts[date]?.activePhase) {
     v.appendChild(el('button', {
@@ -5098,16 +5171,7 @@ function renderHome() {
       ])
     ]));
 
-    // Skip workout — moves today's session forward by 1 calendar day
-    v.appendChild(el('button', {
-      class: 'skip-cta',
-      onclick: () => openSkipConfirmModal()
-    }, [
-      el('span', { class: 'skip-icon', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polygon points="5 4 15 12 5 20"/><line x1="19" y1="5" x2="19" y2="19"/></svg>' }),
-      el('span', {}, 'Skip today · move to tomorrow')
-    ]));
-
-    // Gym bag — inline checklist (right under Skip today)
+    // Gym bag — inline checklist (right under Start warmup)
     {
       const checked = new Set(todaysBag());
       const bagDone = checked.size;
@@ -5506,12 +5570,9 @@ function renderToday() {
     v.appendChild(buildCardioCard(date));
 
     v.appendChild(el('div', { class: 'card' }, [
-      el('div', { class: 'card-title' }, 'Train a different day?'),
-      el('div', { class: 'row wrap', style: 'gap:8px;' },
-        Object.entries(activePlanDays()).map(([k, d]) =>
-          el('button', { class: 'btn secondary', style: 'flex:1;min-width:42%;', onclick: () => { activeDayKey = +k; expandedExId = null; editingSetKey = null; render(); } }, d.name)
-        )
-      )
+      el('div', { class: 'card-title' }, 'Train a different session?'),
+      el('div', { class: 'small muted', style: 'margin-bottom:10px;' }, 'Make up a session or change today — saved for the day.'),
+      el('button', { class: 'btn', style: 'width:100%;', onclick: () => openSessionPickerModal(date) }, 'Change today\'s session')
     ]));
     return;
   }
@@ -5552,16 +5613,14 @@ function renderToday() {
   // Lab timer
   v.appendChild(buildLabTimer(date, w));
 
-  // Day switcher
-  const sw = el('div', { class: 'row', style: 'gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;' });
-  Object.entries(activePlanDays()).forEach(([k, d]) => {
-    sw.appendChild(el('button', {
-      class: 'chip' + (+k === dayKey ? ' accent' : ''),
-      style: 'padding:8px 12px;font-size:12px;flex-shrink:0;',
-      onclick: () => { activeDayKey = +k; expandedExId = null; editingSetKey = null; render(); }
-    }, d.name));
-  });
-  v.appendChild(sw);
+  // Change today's session — persistent picker (replaces the old transient day-switcher chips)
+  v.appendChild(el('div', { class: 'row', style: 'justify-content:flex-end;margin-bottom:12px;' }, [
+    el('button', {
+      class: 'btn secondary',
+      style: 'font-size:12px;padding:6px 12px;',
+      onclick: () => openSessionPickerModal(date)
+    }, '⇄ Change session')
+  ]));
 
   // Reset today (only when there's something to reset)
   const hasProgress = prog.done > 0 || w.started || w.activePhase ||
@@ -7967,7 +8026,13 @@ function renderProgress() {
 
   // Recent sessions
   const recentCard = el('div', { class: 'card' });
-  recentCard.appendChild(el('div', { class: 'card-title' }, 'Recent sessions'));
+  recentCard.appendChild(el('div', { class: 'row between', style: 'align-items:center;margin-bottom:8px;' }, [
+    el('div', { class: 'card-title', style: 'margin:0;' }, 'Recent sessions'),
+    el('button', {
+      class: 'btn secondary', style: 'font-size:12px;padding:6px 12px;',
+      onclick: () => openPastSessionModal()
+    }, '+ Past session')
+  ]));
   // Merge lifting sessions (state.workouts) and cardio sessions (state.cardio) into one
   // date-sorted log. Cardio rows are a separate branch that never reads DAYS/workoutProgress,
   // so they can't throw on a session that has no exercises.
@@ -8463,7 +8528,7 @@ function renderMore() {
 
   v.appendChild(el('div', {
     class: 'center small dim', style: 'margin-top:18px;padding:8px;'
-  }, `MyGym · v4.11 · Started ${PROGRAM_START}`));
+  }, `MyGym · v4.13 · Started ${PROGRAM_START}`));
 }
 
 function openSessionsDiagnostic() {
@@ -8504,6 +8569,189 @@ function openSessionsDiagnostic() {
 }
 
 /* =========== MODALS =========== */
+// Persistent "Change today's session" picker — choose any lifting session, Cardio, or Rest for `date`.
+// Writes straight into state.plan (survives reload). When the pick displaces a real planned session,
+// asks whether to do it another day (targeted reinsert) or just drop it. Replaces the cascade Skip.
+// Backdate a completed lifting session — pick a date + session, enter the weights/reps you did,
+// and it writes a proper finished entry into state.workouts so it shows in Recent sessions + history.
+function openPastSessionModal() {
+  let sessionKey = null;
+  let rows = []; // [{ ex, wInput, rInput }]
+
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Log a past session'));
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;' }, 'Record a workout you already did. Pick the day and session, then enter what you lifted.'));
+
+  m.appendChild(el('label', { style: 'display:block;margin-bottom:6px;' }, 'Date'));
+  const dateInput = el('input', { type: 'date', value: today(), max: today(), style: 'width:100%;margin-bottom:14px;' });
+  m.appendChild(dateInput);
+
+  m.appendChild(el('label', { style: 'display:block;margin-bottom:6px;' }, 'Session'));
+  const sessPicker = el('div', { class: 'row wrap', style: 'gap:6px;margin-bottom:14px;' });
+  const exContainer = el('div', {});
+
+  function buildExRows() {
+    exContainer.innerHTML = '';
+    rows = [];
+    if (sessionKey == null) {
+      exContainer.appendChild(el('div', { class: 'small muted' }, 'Pick a session above to enter your sets.'));
+      return;
+    }
+    const day = DAYS[sessionKey];
+    exContainer.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:8px;' }, `${day.exercises.length} exercises · one weight × reps per exercise (applied to all its sets).`));
+    day.exercises.forEach(ex => {
+      const last = getLastSession(ex.id, dateInput.value || today());
+      const prefW = ex.bw ? '' : String((last && last.sets[0] && last.sets[0].w) || ex.weight || '');
+      const prefR = String((last && last.sets[0] && last.sets[0].r) || getSetTargets(ex)[0] || ex.repsMin || '');
+      const row = el('div', { style: 'display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--surface-2);' });
+      row.appendChild(el('div', { style: 'flex:1;min-width:0;font-size:13px;' }, [
+        el('div', {}, ex.name),
+        el('div', { class: 'small dim' }, `${ex.sets} sets`)
+      ]));
+      const wInput = ex.bw
+        ? el('div', { class: 'small dim', style: 'width:64px;text-align:center;' }, 'BW')
+        : el('input', { type: 'number', inputmode: 'decimal', value: prefW, placeholder: 'kg', style: 'width:64px;text-align:center;' });
+      const rInput = el('input', { type: 'number', inputmode: 'numeric', value: prefR, placeholder: ex.timed ? 'sec' : 'reps', style: 'width:64px;text-align:center;' });
+      row.appendChild(wInput);
+      row.appendChild(el('span', { class: 'small dim' }, '×'));
+      row.appendChild(rInput);
+      exContainer.appendChild(row);
+      rows.push({ ex, wInput, rInput });
+    });
+  }
+
+  Object.entries(activePlanDays()).forEach(([k, d]) => {
+    sessPicker.appendChild(el('button', {
+      class: 'btn secondary', style: 'flex:1;min-width:42%;font-size:13px;',
+      onclick: (e) => {
+        sessionKey = +k;
+        Array.from(sessPicker.children).forEach(b => b.className = 'btn secondary');
+        e.target.className = 'btn';
+        buildExRows();
+      }
+    }, d.name));
+  });
+  m.appendChild(sessPicker);
+  m.appendChild(exContainer);
+  buildExRows();
+  // Re-prefill weights from history when the date changes.
+  dateInput.addEventListener('change', () => { if (sessionKey != null) buildExRows(); });
+
+  m.appendChild(el('label', { style: 'display:block;margin:14px 0 6px;' }, 'Duration (minutes, optional)'));
+  const durInput = el('input', { type: 'number', inputmode: 'numeric', min: '0', max: '300', placeholder: 'e.g. 55', style: 'width:100%;margin-bottom:16px;' });
+  m.appendChild(durInput);
+
+  m.appendChild(el('button', {
+    class: 'btn', style: 'width:100%;',
+    onclick: () => {
+      const date = dateInput.value;
+      if (!date) { toast('Pick a date'); return; }
+      if (sessionKey == null) { toast('Pick a session'); return; }
+      const existing = state.workouts[date];
+      if (existing && isRealSession(existing)) {
+        if (!confirm('A session is already logged on ' + date + '. Replace it?')) return;
+      }
+      delete state.workouts[date];
+      const w = ensureWorkout(date, sessionKey);
+      DAYS[sessionKey].exercises.forEach((ex, i) => {
+        const r = rows[i];
+        const weightVal = ex.bw ? '' : String(parseFloat(r.wInput.value) || 0);
+        const repsVal = String(parseInt(r.rInput.value, 10) || 0);
+        w.logs[ex.id] = Array.from({ length: ex.sets }, () => ({ w: weightVal, r: repsVal, d: true }));
+      });
+      const ts = new Date(date + 'T18:00:00').getTime();
+      w.started = ts;
+      const durMin = parseFloat(durInput.value) || 0;
+      if (durMin > 0) { w.timers = { warmup: 0, workout: durMin * 60000, cooldown: 0 }; w.finished = ts + durMin * 60000; }
+      else { w.finished = ts; }
+      save();
+      closeModal();
+      render();
+      toast('✓ Past session logged · ' + DAYS[sessionKey].name);
+    }
+  }, 'Save session'));
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:8px;width:100%;color:var(--text-muted);', onclick: closeModal }, 'Cancel'));
+  openModal(m);
+}
+
+function openSessionPickerModal(date) {
+  const m = el('div');
+  m.appendChild(el('h3', {}, 'Change today\'s session'));
+
+  const dow = new Date(date + 'T00:00:00').getDay();
+  m.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:14px;' },
+    `${DAY_LABELS[dow]} · pick what you're training. Your plan stays on its weekly rhythm — no shifting.`));
+
+  // Options: the 4 active lifting sessions, then Cardio + Rest (both = rest-from-lifting).
+  const options = Object.entries(activePlanDays()).map(([k, d]) => ({ key: +k, label: d.name }));
+  options.push({ key: null, label: 'Cardio', sub: 'rest from lifting' });
+  options.push({ key: null, label: 'Rest', sub: 'recover' });
+
+  const w = state.workouts[date];
+  const hasLogs = w && w.logs && Object.values(w.logs).some(arr => arr && arr.length);
+
+  options.forEach(opt => {
+    const isCurrent = effectiveDayKey(date) === opt.key && !(opt.label === 'Rest' && opt.key == null && effectiveDayKey(date) != null);
+    const btn = el('button', {
+      class: 'btn ' + (isCurrent ? '' : 'secondary'),
+      style: 'width:100%;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;',
+      onclick: () => handleSessionPick(date, opt.key)
+    }, [
+      el('span', {}, opt.label),
+      opt.sub ? el('span', { class: 'small dim' }, opt.sub) : (isCurrent ? el('span', { class: 'small dim' }, 'current') : null)
+    ]);
+    m.appendChild(btn);
+  });
+
+  m.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:6px;width:100%;color:var(--text-muted);', onclick: closeModal }, 'Cancel'));
+  openModal(m);
+
+  // Second step: confirm the pick — warn about logs, and ask about the displaced session.
+  function handleSessionPick(date, pickKey) {
+    const displacedKey = effectiveDayKey(date);
+    const pickChangesDay = pickKey !== displacedKey;
+    if (!pickChangesDay) { closeModal(); return; } // no-op
+
+    const displacesReal = displacedKey != null && displacedKey !== pickKey;
+    const pickName = pickKey == null ? (options.find(o => o.key == null) ? 'Rest' : 'Rest') : DAYS[pickKey].name;
+    const dispName = displacesReal ? DAYS[displacedKey].name : '';
+
+    const m2 = el('div');
+    m2.appendChild(el('h3', {}, `Switch to ${pickKey == null ? 'Rest / Cardio' : pickName}?`));
+
+    if (hasLogs) {
+      m2.appendChild(el('div', {
+        class: 'small',
+        style: 'margin-bottom:12px;padding:10px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:#fca5a5;'
+      }, '⚠ You\'ve already logged sets today. Changing the session will clear them.'));
+    }
+
+    if (displacesReal) {
+      m2.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;' },
+        `What about today's ${dispName}?`));
+      m2.appendChild(el('button', {
+        class: 'btn', style: 'width:100%;margin-bottom:8px;',
+        onclick: () => { closeModal(); applySessionPick(date, pickKey, true); }
+      }, `Do ${dispName} another day`));
+      m2.appendChild(el('button', {
+        class: 'btn secondary', style: 'width:100%;margin-bottom:8px;',
+        onclick: () => { closeModal(); applySessionPick(date, pickKey, false); }
+      }, 'Just drop it'));
+      m2.appendChild(el('button', { class: 'btn secondary', style: 'margin-top:4px;width:100%;color:var(--text-muted);', onclick: closeModal }, 'Cancel'));
+    } else {
+      // Nothing real displaced (e.g. making up a session on a rest day) — just confirm.
+      m2.appendChild(el('div', { class: 'small muted', style: 'margin-bottom:12px;' },
+        pickKey == null ? 'Today becomes a rest day.' : `Train ${pickName} today.`));
+      m2.appendChild(el('button', {
+        class: 'btn', style: 'width:100%;margin-bottom:8px;',
+        onclick: () => { closeModal(); applySessionPick(date, pickKey, false); }
+      }, 'Confirm'));
+      m2.appendChild(el('button', { class: 'btn secondary', style: 'width:100%;color:var(--text-muted);', onclick: closeModal }, 'Cancel'));
+    }
+    openModal(m2);
+  }
+}
+
 function openSkipConfirmModal() {
   const t = today();
   const cascade = planSkipCascade(t, false); // dry-run
